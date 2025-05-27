@@ -1,0 +1,109 @@
+<!doctype html>
+<html class="js" lang="">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="js/ort20/ort.min.js"></script>
+    <script src="js/opencv.js"></script>
+    <script type="module" src="js/app.js"></script>
+    <title>Autokorrektur</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/font-awesome/css/font-awesome.min.css">
+
+    <link rel="icon" href="icon.png" sizes="192x192">
+    <link rel="apple-touch-icon" href="icon.png">
+</head>
+
+<body>
+<div class="ImageViewer">
+    <div id="imagesContainer" class="imagesContainer">
+    </div>
+
+    <input type="file" id="inputImage" accept="image/jpeg, image/png, image/heic" style="display:none"/>
+    <button class="fileSelect centerbutton " id="fileSelect" type="button">
+      <i class="fa fa-picture-o" aria-hidden="true"> </i> &nbsp;Select Image
+    </button>
+    <button class="startInference, centerbutton" id="startInference" onclick="start()" disabled>
+      <i class="fa fa-play" aria-hidden="true"></i> &nbsp;Start
+    </button>
+
+    <button class="download" id="download" type="button" onclick="downloadResult()">
+      <i class="fa fa-download" aria-hidden="true"></i> &nbsp;Download
+    </button>
+
+
+    <div class="dropdown">
+        <button onclick="dropdown()" class="dropbtn"><i class="fa fa-bars" aria-hidden="true"></i> &nbsp;Option</button>
+        <div id="myDropdown" class="dropdown-content">
+            <div class="multipleFilesContainer">
+                <label for="batchMode" class="multipleFilesLabel">Multiple Images
+                    <span class="tooltip">Enables loading multiple images and automatic inference.</span>
+                </label>
+                <input type="checkbox" id="batchMode" class="batchMode"
+                       aria-label="enables loading multiple Images and automatic inference"/>
+            </div>
+            <div class="multipleFilesContainer">
+                <label for="evalData" class="multipleFilesLabel">Evaluation Mode
+                    <span class="tooltip">Enables download of Evaluation Data.</span>
+                </label>
+                <input type="checkbox" id="evalData" class="evalData" aria-label="Eval-Data Output"/>
+            </div>
+            <div class="multipleFilesContainer">
+                <label for="continue" class="multipleFilesLabel">Continue with Result
+                    <span class="tooltip">makes Result new Input </span>
+                </label>
+                <input type="checkbox" id="continue" class="continue" aria-label="continue with Result"/>
+            </div>
+            <div class="slidecontainer">
+                <label for="maskUpscale">Mask Upscale</label>
+                <input type="range" min="0" max="100" value="20" class="slider" id="maskUpscale">
+                <p>Value: <span id="maskUpscaleVal"></span></p>
+            </div>
+            <div class="slidecontainer">
+                <label for="downshift">Mask Downshift</label>
+                <input type="range" min="0" max="100" value="20" class="slider" id="downshift">
+                <p>Value: <span id="downshiftVal"></span></p>
+            </div>
+            <div class="slidecontainer">
+                <label for="scoreThreshold">Score Threshold</label>
+                <input type="range" min="0" max="100" value="20" class="slider" id="scoreThreshold">
+                <p>Value: <span id="scoreThresholdVal"></span></p>
+            </div>
+
+            <div class="select">
+                <label> Downscale to Max Image Size
+                    <select id="downscaleMP">
+                        <option value="null" selected>No Scaling</option>
+                        <option value="0.5">0.5 MP</option>
+                        <option value="1">1 MP</option>
+                        <option value="2">2 MP</option>
+                        <option value="3">3 MP</option>
+                        <option value="4">4 MP</option>
+                        <option value="5">5 MP</option>
+                        <option value="6">6 MP</option>
+                        <option value="7">7 MP</option>
+                        <option value="8">8 MP</option>
+                        <option value="9">9 MP</option>
+                        <option value="10">10 MP</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="select">
+                <label> Segmentation Model
+                    <select id="segModel">
+                        <option value="yolo11n">Yolo11-Nano</option>
+                        <option value="yolo11s" selected>Yolo11-Small</option>
+                        <option value="yolo11m">Yolo11-Medium</option>
+                    </select>
+                </label>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+</body>
+
+</html>

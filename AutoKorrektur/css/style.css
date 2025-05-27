@@ -1,0 +1,157 @@
+.ImageViewer {
+    margin-top: 50px;
+}
+
+.imagesContainer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 20px;
+    justify-content: center;
+}
+
+.imageItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 15px;
+    max-width: 30%;
+}
+
+.imageItem canvas {
+    border: 1px solid #ccc;
+    max-width: 100%;
+    height: auto;
+}
+
+.imageItem p {
+    margin-top: 5px;
+    font-size: 14px;
+    text-align: center;
+}
+
+.centerbutton {
+    width: 30%;
+    height: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto;
+    margin-top: 20px;
+}
+
+.download {
+
+    padding: 1px 15px;
+    height: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    margin-top: 60px;
+    text-align: center;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.multipleFilesContainer {
+    margin: 0 auto;
+    margin-top: 20px;
+}
+
+.multipleFilesLabel {
+    position: relative;
+    display: inline-block;
+    border-bottom: 1px dotted black;
+}
+
+
+.multipleFilesLabel .tooltip {
+    visibility: hidden;
+    width: 120px;
+    background-color: black;
+    color: #fff;
+    text-align: center;
+    padding: 5px 0;
+    border-radius: 6px;
+
+
+    position: absolute;
+    z-index: 1;
+    top: -5px;
+    left: 125%;
+}
+
+.multipleFilesLabel:hover .tooltip {
+    visibility: visible;
+}
+
+.multipleFilesLabel .tooltip::after {
+    content: " ";
+    position: absolute;
+    top: 20%;
+    right: 100%;
+    margin-top: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent black transparent transparent;
+}
+
+.select {
+
+    margin-top: 20px;
+    margin-left: 20px;
+}
+
+.slidecontainer {
+    margin-top: 30px;
+    margin-left: 20px;
+}
+
+/* Dropdown Button */
+.dropbtn {
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto;
+    margin-top: 20px;
+}
+
+/* The container <div> - needed to position the dropdown content */
+.dropdown {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Dropdown Content (Hidden by Default) */
+.dropdown-content {
+    display: none;
+    position: absolute;
+    min-width: 20%;
+    z-index: 1;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    flex-wrap: wrap;
+    justify-content: center;
+    padding-bottom: 50px;
+}
+
+/* Links inside the dropdown */
+.dropdown-content a {
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    text-align: center;
+}
+
+/* Show the dropdown menu (use JS to add this class to the .dropdown-content container when the user clicks on the dropdown button)
+   (Source: https://www.w3schools.com/howto/howto_js_dropdown.asp)
+*/
+.show {
+  display: flex;
+}
