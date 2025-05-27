@@ -59,7 +59,7 @@ While the image quality of the results may be lower compared to other approaches
 ## Setup and Usage
         
 
-* Try the demo at [BenB2.github.io](https://benb2.github.io/AutoKorrektur/)
+* Try the demo at [BenB2.github.io](https://benb2.github.io/AutoKorrektur/AutoKorrektur/)
 
 OR
 
