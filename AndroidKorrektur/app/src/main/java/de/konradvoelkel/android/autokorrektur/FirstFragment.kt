@@ -24,7 +24,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -36,7 +35,6 @@ import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
 import de.konradvoelkel.android.autokorrektur.ml.MiGanInference
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import org.opencv.android.Utils
-import org.opencv.core.Mat
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -710,54 +708,6 @@ class FirstFragment : Fragment() {
      */
     private fun getScoreThresholdFromSlider(): Float {
         return (binding.scoreThreshold.progress * 0.01).toFloat()
-    }
-
-    /**
-     * Inverts the colors of the given image
-     */
-    private fun invertImageColors(uri: Uri): Bitmap? {
-        try {
-            // Get the input stream from the URI
-            val inputStream: InputStream? = requireContext().contentResolver.openInputStream(uri)
-
-            // Decode the input stream into a bitmap
-            val originalBitmap = BitmapFactory.decodeStream(inputStream)
-            inputStream?.close()
-
-            // Create a mutable copy of the bitmap
-            val resultBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true)
-
-            // Create a canvas to draw on the new bitmap
-            val canvas = Canvas(resultBitmap)
-
-            // Create a color matrix that inverts colors
-            val colorMatrix = ColorMatrix().apply {
-                set(floatArrayOf(
-                    -1f, 0f, 0f, 0f, 255f,
-                    0f, -1f, 0f, 0f, 255f,
-                    0f, 0f, -1f, 0f, 255f,
-                    0f, 0f, 0f, 1f, 0f
-                ))
-            }
-
-            // Create a paint object with the color matrix
-            val paint = Paint().apply {
-                colorFilter = ColorMatrixColorFilter(colorMatrix)
-            }
-
-            // Draw the bitmap with the inverted colors
-            canvas.drawBitmap(resultBitmap, 0f, 0f, paint)
-
-            return resultBitmap
-        } catch (e: Exception) {
-            AppLogger.error("Error processing image for color inversion", e)
-            Snackbar.make(
-                binding.root,
-                "Error processing image: ${e.message}",
-                Snackbar.LENGTH_LONG
-            ).show()
-            return null
-        }
     }
 
     /**
