@@ -1,8 +1,11 @@
 package de.konradvoelkel.android.autokorrektur
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
@@ -17,6 +20,7 @@ import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import com.google.android.material.snackbar.Snackbar
@@ -36,6 +40,7 @@ class FirstFragment : Fragment() {
 
     private var selectedImageUri: Uri? = null
     private var resultImageUri: Uri? = null
+    private var photoFile: File? = null
 
     // Activity result launcher for image selection
     private val selectImageLauncher = registerForActivityResult(
@@ -59,6 +64,36 @@ class FirstFragment : Fragment() {
                 displayImage(uri, "Original")
                 binding.startInference.isEnabled = true
             }
+        }
+    }
+
+    // Permission request launcher for camera
+    private val cameraPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            launchCamera()
+        } else {
+            Toast.makeText(
+                requireContext(),
+                "Camera permission is required to take photos",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    // Permission request launcher for storage
+    private val storagePermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            launchGallery()
+        } else {
+            Toast.makeText(
+                requireContext(),
+                "Storage permission is required to select photos",
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 
@@ -183,6 +218,81 @@ class FirstFragment : Fragment() {
     }
 
     private fun selectImage() {
+        val options = arrayOf(
+            getString(R.string.take_photo),
+            getString(R.string.choose_from_gallery),
+            getString(R.string.cancel)
+        )
+
+        android.app.AlertDialog.Builder(requireContext())
+            .setTitle(R.string.photo_selection_title)
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> takePhoto()
+                    1 -> chooseFromGallery()
+                    // Cancel does nothing
+                }
+            }
+            .show()
+    }
+
+    private fun takePhoto() {
+        when {
+            ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                launchCamera()
+            }
+            else -> {
+                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+            }
+        }
+    }
+
+    private fun launchCamera() {
+        try {
+            photoFile = createImageFile()
+            photoFile?.also {
+                selectedImageUri = FileProvider.getUriForFile(
+                    requireContext(),
+                    "${requireContext().packageName}.fileprovider",
+                    it
+                )
+                val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, selectedImageUri)
+                takePictureLauncher.launch(takePictureIntent)
+            }
+        } catch (ex: Exception) {
+            Toast.makeText(
+                requireContext(),
+                "Error creating image file: ${ex.message}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun chooseFromGallery() {
+        val readPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Manifest.permission.READ_MEDIA_IMAGES
+        } else {
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+
+        when {
+            ContextCompat.checkSelfPermission(
+                requireContext(),
+                readPermission
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                launchGallery()
+            }
+            else -> {
+                storagePermissionLauncher.launch(readPermission)
+            }
+        }
+    }
+
+    private fun launchGallery() {
         val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
         selectImageLauncher.launch(intent)
     }
