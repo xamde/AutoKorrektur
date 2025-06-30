@@ -39,6 +39,22 @@ import java.util.Date
 import java.util.Locale
 import androidx.core.view.isVisible
 import androidx.core.graphics.createBitmap
+import org.opencv.core.Mat
+
+/**
+ * Data class to store batch processing results for CSV export
+ */
+data class BatchProcessingResult(
+    val originalImageName: String,
+    val processingTimeMs: Long,
+    val maskUpscale: Float,
+    val scoreThreshold: Float,
+    val downshift: Float,
+    val downscaleMp: String,
+    val segmentationModel: String,
+    val success: Boolean,
+    val errorMessage: String? = null
+)
 
 /**
  * Main fragment for the AutoKorrektur app, mimicking the web app functionality.
@@ -49,9 +65,13 @@ class FirstFragment : Fragment() {
     private val binding get() = _binding!!
 
     private var selectedImageUri: Uri? = null
+    private var selectedImageUris: MutableList<Uri> = mutableListOf()
     private var resultImageUri: Uri? = null
     private var processedBitmap: Bitmap? = null
+    private var processedBitmaps: MutableList<Bitmap> = mutableListOf()
     private var photoFile: File? = null
+    private var batchProcessingResults: MutableList<BatchProcessingResult> = mutableListOf()
+    private var isProcessingBatch = false
 
     // ML inference objects
     private lateinit var imageProcessor: ImageProcessor
@@ -160,6 +180,36 @@ class FirstFragment : Fragment() {
         }
     }
 
+    // Multiple image picker launcher for batch processing
+    private val multipleImagePickerLauncher = registerForActivityResult(
+        ActivityResultContracts.GetMultipleContents()
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            selectedImageUris.clear()
+            selectedImageUris.addAll(uris)
+            AppLogger.info("Selected ${uris.size} images for batch processing")
+
+            // Display first few images as preview
+            clearImagesContainer()
+            uris.take(3).forEachIndexed { index, uri ->
+                displayImage(uri, "Image ${index + 1}")
+            }
+
+            if (uris.size > 3) {
+                Snackbar.make(
+                    binding.root,
+                    "Selected ${uris.size} images. Showing first 3 as preview.",
+                    Snackbar.LENGTH_LONG
+                ).show()
+            }
+
+            binding.startInference.isEnabled = true
+            binding.startInference.text = "Start Batch Processing (${uris.size} images)"
+        } else {
+            AppLogger.info("No images selected for batch processing")
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -206,9 +256,9 @@ class FirstFragment : Fragment() {
         // Setup file select button
         binding.fileSelect.setOnClickListener {
             if (binding.batchMode.isChecked) {
-                // Multiple image selection would be implemented here
-                AppLogger.info("Multiple image selection requested but not implemented")
-                Snackbar.make(binding.root, "Multiple image selection not implemented in this mockup", Snackbar.LENGTH_SHORT).show()
+                // Launch multiple image picker for batch processing
+                AppLogger.info("Launching multiple image selection for batch processing")
+                multipleImagePickerLauncher.launch("image/*")
             } else {
                 selectImage()
             }
@@ -246,7 +296,35 @@ class FirstFragment : Fragment() {
 
         // Setup switches
         binding.batchMode.setOnCheckedChangeListener { _, isChecked ->
-            binding.startInference.isEnabled = selectedImageUri != null && !isChecked
+            if (isChecked) {
+                // Batch mode enabled
+                binding.startInference.isEnabled = selectedImageUris.isNotEmpty()
+                binding.startInference.text = if (selectedImageUris.isNotEmpty()) {
+                    "Start Batch Processing (${selectedImageUris.size} images)"
+                } else {
+                    "Start Batch Processing"
+                }
+                binding.fileSelect.text = "Select Multiple Images"
+            } else {
+                // Single mode enabled
+                binding.startInference.isEnabled = selectedImageUri != null
+                binding.startInference.text = "Start"
+                binding.fileSelect.text = "Select Image"
+                // Clear batch selections when switching to single mode
+                selectedImageUris.clear()
+            }
+        }
+
+        // Setup continue mode switch
+        binding.continueWithResult.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked && processedBitmap == null && !binding.batchMode.isChecked) {
+                Snackbar.make(
+                    binding.root,
+                    "No previous result available. Process an image first to enable continue mode.",
+                    Snackbar.LENGTH_LONG
+                ).show()
+                binding.continueWithResult.isChecked = false
+            }
         }
     }
 
@@ -466,12 +544,26 @@ class FirstFragment : Fragment() {
             return
         }
 
-        // Check if an image is selected
-        if (selectedImageUri == null) {
-            AppLogger.warn("No image selected for inference")
-            Snackbar.make(binding.root, "Please select an image first", Snackbar.LENGTH_SHORT).show()
-            return
+        // Route to batch or single processing based on mode
+        if (binding.batchMode.isChecked) {
+            if (selectedImageUris.isEmpty()) {
+                AppLogger.warn("No images selected for batch processing")
+                Snackbar.make(binding.root, "Please select images for batch processing first", Snackbar.LENGTH_SHORT).show()
+                return
+            }
+            performBatchProcessing()
+        } else {
+            // Check if an image is selected for single processing
+            if (selectedImageUri == null) {
+                AppLogger.warn("No image selected for inference")
+                Snackbar.make(binding.root, "Please select an image first", Snackbar.LENGTH_SHORT).show()
+                return
+            }
+            performSingleImageInference()
         }
+    }
+
+    private fun performSingleImageInference() {
 
         // Disable the button and show processing state
         binding.startInference.isEnabled = false
@@ -480,10 +572,20 @@ class FirstFragment : Fragment() {
         // Clear the images container
         clearImagesContainer()
 
-        // Display the original image
-        selectedImageUri?.let { uri ->
-            displayImage(uri, "Original")
+        // Display the original image or previous result based on continue mode
+        val inputUri = if (binding.continueWithResult.isChecked && resultImageUri != null) {
+            resultImageUri!!
+        } else {
+            selectedImageUri!!
         }
+
+        val inputLabel = if (binding.continueWithResult.isChecked && resultImageUri != null) {
+            "Previous Result (Input)"
+        } else {
+            "Original"
+        }
+
+        displayImage(inputUri, inputLabel)
 
         // Perform ONNX inference in a background thread
         Thread {
@@ -525,9 +627,16 @@ class FirstFragment : Fragment() {
 
                     // Step 1: Process input image
                     AppLogger.debug("Step 1: Processing input image")
+                    // Determine input URI based on continue mode
+                    val processingUri = if (binding.continueWithResult.isChecked && resultImageUri != null) {
+                        resultImageUri!!
+                    } else {
+                        uri
+                    }
+
                     val processedImage = try {
                         imageProcessor.processInputImage(
-                            uri = uri,
+                            uri = processingUri,
                             modelWidth = 640,  // YOLO model input width
                             modelHeight = 640, // YOLO model input height
                             downscaleMp = downscaleMp
@@ -581,6 +690,10 @@ class FirstFragment : Fragment() {
                                     tempMaskFile
                                 )
                                 displayImage(maskUri, "Mask")
+
+                                // Create and display mask overlay on original image
+                                createMaskOverlay(processingUri, maskMat)
+
                                 AppLogger.debug("Mask displayed successfully")
                             } catch (e: Exception) {
                                 AppLogger.error("Error displaying mask", e)
@@ -726,6 +839,299 @@ class FirstFragment : Fragment() {
                 }
             }
         }.start()
+    }
+
+    private fun performBatchProcessing() {
+        AppLogger.info("Starting batch processing for ${selectedImageUris.size} images")
+
+        // Clear previous results
+        batchProcessingResults.clear()
+        processedBitmaps.clear()
+        isProcessingBatch = true
+
+        // Disable UI and show processing state
+        binding.startInference.isEnabled = false
+        binding.startInference.text = "Processing batch (0/${selectedImageUris.size})..."
+        binding.fileSelect.isEnabled = false
+        binding.batchMode.isEnabled = false
+
+        // Clear the images container
+        clearImagesContainer()
+
+        // Start batch processing in background thread
+        Thread {
+            try {
+                // Initialize ML inference objects
+                try {
+                    yoloInference.initialize()
+                    miGanInference.initialize()
+                    AppLogger.info("ML inference objects initialized for batch processing")
+                } catch (e: Exception) {
+                    AppLogger.error("Failed to initialize ML objects for batch processing", e)
+                    throw Exception("Failed to initialize ML models: ${e.message}", e)
+                }
+
+                // Get UI parameters once for all images
+                val downscaleMp = getDownscaleMpFromSpinner()
+                val maskUpscale = getMaskUpscaleFromSlider()
+                val scoreThreshold = getScoreThresholdFromSlider()
+                val downshift = getDownshiftFromSlider()
+                val segModel = binding.segModel.selectedItem.toString()
+
+                AppLogger.debug("Batch parameters - downscaleMp: $downscaleMp, maskUpscale: $maskUpscale, scoreThreshold: $scoreThreshold, downshift: $downshift, segModel: $segModel")
+
+                // Process each image
+                selectedImageUris.forEachIndexed { index, uri ->
+                    if (!isProcessingBatch) {
+                        AppLogger.info("Batch processing cancelled")
+                        return@Thread
+                    }
+
+                    val startTime = System.currentTimeMillis()
+                    val imageName = "Image_${index + 1}"
+
+                    // Update progress on UI thread
+                    if (isAdded && !isDetached) {
+                        requireActivity().runOnUiThread {
+                            binding.startInference.text = "Processing batch (${index + 1}/${selectedImageUris.size})..."
+                        }
+                    }
+
+                    try {
+                        AppLogger.debug("Processing image ${index + 1}/${selectedImageUris.size}: $uri")
+
+                        // Step 1: Process input image
+                        val processedImage = imageProcessor.processInputImage(
+                            uri = uri,
+                            modelWidth = 640,
+                            modelHeight = 640,
+                            downscaleMp = downscaleMp
+                        )
+
+                        // Step 2: Run YOLO inference
+                        val maskMat = yoloInference.inferYolo(
+                            transformedMat = processedImage.transformedMat,
+                            xRatio = processedImage.xRatio,
+                            yRatio = processedImage.yRatio,
+                            modelWidth = 640,
+                            modelHeight = 640,
+                            upscaleFactor = maskUpscale,
+                            scoreThreshold = scoreThreshold,
+                            downshiftFactor = downshift
+                        )
+
+                        // Step 3: Run Mi-GAN inference
+                        val resultMat = miGanInference.inferMiGan(
+                            imageMat = processedImage.transformedMat,
+                            maskMat = maskMat
+                        )
+
+                        // Convert result to bitmap
+                        val resultBitmap = createBitmap(resultMat.cols(), resultMat.rows())
+                        Utils.matToBitmap(resultMat, resultBitmap)
+                        processedBitmaps.add(resultBitmap)
+
+                        val processingTime = System.currentTimeMillis() - startTime
+
+                        // Record successful result
+                        batchProcessingResults.add(
+                            BatchProcessingResult(
+                                originalImageName = imageName,
+                                processingTimeMs = processingTime,
+                                maskUpscale = maskUpscale,
+                                scoreThreshold = scoreThreshold,
+                                downshift = downshift,
+                                downscaleMp = downscaleMp?.toString() ?: "No Scaling",
+                                segmentationModel = segModel,
+                                success = true
+                            )
+                        )
+
+                        AppLogger.debug("Successfully processed image ${index + 1} in ${processingTime}ms")
+
+                    } catch (e: Exception) {
+                        val processingTime = System.currentTimeMillis() - startTime
+                        AppLogger.error("Error processing image ${index + 1}: ${e.message}", e)
+
+                        // Record failed result
+                        batchProcessingResults.add(
+                            BatchProcessingResult(
+                                originalImageName = imageName,
+                                processingTimeMs = processingTime,
+                                maskUpscale = maskUpscale,
+                                scoreThreshold = scoreThreshold,
+                                downshift = downshift,
+                                downscaleMp = downscaleMp?.toString() ?: "No Scaling",
+                                segmentationModel = segModel,
+                                success = false,
+                                errorMessage = e.message
+                            )
+                        )
+                    }
+                }
+
+                // Update UI on completion
+                if (isAdded && !isDetached) {
+                    requireActivity().runOnUiThread {
+                        finalizeBatchProcessing()
+                    }
+                }
+
+            } catch (e: Exception) {
+                AppLogger.error("Batch processing failed", e)
+                if (isAdded && !isDetached) {
+                    requireActivity().runOnUiThread {
+                        binding.startInference.isEnabled = true
+                        binding.startInference.text = "Start Batch Processing"
+                        binding.fileSelect.isEnabled = true
+                        binding.batchMode.isEnabled = true
+                        isProcessingBatch = false
+
+                        Snackbar.make(
+                            binding.root,
+                            "Batch processing failed: ${e.message}",
+                            Snackbar.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            }
+        }.start()
+    }
+
+    private fun finalizeBatchProcessing() {
+        val successCount = batchProcessingResults.count { it.success }
+        val totalCount = batchProcessingResults.size
+
+        AppLogger.info("Batch processing completed: $successCount/$totalCount images processed successfully")
+
+        // Re-enable UI
+        binding.startInference.isEnabled = true
+        binding.startInference.text = "Start Batch Processing (${selectedImageUris.size} images)"
+        binding.fileSelect.isEnabled = true
+        binding.batchMode.isEnabled = true
+        isProcessingBatch = false
+
+        // Show results summary
+        val message = "Batch processing completed!\n$successCount/$totalCount images processed successfully"
+        Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG)
+            .setAction("Export CSV") {
+                exportBatchResultsToCSV()
+            }.show()
+
+        // Display first few processed images
+        processedBitmaps.take(3).forEachIndexed { index, bitmap ->
+            try {
+                val tempFile = File(requireContext().cacheDir, "batch_result_${index}.jpg")
+                val outputStream = FileOutputStream(tempFile)
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                outputStream.close()
+
+                val resultUri = FileProvider.getUriForFile(
+                    requireContext(),
+                    "${requireContext().packageName}.fileprovider",
+                    tempFile
+                )
+                displayImage(resultUri, "Result ${index + 1}")
+            } catch (e: Exception) {
+                AppLogger.error("Error displaying batch result ${index + 1}", e)
+            }
+        }
+    }
+
+    private fun exportBatchResultsToCSV() {
+        if (batchProcessingResults.isEmpty()) {
+            Snackbar.make(binding.root, "No batch results to export", Snackbar.LENGTH_SHORT).show()
+            return
+        }
+
+        try {
+            val csvContent = StringBuilder()
+            csvContent.append("Image Name,Processing Time (ms),Mask Upscale,Score Threshold,Downshift,Downscale MP,Segmentation Model,Success,Error Message\n")
+
+            batchProcessingResults.forEach { result ->
+                csvContent.append("${result.originalImageName},")
+                csvContent.append("${result.processingTimeMs},")
+                csvContent.append("${result.maskUpscale},")
+                csvContent.append("${result.scoreThreshold},")
+                csvContent.append("${result.downshift},")
+                csvContent.append("${result.downscaleMp},")
+                csvContent.append("${result.segmentationModel},")
+                csvContent.append("${result.success},")
+                csvContent.append("${result.errorMessage ?: ""}\n")
+            }
+
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val fileName = "autokorrektur_batch_results_$timestamp.csv"
+
+            val csvFile = File(requireContext().getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), fileName)
+            csvFile.writeText(csvContent.toString())
+
+            AppLogger.info("CSV exported to: ${csvFile.absolutePath}")
+            Snackbar.make(binding.root, "CSV exported to: ${csvFile.name}", Snackbar.LENGTH_LONG).show()
+
+        } catch (e: Exception) {
+            AppLogger.error("Failed to export CSV", e)
+            Snackbar.make(binding.root, "Failed to export CSV: ${e.message}", Snackbar.LENGTH_LONG).show()
+        }
+    }
+
+    private fun createMaskOverlay(originalUri: Uri, maskMat: Mat) {
+        try {
+            AppLogger.debug("Creating mask overlay visualization")
+
+            // Load original image as bitmap
+            val originalBitmap = MediaStore.Images.Media.getBitmap(requireContext().contentResolver, originalUri)
+
+            // Create a mutable copy of the original bitmap
+            val overlayBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true)
+
+            // Convert mask to bitmap
+            val maskBitmap = createBitmap(maskMat.cols(), maskMat.rows())
+            Utils.matToBitmap(maskMat, maskBitmap)
+
+            // Scale mask bitmap to match original image size
+            val scaledMaskBitmap = Bitmap.createScaledBitmap(
+                maskBitmap, 
+                overlayBitmap.width, 
+                overlayBitmap.height, 
+                true
+            )
+
+            // Create overlay by applying red tint to mask areas
+            val overlayCanvas = android.graphics.Canvas(overlayBitmap)
+            val paint = android.graphics.Paint().apply {
+                alpha = 128 // 50% transparency
+                colorFilter = android.graphics.PorterDuffColorFilter(
+                    android.graphics.Color.RED,
+                    android.graphics.PorterDuff.Mode.SRC_ATOP
+                )
+            }
+
+            // Draw the scaled mask with red tint
+            overlayCanvas.drawBitmap(scaledMaskBitmap, 0f, 0f, paint)
+
+            // Save overlay image to temporary file
+            val tempOverlayFile = File(requireContext().cacheDir, "mask_overlay.jpg")
+            val overlayOutputStream = FileOutputStream(tempOverlayFile)
+            overlayBitmap.compress(Bitmap.CompressFormat.JPEG, 100, overlayOutputStream)
+            overlayOutputStream.close()
+
+            // Get URI for the overlay image
+            val overlayUri = FileProvider.getUriForFile(
+                requireContext(),
+                "${requireContext().packageName}.fileprovider",
+                tempOverlayFile
+            )
+
+            // Display the overlay image
+            displayImage(overlayUri, "Mask Overlay")
+
+            AppLogger.debug("Mask overlay created and displayed successfully")
+
+        } catch (e: Exception) {
+            AppLogger.error("Error creating mask overlay", e)
+            // Don't show error to user as this is an additional feature
+        }
     }
 
     /**
