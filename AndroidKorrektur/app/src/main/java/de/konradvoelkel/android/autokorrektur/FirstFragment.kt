@@ -6,11 +6,6 @@ import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Canvas
-import android.graphics.ColorMatrix
-import android.graphics.ColorMatrixColorFilter
-import android.graphics.Paint
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -38,11 +33,12 @@ import org.opencv.android.Utils
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.io.InputStream
 import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.core.view.isVisible
+import androidx.core.graphics.createBitmap
 
 /**
  * Main fragment for the AutoKorrektur app, mimicking the web app functionality.
@@ -67,11 +63,55 @@ class FirstFragment : Fragment() {
     private val selectImageLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            result.data?.data?.let { uri ->
-                selectedImageUri = uri
-                displayImage(uri, "Original")
-                binding.startInference.isEnabled = true
+        AppLogger.debug("Gallery selection result received with code: ${result.resultCode}")
+
+        when (result.resultCode) {
+            Activity.RESULT_OK -> {
+                val data = result.data
+                if (data != null) {
+                    val uri = data.data
+                    if (uri != null) {
+                        AppLogger.info("Gallery image selected successfully: $uri")
+                        try {
+                            selectedImageUri = uri
+                            displayImage(uri, "Original")
+                            binding.startInference.isEnabled = true
+                            AppLogger.debug("Gallery image displayed successfully")
+                        } catch (e: Exception) {
+                            AppLogger.error("Error displaying selected gallery image", e)
+                            Snackbar.make(
+                                binding.root,
+                                "Error displaying selected image: ${e.message}",
+                                Snackbar.LENGTH_LONG
+                            ).show()
+                        }
+                    } else {
+                        AppLogger.error("Gallery selection returned null URI")
+                        Snackbar.make(
+                            binding.root,
+                            "Failed to get image from gallery - no image data received",
+                            Snackbar.LENGTH_LONG
+                        ).show()
+                    }
+                } else {
+                    AppLogger.error("Gallery selection returned null data")
+                    Snackbar.make(
+                        binding.root,
+                        "Failed to get image from gallery - no data received",
+                        Snackbar.LENGTH_LONG
+                    ).show()
+                }
+            }
+            Activity.RESULT_CANCELED -> {
+                AppLogger.info("Gallery selection was canceled by user")
+            }
+            else -> {
+                AppLogger.error("Gallery selection failed with result code: ${result.resultCode}")
+                Snackbar.make(
+                    binding.root,
+                    "Failed to select image from gallery",
+                    Snackbar.LENGTH_LONG
+                ).show()
             }
         }
     }
@@ -351,8 +391,20 @@ class FirstFragment : Fragment() {
     }
 
     private fun launchGallery() {
-        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-        selectImageLauncher.launch(intent)
+        try {
+            AppLogger.debug("Launching gallery picker")
+            val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+            intent.type = "image/*"
+            selectImageLauncher.launch(intent)
+            AppLogger.debug("Gallery picker launched successfully")
+        } catch (e: Exception) {
+            AppLogger.error("Error launching gallery picker", e)
+            Snackbar.make(
+                binding.root,
+                "Error opening gallery: ${e.message}",
+                Snackbar.LENGTH_LONG
+            ).show()
+        }
     }
 
     private fun createImageFile(): File {
@@ -397,7 +449,7 @@ class FirstFragment : Fragment() {
     }
 
     private fun toggleOptionsPanel() {
-        if (binding.optionsPanel.visibility == View.VISIBLE) {
+        if (binding.optionsPanel.isVisible) {
             binding.optionsPanel.visibility = View.GONE
         } else {
             binding.optionsPanel.visibility = View.VISIBLE
@@ -467,8 +519,9 @@ class FirstFragment : Fragment() {
                     val downscaleMp = getDownscaleMpFromSpinner()
                     val maskUpscale = getMaskUpscaleFromSlider()
                     val scoreThreshold = getScoreThresholdFromSlider()
+                    val downshift = getDownshiftFromSlider()
 
-                    AppLogger.debug("Parameters - downscaleMp: $downscaleMp, maskUpscale: $maskUpscale, scoreThreshold: $scoreThreshold")
+                    AppLogger.debug("Parameters - downscaleMp: $downscaleMp, maskUpscale: $maskUpscale, scoreThreshold: $scoreThreshold, downshift: $downshift")
 
                     // Step 1: Process input image
                     AppLogger.debug("Step 1: Processing input image")
@@ -495,7 +548,8 @@ class FirstFragment : Fragment() {
                             modelWidth = 640,
                             modelHeight = 640,
                             upscaleFactor = maskUpscale,
-                            scoreThreshold = scoreThreshold
+                            scoreThreshold = scoreThreshold,
+                            downshiftFactor = downshift
                         )
                     } catch (e: Exception) {
                         AppLogger.error("Error during YOLO inference", e)
@@ -513,7 +567,7 @@ class FirstFragment : Fragment() {
                                 }
 
                                 AppLogger.debug("Creating mask bitmap")
-                                val maskBitmap = Bitmap.createBitmap(maskMat.cols(), maskMat.rows(), Bitmap.Config.ARGB_8888)
+                                val maskBitmap = createBitmap(maskMat.cols(), maskMat.rows())
                                 Utils.matToBitmap(maskMat, maskBitmap)
 
                                 val tempMaskFile = File(requireContext().cacheDir, "mask_image.jpg")
@@ -559,7 +613,7 @@ class FirstFragment : Fragment() {
                                 }
 
                                 AppLogger.debug("Creating result bitmap")
-                                processedBitmap = Bitmap.createBitmap(resultMat.cols(), resultMat.rows(), Bitmap.Config.ARGB_8888)
+                                processedBitmap = createBitmap(resultMat.cols(), resultMat.rows())
                                 Utils.matToBitmap(resultMat, processedBitmap!!)
 
                                 // Create a temporary file to display the processed image
@@ -708,6 +762,13 @@ class FirstFragment : Fragment() {
      */
     private fun getScoreThresholdFromSlider(): Float {
         return (binding.scoreThreshold.progress * 0.01).toFloat()
+    }
+
+    /**
+     * Gets the downshift factor from the slider.
+     */
+    private fun getDownshiftFromSlider(): Float {
+        return (binding.downshift.progress * 0.001).toFloat()
     }
 
     /**
