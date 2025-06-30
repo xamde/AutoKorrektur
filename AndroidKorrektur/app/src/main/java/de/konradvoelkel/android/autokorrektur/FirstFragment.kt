@@ -2,8 +2,15 @@ package de.konradvoelkel.android.autokorrektur
 
 import android.Manifest
 import android.app.Activity
+import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.Paint
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -26,6 +33,9 @@ import androidx.fragment.app.Fragment
 import com.google.android.material.snackbar.Snackbar
 import de.konradvoelkel.android.autokorrektur.databinding.FragmentFirstBinding
 import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
+import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -40,6 +50,7 @@ class FirstFragment : Fragment() {
 
     private var selectedImageUri: Uri? = null
     private var resultImageUri: Uri? = null
+    private var processedBitmap: Bitmap? = null
     private var photoFile: File? = null
 
     // Activity result launcher for image selection
@@ -129,10 +140,14 @@ class FirstFragment : Fragment() {
 
         // Setup download button
         binding.download.setOnClickListener {
-            resultImageUri?.let {
-                Toast.makeText(context, "Download functionality would save the image to gallery", Toast.LENGTH_SHORT).show()
+            processedBitmap?.let { bitmap ->
+                // Save the processed image to gallery
+                val savedUri = saveImageToGallery(bitmap)
+                if (savedUri != null) {
+                    Snackbar.make(binding.root, "Image saved to gallery", Snackbar.LENGTH_SHORT).show()
+                }
             } ?: run {
-                Toast.makeText(context, "No result image to download", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "No processed image to download. Run inference first.", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -366,17 +381,130 @@ class FirstFragment : Fragment() {
                 displayImage(uri, "Mask")
             }
 
-            // Display a mock "result" image
+            // Process the image by inverting colors
             selectedImageUri?.let { uri ->
-                resultImageUri = uri
-                displayImage(uri, "Result")
+                // Process the image (invert colors)
+                processedBitmap = invertImageColors(uri)
+
+                // Create a temporary file to display the processed image
+                val tempFile = File(requireContext().cacheDir, "processed_image.jpg")
+                val outputStream = FileOutputStream(tempFile)
+                processedBitmap?.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                outputStream.close()
+
+                // Get URI for the processed image
+                resultImageUri = FileProvider.getUriForFile(
+                    requireContext(),
+                    "${requireContext().packageName}.fileprovider",
+                    tempFile
+                )
+
+                // Display the processed image
+                resultImageUri?.let { resultUri ->
+                    displayImage(resultUri, "Result (Inverted Colors)")
+                }
             }
 
             binding.startInference.isEnabled = true
             binding.startInference.text = "Start"
 
-            Snackbar.make(binding.root, "Inference completed (mockup)", Snackbar.LENGTH_SHORT).show()
+            Snackbar.make(binding.root, "Inference completed with color inversion", Snackbar.LENGTH_SHORT).show()
         }, 2000) // 2-second delay to simulate processing
+    }
+
+    /**
+     * Inverts the colors of the given image
+     */
+    private fun invertImageColors(uri: Uri): Bitmap? {
+        try {
+            // Get the input stream from the URI
+            val inputStream: InputStream? = requireContext().contentResolver.openInputStream(uri)
+
+            // Decode the input stream into a bitmap
+            val originalBitmap = BitmapFactory.decodeStream(inputStream)
+            inputStream?.close()
+
+            // Create a mutable copy of the bitmap
+            val resultBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true)
+
+            // Create a canvas to draw on the new bitmap
+            val canvas = Canvas(resultBitmap)
+
+            // Create a color matrix that inverts colors
+            val colorMatrix = ColorMatrix().apply {
+                set(floatArrayOf(
+                    -1f, 0f, 0f, 0f, 255f,
+                    0f, -1f, 0f, 0f, 255f,
+                    0f, 0f, -1f, 0f, 255f,
+                    0f, 0f, 0f, 1f, 0f
+                ))
+            }
+
+            // Create a paint object with the color matrix
+            val paint = Paint().apply {
+                colorFilter = ColorMatrixColorFilter(colorMatrix)
+            }
+
+            // Draw the bitmap with the inverted colors
+            canvas.drawBitmap(resultBitmap, 0f, 0f, paint)
+
+            return resultBitmap
+        } catch (e: Exception) {
+            Toast.makeText(
+                requireContext(),
+                "Error processing image: ${e.message}",
+                Toast.LENGTH_LONG
+            ).show()
+            return null
+        }
+    }
+
+    /**
+     * Saves the processed bitmap to the gallery
+     */
+    private fun saveImageToGallery(bitmap: Bitmap): Uri? {
+        try {
+            val filename = "AutoKorrektur_${System.currentTimeMillis()}.jpg"
+            var fos: OutputStream? = null
+            var imageUri: Uri? = null
+
+            // For Android 10 (Q) and above
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+                }
+
+                val contentResolver = requireContext().contentResolver
+                imageUri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                fos = imageUri?.let { contentResolver.openOutputStream(it) }
+            } else {
+                // For older Android versions
+                val imagesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                val image = File(imagesDir, filename)
+                fos = FileOutputStream(image)
+                imageUri = Uri.fromFile(image)
+            }
+
+            fos?.use {
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)
+                Toast.makeText(
+                    requireContext(),
+                    "Image saved to gallery",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+
+            return imageUri
+        } catch (e: Exception) {
+            Toast.makeText(
+                requireContext(),
+                "Error saving image: ${e.message}",
+                Toast.LENGTH_LONG
+            ).show()
+            return null
+        }
     }
 
     override fun onDestroyView() {
