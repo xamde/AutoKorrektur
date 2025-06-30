@@ -19,7 +19,6 @@ import android.provider.MediaStore
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -32,8 +31,15 @@ import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import com.google.android.material.snackbar.Snackbar
 import de.konradvoelkel.android.autokorrektur.databinding.FragmentFirstBinding
+import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
+import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
+import de.konradvoelkel.android.autokorrektur.ml.MiGanInference
+import de.konradvoelkel.android.autokorrektur.utils.AppLogger
+import org.opencv.android.Utils
+import org.opencv.core.Mat
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.text.SimpleDateFormat
@@ -52,6 +58,12 @@ class FirstFragment : Fragment() {
     private var resultImageUri: Uri? = null
     private var processedBitmap: Bitmap? = null
     private var photoFile: File? = null
+
+    // ML inference objects
+    private lateinit var imageProcessor: ImageProcessor
+    private lateinit var yoloInference: YoloInferenceTFLite
+    private lateinit var miGanInference: MiGanInference
+    private var mlComponentsInitialized = false
 
     // Activity result launcher for image selection
     private val selectImageLauncher = registerForActivityResult(
@@ -85,10 +97,11 @@ class FirstFragment : Fragment() {
         if (isGranted) {
             launchCamera()
         } else {
-            Toast.makeText(
-                requireContext(),
+            AppLogger.warn("Camera permission denied by user")
+            Snackbar.make(
+                binding.root,
                 "Camera permission is required to take photos",
-                Toast.LENGTH_LONG
+                Snackbar.LENGTH_LONG
             ).show()
         }
     }
@@ -100,10 +113,11 @@ class FirstFragment : Fragment() {
         if (isGranted) {
             launchGallery()
         } else {
-            Toast.makeText(
-                requireContext(),
+            AppLogger.warn("Storage permission denied by user")
+            Snackbar.make(
+                binding.root,
                 "Storage permission is required to select photos",
-                Toast.LENGTH_LONG
+                Snackbar.LENGTH_LONG
             ).show()
         }
     }
@@ -119,6 +133,34 @@ class FirstFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Check OpenCV initialization
+        try {
+            AppLogger.debug("Checking OpenCV initialization")
+            if (!org.opencv.android.OpenCVLoader.initDebug()) {
+                AppLogger.error("OpenCV initialization failed")
+                Snackbar.make(binding.root, "OpenCV initialization failed. Some features may not work.", Snackbar.LENGTH_LONG).show()
+            } else {
+                AppLogger.info("OpenCV initialized successfully")
+            }
+        } catch (e: Exception) {
+            AppLogger.error("OpenCV initialization check failed", e)
+            // Continue anyway, as OpenCV might be statically linked
+        }
+
+        // Initialize ML inference objects
+        try {
+            AppLogger.debug("Creating ML inference objects")
+            imageProcessor = ImageProcessor(requireContext())
+            yoloInference = YoloInferenceTFLite(requireContext())
+            miGanInference = MiGanInference(requireContext())
+            mlComponentsInitialized = true
+            AppLogger.info("ML inference objects created successfully")
+        } catch (e: Exception) {
+            AppLogger.error("Failed to create ML inference objects", e)
+            mlComponentsInitialized = false
+            Snackbar.make(binding.root, "Failed to initialize ML components: ${e.message}", Snackbar.LENGTH_LONG).show()
+        }
+
         setupUI()
     }
 
@@ -127,7 +169,8 @@ class FirstFragment : Fragment() {
         binding.fileSelect.setOnClickListener {
             if (binding.batchMode.isChecked) {
                 // Multiple image selection would be implemented here
-                Toast.makeText(context, "Multiple image selection not implemented in this mockup", Toast.LENGTH_SHORT).show()
+                AppLogger.info("Multiple image selection requested but not implemented")
+                Snackbar.make(binding.root, "Multiple image selection not implemented in this mockup", Snackbar.LENGTH_SHORT).show()
             } else {
                 selectImage()
             }
@@ -135,7 +178,7 @@ class FirstFragment : Fragment() {
 
         // Setup start inference button
         binding.startInference.setOnClickListener {
-            mockInference()
+            performOnnxInference()
         }
 
         // Setup download button
@@ -147,7 +190,8 @@ class FirstFragment : Fragment() {
                     Snackbar.make(binding.root, "Image saved to gallery", Snackbar.LENGTH_SHORT).show()
                 }
             } ?: run {
-                Toast.makeText(context, "No processed image to download. Run inference first.", Toast.LENGTH_SHORT).show()
+                AppLogger.warn("Download attempted but no processed image available")
+                Snackbar.make(binding.root, "No processed image to download. Run inference first.", Snackbar.LENGTH_SHORT).show()
             }
         }
 
@@ -279,10 +323,11 @@ class FirstFragment : Fragment() {
                 takePictureLauncher.launch(takePictureIntent)
             }
         } catch (ex: Exception) {
-            Toast.makeText(
-                requireContext(),
+            AppLogger.error("Error creating image file for camera", ex)
+            Snackbar.make(
+                binding.root,
                 "Error creating image file: ${ex.message}",
-                Toast.LENGTH_LONG
+                Snackbar.LENGTH_LONG
             ).show()
         }
     }
@@ -361,8 +406,24 @@ class FirstFragment : Fragment() {
         }
     }
 
-    private fun mockInference() {
-        // This is a mockup, so we'll just simulate the inference process
+    private fun performOnnxInference() {
+        AppLogger.info("Starting ONNX inference")
+
+        // Check if ML components are initialized
+        if (!mlComponentsInitialized) {
+            AppLogger.error("ML components not initialized")
+            Snackbar.make(binding.root, "ML components not initialized. Please restart the app.", Snackbar.LENGTH_LONG).show()
+            return
+        }
+
+        // Check if an image is selected
+        if (selectedImageUri == null) {
+            AppLogger.warn("No image selected for inference")
+            Snackbar.make(binding.root, "Please select an image first", Snackbar.LENGTH_SHORT).show()
+            return
+        }
+
+        // Disable the button and show processing state
         binding.startInference.isEnabled = false
         binding.startInference.text = "Processing..."
 
@@ -374,42 +435,281 @@ class FirstFragment : Fragment() {
             displayImage(uri, "Original")
         }
 
-        // Simulate processing delay
-        binding.root.postDelayed({
-            // Display a mock "mask" image
-            selectedImageUri?.let { uri ->
-                displayImage(uri, "Mask")
-            }
+        // Perform ONNX inference in a background thread
+        Thread {
+            try {
+                AppLogger.debug("Starting background inference thread")
 
-            // Process the image by inverting colors
-            selectedImageUri?.let { uri ->
-                // Process the image (invert colors)
-                processedBitmap = invertImageColors(uri)
+                selectedImageUri?.let { uri ->
+                    AppLogger.debug("Processing image URI: $uri")
 
-                // Create a temporary file to display the processed image
-                val tempFile = File(requireContext().cacheDir, "processed_image.jpg")
-                val outputStream = FileOutputStream(tempFile)
-                processedBitmap?.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                outputStream.close()
+                    // Initialize ML inference objects if not already done
+                    try {
+                        AppLogger.debug("Checking if YOLO inference needs initialization")
+                        yoloInference.initialize()
+                        AppLogger.debug("YOLO inference initialized successfully")
 
-                // Get URI for the processed image
-                resultImageUri = FileProvider.getUriForFile(
-                    requireContext(),
-                    "${requireContext().packageName}.fileprovider",
-                    tempFile
-                )
+                        AppLogger.debug("Checking if Mi-GAN inference needs initialization")
+                        miGanInference.initialize()
+                        AppLogger.debug("Mi-GAN inference initialized successfully")
 
-                // Display the processed image
-                resultImageUri?.let { resultUri ->
-                    displayImage(resultUri, "Result (Inverted Colors)")
+                        AppLogger.info("All ML inference objects initialized successfully")
+                    } catch (e: IOException) {
+                        AppLogger.error("IOException during ML initialization", e)
+                        throw Exception("Failed to load ML models from assets: ${e.message}", e)
+                    } catch (e: RuntimeException) {
+                        AppLogger.error("RuntimeException during ML initialization", e)
+                        throw Exception("Runtime error during ML initialization: ${e.message}", e)
+                    } catch (e: Exception) {
+                        AppLogger.error("Unexpected exception during ML initialization", e)
+                        throw Exception("Failed to initialize ML models: ${e.message}", e)
+                    }
+
+                    // Get UI parameters
+                    val downscaleMp = getDownscaleMpFromSpinner()
+                    val maskUpscale = getMaskUpscaleFromSlider()
+                    val scoreThreshold = getScoreThresholdFromSlider()
+
+                    AppLogger.debug("Parameters - downscaleMp: $downscaleMp, maskUpscale: $maskUpscale, scoreThreshold: $scoreThreshold")
+
+                    // Step 1: Process input image
+                    AppLogger.debug("Step 1: Processing input image")
+                    val processedImage = try {
+                        imageProcessor.processInputImage(
+                            uri = uri,
+                            modelWidth = 640,  // YOLO model input width
+                            modelHeight = 640, // YOLO model input height
+                            downscaleMp = downscaleMp
+                        )
+                    } catch (e: Exception) {
+                        AppLogger.error("Error processing input image", e)
+                        throw Exception("Failed to process input image: ${e.message}", e)
+                    }
+                    AppLogger.debug("Input image processed successfully")
+
+                    // Step 2: Run YOLO inference to get segmentation mask
+                    AppLogger.debug("Step 2: Running YOLO inference")
+                    val maskMat = try {
+                        yoloInference.inferYolo(
+                            transformedMat = processedImage.transformedMat,
+                            xRatio = processedImage.xRatio,
+                            yRatio = processedImage.yRatio,
+                            modelWidth = 640,
+                            modelHeight = 640,
+                            upscaleFactor = maskUpscale,
+                            scoreThreshold = scoreThreshold
+                        )
+                    } catch (e: Exception) {
+                        AppLogger.error("Error during YOLO inference", e)
+                        throw Exception("YOLO inference failed: ${e.message}", e)
+                    }
+                    AppLogger.debug("YOLO inference completed successfully")
+
+                    // Display the mask on UI thread
+                    if (isAdded && !isDetached) {
+                        requireActivity().runOnUiThread {
+                            try {
+                                if (!isAdded || isDetached) {
+                                    AppLogger.warn("Fragment not attached, skipping mask display")
+                                    return@runOnUiThread
+                                }
+
+                                AppLogger.debug("Creating mask bitmap")
+                                val maskBitmap = Bitmap.createBitmap(maskMat.cols(), maskMat.rows(), Bitmap.Config.ARGB_8888)
+                                Utils.matToBitmap(maskMat, maskBitmap)
+
+                                val tempMaskFile = File(requireContext().cacheDir, "mask_image.jpg")
+                                val maskOutputStream = FileOutputStream(tempMaskFile)
+                                maskBitmap.compress(Bitmap.CompressFormat.JPEG, 100, maskOutputStream)
+                                maskOutputStream.close()
+
+                                val maskUri = FileProvider.getUriForFile(
+                                    requireContext(),
+                                    "${requireContext().packageName}.fileprovider",
+                                    tempMaskFile
+                                )
+                                displayImage(maskUri, "Mask")
+                                AppLogger.debug("Mask displayed successfully")
+                            } catch (e: Exception) {
+                                AppLogger.error("Error displaying mask", e)
+                            }
+                        }
+                    } else {
+                        AppLogger.warn("Fragment not attached, skipping mask display")
+                    }
+
+                    // Step 3: Run Mi-GAN inference for inpainting
+                    AppLogger.debug("Step 3: Running Mi-GAN inference")
+                    val resultMat = try {
+                        miGanInference.inferMiGan(
+                            imageMat = processedImage.transformedMat,
+                            maskMat = maskMat
+                        )
+                    } catch (e: Exception) {
+                        AppLogger.error("Error during Mi-GAN inference", e)
+                        throw Exception("Mi-GAN inference failed: ${e.message}", e)
+                    }
+                    AppLogger.debug("Mi-GAN inference completed successfully")
+
+                    // Convert result to bitmap and display on UI thread
+                    if (isAdded && !isDetached) {
+                        requireActivity().runOnUiThread {
+                            try {
+                                if (!isAdded || isDetached) {
+                                    AppLogger.warn("Fragment not attached, skipping result display")
+                                    return@runOnUiThread
+                                }
+
+                                AppLogger.debug("Creating result bitmap")
+                                processedBitmap = Bitmap.createBitmap(resultMat.cols(), resultMat.rows(), Bitmap.Config.ARGB_8888)
+                                Utils.matToBitmap(resultMat, processedBitmap!!)
+
+                                // Create a temporary file to display the processed image
+                                val tempFile = File(requireContext().cacheDir, "processed_image.jpg")
+                                val outputStream = FileOutputStream(tempFile)
+                                processedBitmap?.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                                outputStream.close()
+
+                                // Get URI for the processed image
+                                resultImageUri = FileProvider.getUriForFile(
+                                    requireContext(),
+                                    "${requireContext().packageName}.fileprovider",
+                                    tempFile
+                                )
+
+                                // Display the processed image
+                                resultImageUri?.let { resultUri ->
+                                    displayImage(resultUri, "Result (ONNX Processed)")
+                                }
+
+                                binding.startInference.isEnabled = true
+                                binding.startInference.text = "Start"
+
+                                Snackbar.make(binding.root, "ONNX inference completed successfully", Snackbar.LENGTH_SHORT).show()
+                                AppLogger.info("Inference completed successfully")
+                            } catch (e: Exception) {
+                                AppLogger.error("Error displaying result", e)
+                                binding.startInference.isEnabled = true
+                                binding.startInference.text = "Start"
+                                Snackbar.make(binding.root, "Error displaying result: ${e.message}", Snackbar.LENGTH_LONG).show()
+                            }
+                        }
+                    } else {
+                        AppLogger.warn("Fragment not attached, skipping result display")
+                    }
+                } ?: run {
+                    AppLogger.error("selectedImageUri is null in background thread")
+                    if (isAdded && !isDetached) {
+                        requireActivity().runOnUiThread {
+                            if (!isAdded || isDetached) {
+                                AppLogger.warn("Fragment not attached, skipping null URI error display")
+                                return@runOnUiThread
+                            }
+                            binding.startInference.isEnabled = true
+                            binding.startInference.text = "Start"
+                            Snackbar.make(binding.root, "No image selected", Snackbar.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        AppLogger.warn("Fragment not attached, skipping null URI error display")
+                    }
+                }
+            } catch (e: Exception) {
+                AppLogger.error("Error during inference", e)
+
+                // Handle errors on UI thread
+                if (isAdded && !isDetached) {
+                    requireActivity().runOnUiThread {
+                        if (!isAdded || isDetached) {
+                            AppLogger.warn("Fragment not attached, skipping error display")
+                            return@runOnUiThread
+                        }
+
+                        binding.startInference.isEnabled = true
+                        binding.startInference.text = "Start"
+
+                        val errorMessages = when {
+                            e.message?.contains("Failed to create YOLO session") == true -> {
+                                Pair("YOLO Model Loading Failed", "The YOLO model could not be loaded. This might be due to:\n• Corrupted model file\n• Insufficient memory\n• Incompatible model format\n\nCheck logcat for detailed error information.\n\nOriginal error: ${e.message}")
+                            }
+                            e.message?.contains("Failed to create NMS session") == true -> {
+                                Pair("NMS Model Loading Failed", "The NMS model could not be loaded. Check logcat for details.\n\nOriginal error: ${e.message}")
+                            }
+                            e.message?.contains("Failed to create mask session") == true -> {
+                                Pair("Mask Model Loading Failed", "The Mask model could not be loaded. Check logcat for details.\n\nOriginal error: ${e.message}")
+                            }
+                            e.message?.contains("model") == true -> {
+                                Pair("Model Loading Failed", "One or more ML models failed to load. Check logcat for detailed error information.\n\nOriginal error: ${e.message}")
+                            }
+                            e.message?.contains("OpenCV") == true -> {
+                                Pair("OpenCV Error", "OpenCV initialization failed. This might indicate a problem with image processing.\n\nOriginal error: ${e.message}")
+                            }
+                            e.message?.contains("ONNX") == true -> {
+                                Pair("ONNX Runtime Error", "ONNX Runtime encountered an error during model execution.\n\nOriginal error: ${e.message}")
+                            }
+                            e.message?.contains("initialize") == true -> {
+                                Pair("Initialization Failed", e.message ?: "Unknown initialization error")
+                            }
+                            else -> {
+                                Pair("Inference Error", "An error occurred during inference processing.\n\nOriginal error: ${e.message}")
+                            }
+                        }
+
+                        val shortMessage = errorMessages.first
+                        val detailedMessage = errorMessages.second
+
+                        // Log the error details and show user-friendly message
+                        AppLogger.error("Inference error: $shortMessage - $detailedMessage")
+
+                        // Snackbar for detailed information
+                        Snackbar.make(
+                            binding.root,
+                            detailedMessage as CharSequence,
+                            Snackbar.LENGTH_INDEFINITE
+                        ).setAction("Dismiss") {
+                            // Snackbar will be dismissed
+                        }.show()
+                    }
+                } else {
+                    AppLogger.warn("Fragment not attached, skipping error display")
                 }
             }
+        }.start()
+    }
 
-            binding.startInference.isEnabled = true
-            binding.startInference.text = "Start"
+    /**
+     * Gets the downscale megapixels value from the spinner.
+     */
+    private fun getDownscaleMpFromSpinner(): Float? {
+        val selectedItem = binding.downscaleMP.selectedItem.toString()
+        return when (selectedItem) {
+            "No Scaling" -> null
+            "0.5 MP" -> 0.5f
+            "1 MP" -> 1.0f
+            "2 MP" -> 2.0f
+            "3 MP" -> 3.0f
+            "4 MP" -> 4.0f
+            "5 MP" -> 5.0f
+            "6 MP" -> 6.0f
+            "7 MP" -> 7.0f
+            "8 MP" -> 8.0f
+            "9 MP" -> 9.0f
+            "10 MP" -> 10.0f
+            else -> null
+        }
+    }
 
-            Snackbar.make(binding.root, "Inference completed with color inversion", Snackbar.LENGTH_SHORT).show()
-        }, 2000) // 2-second delay to simulate processing
+    /**
+     * Gets the mask upscale factor from the slider.
+     */
+    private fun getMaskUpscaleFromSlider(): Float {
+        return (1 + binding.maskUpscale.progress * 0.01).toFloat()
+    }
+
+    /**
+     * Gets the score threshold from the slider.
+     */
+    private fun getScoreThresholdFromSlider(): Float {
+        return (binding.scoreThreshold.progress * 0.01).toFloat()
     }
 
     /**
@@ -450,10 +750,11 @@ class FirstFragment : Fragment() {
 
             return resultBitmap
         } catch (e: Exception) {
-            Toast.makeText(
-                requireContext(),
+            AppLogger.error("Error processing image for color inversion", e)
+            Snackbar.make(
+                binding.root,
                 "Error processing image: ${e.message}",
-                Toast.LENGTH_LONG
+                Snackbar.LENGTH_LONG
             ).show()
             return null
         }
@@ -489,19 +790,16 @@ class FirstFragment : Fragment() {
 
             fos?.use {
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)
-                Toast.makeText(
-                    requireContext(),
-                    "Image saved to gallery",
-                    Toast.LENGTH_SHORT
-                ).show()
+                AppLogger.info("Image saved to gallery successfully")
             }
 
             return imageUri
         } catch (e: Exception) {
-            Toast.makeText(
-                requireContext(),
+            AppLogger.error("Error saving image to gallery", e)
+            Snackbar.make(
+                binding.root,
                 "Error saving image: ${e.message}",
-                Toast.LENGTH_LONG
+                Snackbar.LENGTH_LONG
             ).show()
             return null
         }
@@ -509,6 +807,15 @@ class FirstFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+
+        // Clean up ML inference objects
+        if (::yoloInference.isInitialized) {
+            yoloInference.close()
+        }
+        if (::miGanInference.isInitialized) {
+            miGanInference.close()
+        }
+
         _binding = null
     }
 }

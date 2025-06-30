@@ -1,14 +1,15 @@
 package de.konradvoelkel.android.autokorrektur
 
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
-import android.view.Menu
-import android.view.MenuItem
 import de.konradvoelkel.android.autokorrektur.databinding.ActivityMainBinding
+import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 
 class MainActivity : AppCompatActivity() {
 
@@ -17,6 +18,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Initialize the logger first
+        AppLogger.initialize(this)
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)

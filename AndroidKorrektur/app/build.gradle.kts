@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "de.konradvoelkel.android.autokorrektur"
-        minSdk = 28
+        minSdk = 29
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -46,7 +46,9 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
-    implementation(libs.onnxruntime.mobile)
+    implementation(libs.onnxruntime.android)
+    implementation(libs.opencv)
+    implementation(libs.tensorflow.lite)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
