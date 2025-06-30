@@ -12,6 +12,8 @@ navigationFragmentKtx = "2.9.0"
 navigationUiKtx = "2.9.0"
 onnxruntimeAndroid = "latest.release"
 onnxruntimeMobile = "latest.release"
+opencv = "4.9.0"
+tensorflowLite = "2.13.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -26,8 +28,9 @@ androidx-navigation-ui-ktx = { group = "androidx.navigation", name = "navigation
 onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntimeAndroid" }
 # this one should be powerful enough
 onnxruntime-mobile = { group = "com.microsoft.onnxruntime", name = "onnxruntime-mobile", version.ref = "onnxruntimeMobile" }
+opencv = { group = "org.opencv", name = "opencv", version.ref = "opencv" }
+tensorflow-lite = { group = "org.tensorflow", name = "tensorflow-lite", version.ref = "tensorflowLite" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
-
