@@ -233,6 +233,7 @@ class YoloInference(private val context: Context) {
      * @param modelHeight The height of the model input
      * @param upscaleFactor Factor by which the segmentation mask is upscaled
      * @param scoreThreshold Confidence threshold for detections
+     * @param downshiftFactor Factor by which the mask is shifted down (0.0-0.1)
      * @return A binary mask where car pixels are black (0) and background pixels are white (255)
      */
     @Throws(IOException::class)
@@ -243,7 +244,8 @@ class YoloInference(private val context: Context) {
         modelWidth: Int,
         modelHeight: Int,
         upscaleFactor: Float = 1.2f,
-        scoreThreshold: Float = baseScoreThreshold
+        scoreThreshold: Float = baseScoreThreshold,
+        downshiftFactor: Float = 0.0f
     ): Mat {
         // Make sure the sessions are initialized
         if (yoloSession == null || nmsSession == null || maskSession == null) {
@@ -429,6 +431,13 @@ class YoloInference(private val context: Context) {
                             }
                         }
 
+                        // Apply downshift if specified
+                        if (downshiftFactor > 0.0f) {
+                            val shiftedMask = shiftDown(overlayGray, downshiftFactor)
+                            overlayGray.release()
+                            return shiftedMask
+                        }
+
                         return overlayGray
                     } finally {
                         // Close all NMS outputs
@@ -514,6 +523,50 @@ class YoloInference(private val context: Context) {
         maskMat.release()
 
         return grayMat
+    }
+
+    /**
+     * Shifts a mask down by the specified factor and fills the top with white pixels.
+     *
+     * @param mask The input mask to shift
+     * @param downshiftFactor Factor by which to shift down (0.0-0.1)
+     * @return The shifted mask
+     */
+    private fun shiftDown(mask: Mat, downshiftFactor: Float): Mat {
+        if (downshiftFactor <= 0.0f) {
+            return mask
+        }
+
+        val height = mask.rows()
+        val width = mask.cols()
+        val shiftPixels = (height * downshiftFactor).toInt()
+
+        if (shiftPixels <= 0 || shiftPixels >= height) {
+            return mask
+        }
+
+        // Create a new mask with the same dimensions
+        val shiftedMask = Mat.zeros(height, width, mask.type())
+
+        // Copy the original mask shifted down
+        val srcRect = org.opencv.core.Rect(0, 0, width, height - shiftPixels)
+        val dstRect = org.opencv.core.Rect(0, shiftPixels, width, height - shiftPixels)
+
+        val srcRoi = Mat(mask, srcRect)
+        val dstRoi = Mat(shiftedMask, dstRect)
+        srcRoi.copyTo(dstRoi)
+
+        // Fill the top part with white (255)
+        val topRect = org.opencv.core.Rect(0, 0, width, shiftPixels)
+        val topRoi = Mat(shiftedMask, topRect)
+        topRoi.setTo(Scalar(255.0))
+
+        // Clean up ROI mats
+        srcRoi.release()
+        dstRoi.release()
+        topRoi.release()
+
+        return shiftedMask
     }
 
     /**
