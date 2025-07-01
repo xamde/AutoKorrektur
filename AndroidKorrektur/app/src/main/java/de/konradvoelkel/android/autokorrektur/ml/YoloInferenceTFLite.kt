@@ -243,6 +243,7 @@ class YoloInferenceTFLite(private val context: Context) {
 
     /**
      * Processes TensorFlow Lite outputs to create segmentation mask.
+     * Enhanced with detailed logging to diagnose model output format.
      */
     private fun processOutputsToMask(
         outputs: Map<Int, Any>,
@@ -255,6 +256,9 @@ class YoloInferenceTFLite(private val context: Context) {
         scoreThreshold: Float
     ) {
         try {
+            println("[DEBUG_LOG] Processing model outputs for mask creation")
+            println("[DEBUG_LOG] Available outputs: ${outputs.keys.joinToString(", ")}")
+
             // For YOLO segmentation models, we typically have:
             // Output 0: Detection boxes and scores with mask coefficients [1, 116, 8400]
             // Output 1: Prototype masks [1, 32, 160, 160] (32 prototype masks at 160x160 resolution)
@@ -262,38 +266,69 @@ class YoloInferenceTFLite(private val context: Context) {
             val detectionsBuffer = outputs[0] as? ByteBuffer
             val prototypeMasksBuffer = outputs[1] as? ByteBuffer
 
+            println("[DEBUG_LOG] Detections buffer available: ${detectionsBuffer != null}")
+            println("[DEBUG_LOG] Prototype masks buffer available: ${prototypeMasksBuffer != null}")
+
             if (detectionsBuffer != null) {
                 detectionsBuffer.rewind()
+                println("[DEBUG_LOG] Detections buffer size: ${detectionsBuffer.capacity()} bytes")
 
                 // Parse detections and create masks for vehicles
                 val detections = parseDetections(detectionsBuffer, scoreThreshold)
 
                 // Apply NMS to remove overlapping detections
                 val filteredDetections = applyNMS(detections, nmsThreshold)
+                println("[DEBUG_LOG] Filtered detections after NMS: ${filteredDetections.size}")
 
                 // Extract prototype masks if available
                 var prototypeMasks: FloatArray? = null
                 if (prototypeMasksBuffer != null) {
                     prototypeMasksBuffer.rewind()
+                    println("[DEBUG_LOG] Prototype masks buffer size: ${prototypeMasksBuffer.capacity()} bytes")
+
                     // Prototype masks shape: [1, 32, 160, 160] = 819200 floats
                     val prototypeMaskSize = 32 * 160 * 160
-                    prototypeMasks = FloatArray(prototypeMaskSize)
-                    for (i in 0 until prototypeMaskSize) {
-                        prototypeMasks[i] = prototypeMasksBuffer.float
+                    val expectedBufferSize = prototypeMaskSize * 4 // 4 bytes per float
+
+                    println("[DEBUG_LOG] Expected prototype mask size: $prototypeMaskSize floats ($expectedBufferSize bytes)")
+
+                    if (prototypeMasksBuffer.capacity() >= expectedBufferSize) {
+                        prototypeMasks = FloatArray(prototypeMaskSize)
+                        for (i in 0 until prototypeMaskSize) {
+                            prototypeMasks[i] = prototypeMasksBuffer.float
+                        }
+                        println("[DEBUG_LOG] Successfully extracted prototype masks: ${prototypeMasks.size} values")
+                    } else {
+                        println("[DEBUG_LOG] ERROR: Prototype masks buffer too small: ${prototypeMasksBuffer.capacity()} bytes, expected $expectedBufferSize bytes")
+                        println("[DEBUG_LOG] This indicates the model may not be a proper segmentation model")
                     }
-                    println("[DEBUG_LOG] Extracted prototype masks: ${prototypeMasks.size} values")
+                } else {
+                    println("[DEBUG_LOG] WARNING: No prototype masks output found")
+                    println("[DEBUG_LOG] This indicates the model is likely a detection-only model, not a segmentation model")
+                    println("[DEBUG_LOG] Expected output 1 to contain prototype masks [1, 32, 160, 160]")
                 }
 
                 // Create masks for vehicle detections
+                println("[DEBUG_LOG] Creating masks for ${filteredDetections.size} vehicle detections")
                 for (detection in filteredDetections) {
                     if (vehicleClassIndices.contains(detection.classId)) {
+                        println("[DEBUG_LOG] Processing detection: class=${detection.classId}, confidence=${detection.confidence}")
                         createDetectionMask(detection, overlayGray, xRatio, yRatio, modelWidth, modelHeight, upscaleFactor, prototypeMasks)
                     }
                 }
+                println("[DEBUG_LOG] Completed mask creation for all detections")
+            } else {
+                println("[DEBUG_LOG] ERROR: No detections buffer found in output 0")
+                throw IllegalStateException("Model output 0 (detections) not found or invalid format")
             }
         } catch (e: Exception) {
-            println("[DEBUG_LOG] Error processing outputs: ${e.message}")
+            println("[DEBUG_LOG] CRITICAL: Error processing model outputs: ${e.message}")
+            println("[DEBUG_LOG] This may indicate:")
+            println("[DEBUG_LOG] 1. Model is not a YOLOv11-seg segmentation model")
+            println("[DEBUG_LOG] 2. Model output format doesn't match expected structure")
+            println("[DEBUG_LOG] 3. Model file is corrupted or incompatible")
             e.printStackTrace()
+            throw e
         }
     }
 
@@ -411,6 +446,8 @@ class YoloInferenceTFLite(private val context: Context) {
 
     /**
      * Creates a mask for a single detection using prototype masks and mask coefficients.
+     * Enhanced with robust error handling and intelligent fallback strategies.
+     * Prioritizes proper segmentation but provides graceful degradation when needed.
      */
     private fun createDetectionMask(
         detection: Detection,
@@ -422,14 +459,34 @@ class YoloInferenceTFLite(private val context: Context) {
         upscaleFactor: Float,
         prototypeMasks: FloatArray?
     ) {
+        println("[DEBUG_LOG] Creating detection mask for class=${detection.classId}, confidence=${detection.confidence}")
+        println("[DEBUG_LOG] Detection bounds: (${detection.x1}, ${detection.y1}) to (${detection.x2}, ${detection.y2})")
+
+        // Check if we have proper segmentation capabilities
         if (prototypeMasks == null) {
-            // Fallback to rectangular mask if no prototype masks available
+            println("[DEBUG_LOG] WARNING: No prototype masks available from model")
+            println("[DEBUG_LOG] Model appears to be detection-only, not segmentation model")
+            println("[DEBUG_LOG] Falling back to rectangular mask (clearly identified as fallback)")
+
+            // Use rectangular mask as fallback with clear identification
             createRectangularMask(detection, overlayGray, xRatio, yRatio, modelWidth, modelHeight, upscaleFactor)
             return
         }
 
+        // Validate mask coefficients
+        if (detection.maskCoefficients.size != 32) {
+            println("[DEBUG_LOG] WARNING: Invalid mask coefficients size: ${detection.maskCoefficients.size}, expected 32")
+            println("[DEBUG_LOG] Detection data may be corrupted or model format mismatch")
+            println("[DEBUG_LOG] Falling back to rectangular mask (clearly identified as fallback)")
+
+            createRectangularMask(detection, overlayGray, xRatio, yRatio, modelWidth, modelHeight, upscaleFactor)
+            return
+        }
+
+        // Attempt proper segmentation mask assembly
         try {
-            // Assemble segmentation mask from prototype masks and mask coefficients
+            println("[DEBUG_LOG] Assembling proper segmentation mask from prototypes")
+
             val segmentationMask = assembleMaskFromPrototypes(
                 detection.maskCoefficients,
                 prototypeMasks,
@@ -439,10 +496,18 @@ class YoloInferenceTFLite(private val context: Context) {
 
             // Apply the segmentation mask to the overlay
             applySegmentationMask(segmentationMask, overlayGray, xRatio, yRatio, upscaleFactor)
+            println("[DEBUG_LOG] Successfully applied proper segmentation mask")
+
+        } catch (e: IllegalArgumentException) {
+            println("[DEBUG_LOG] ERROR: Invalid parameters for mask assembly: ${e.message}")
+            println("[DEBUG_LOG] Falling back to rectangular mask due to invalid inputs (clearly identified as fallback)")
+            createRectangularMask(detection, overlayGray, xRatio, yRatio, modelWidth, modelHeight, upscaleFactor)
 
         } catch (e: Exception) {
-            println("[DEBUG_LOG] Error creating segmentation mask, falling back to rectangular: ${e.message}")
-            // Fallback to rectangular mask on error
+            println("[DEBUG_LOG] ERROR: Unexpected error in mask assembly: ${e.message}")
+            println("[DEBUG_LOG] ${e.javaClass.simpleName}: ${e.message}")
+            println("[DEBUG_LOG] Falling back to rectangular mask due to processing error (clearly identified as fallback)")
+            e.printStackTrace()
             createRectangularMask(detection, overlayGray, xRatio, yRatio, modelWidth, modelHeight, upscaleFactor)
         }
     }
@@ -450,6 +515,7 @@ class YoloInferenceTFLite(private val context: Context) {
     /**
      * Assembles a segmentation mask from prototype masks and mask coefficients.
      * This implements the mask assembly logic similar to the JavaScript 3-model approach.
+     * Enhanced with detailed logging and robust error handling for better debugging.
      */
     private fun assembleMaskFromPrototypes(
         maskCoefficients: FloatArray,
@@ -460,47 +526,115 @@ class YoloInferenceTFLite(private val context: Context) {
         // Prototype masks are 32 masks of 160x160 each
         val prototypeSize = 160
         val numPrototypes = 32
+        val expectedPrototypeArraySize = numPrototypes * prototypeSize * prototypeSize
+
+        println("[DEBUG_LOG] Starting mask assembly from prototypes")
+        println("[DEBUG_LOG] Bounding box: (${x1}, ${y1}) to (${x2}, ${y2})")
+        println("[DEBUG_LOG] Model dimensions: ${modelWidth}x${modelHeight}")
+
+        // Validate input arrays
+        if (maskCoefficients.size != numPrototypes) {
+            throw IllegalArgumentException("Invalid mask coefficients size: expected $numPrototypes, got ${maskCoefficients.size}")
+        }
+
+        if (prototypeMasks.size != expectedPrototypeArraySize) {
+            throw IllegalArgumentException("Invalid prototype masks array size: expected $expectedPrototypeArraySize (${numPrototypes} masks of ${prototypeSize}x${prototypeSize}), got ${prototypeMasks.size}")
+        }
+
+        // Validate bounding box
+        if (x1 >= x2 || y1 >= y2) {
+            throw IllegalArgumentException("Invalid bounding box: (${x1}, ${y1}) to (${x2}, ${y2})")
+        }
+
+        if (x1 < 0 || y1 < 0 || x2 > modelWidth || y2 > modelHeight) {
+            throw IllegalArgumentException("Bounding box out of model bounds: (${x1}, ${y1}) to (${x2}, ${y2}) for model ${modelWidth}x${modelHeight}")
+        }
 
         // Create the final mask by combining prototype masks with coefficients
         val finalMask = Mat.zeros(prototypeSize, prototypeSize, CvType.CV_32FC1)
 
         try {
+            println("[DEBUG_LOG] Combining ${numPrototypes} prototype masks with coefficients")
+
             // Linear combination of prototype masks weighted by coefficients
             for (i in 0 until numPrototypes) {
                 val coefficient = maskCoefficients[i]
 
-                // Extract the i-th prototype mask (160x160)
-                val startIdx = i * prototypeSize * prototypeSize
-                val prototypeMask = Mat(prototypeSize, prototypeSize, CvType.CV_32FC1)
-
-                val prototypeData = FloatArray(prototypeSize * prototypeSize)
-                for (j in 0 until prototypeSize * prototypeSize) {
-                    prototypeData[j] = prototypeMasks[startIdx + j]
+                // Log coefficient values for debugging (only for first few and any extreme values)
+                if (i < 3 || kotlin.math.abs(coefficient) > 10.0f) {
+                    println("[DEBUG_LOG] Prototype $i: coefficient = $coefficient")
                 }
-                prototypeMask.put(0, 0, prototypeData)
 
-                // Add weighted prototype to final mask
-                val weightedMask = Mat()
-                Core.multiply(prototypeMask, Scalar(coefficient.toDouble()), weightedMask)
-                Core.add(finalMask, weightedMask, finalMask)
+                try {
+                    // Extract the i-th prototype mask (160x160)
+                    val startIdx = i * prototypeSize * prototypeSize
+                    val endIdx = startIdx + prototypeSize * prototypeSize
 
-                prototypeMask.release()
-                weightedMask.release()
+                    if (endIdx > prototypeMasks.size) {
+                        throw IndexOutOfBoundsException("Prototype mask $i extends beyond array bounds: $endIdx > ${prototypeMasks.size}")
+                    }
+
+                    val prototypeMask = Mat(prototypeSize, prototypeSize, CvType.CV_32FC1)
+
+                    val prototypeData = FloatArray(prototypeSize * prototypeSize)
+                    for (j in 0 until prototypeSize * prototypeSize) {
+                        prototypeData[j] = prototypeMasks[startIdx + j]
+                    }
+                    prototypeMask.put(0, 0, prototypeData)
+
+                    // Add weighted prototype to final mask
+                    val weightedMask = Mat()
+                    Core.multiply(prototypeMask, Scalar(coefficient.toDouble()), weightedMask)
+                    Core.add(finalMask, weightedMask, finalMask)
+
+                    prototypeMask.release()
+                    weightedMask.release()
+
+                } catch (e: Exception) {
+                    println("[DEBUG_LOG] ERROR: Failed to process prototype mask $i: ${e.message}")
+                    throw IllegalStateException("Failed to process prototype mask $i", e)
+                }
             }
 
+            println("[DEBUG_LOG] Successfully combined all prototype masks")
+
             // Apply sigmoid activation to get probabilities
-            applySigmoid(finalMask)
+            println("[DEBUG_LOG] Applying sigmoid activation")
+            try {
+                applySigmoid(finalMask)
+                println("[DEBUG_LOG] Sigmoid activation completed")
+            } catch (e: Exception) {
+                println("[DEBUG_LOG] ERROR: Sigmoid activation failed: ${e.message}")
+                throw IllegalStateException("Sigmoid activation failed", e)
+            }
 
             // Crop mask to bounding box region and resize to model size
-            val croppedMask = cropAndResizeMask(finalMask, x1, y1, x2, y2, modelWidth, modelHeight)
+            println("[DEBUG_LOG] Cropping and resizing mask to model dimensions")
+            val croppedMask = try {
+                cropAndResizeMask(finalMask, x1, y1, x2, y2, modelWidth, modelHeight)
+            } catch (e: Exception) {
+                println("[DEBUG_LOG] ERROR: Crop and resize failed: ${e.message}")
+                throw IllegalStateException("Mask cropping and resizing failed", e)
+            }
+
             finalMask.release()
+            println("[DEBUG_LOG] Mask assembly completed successfully")
 
             return croppedMask
 
-        } catch (e: Exception) {
-            println("[DEBUG_LOG] Error in assembleMaskFromPrototypes: ${e.message}")
+        } catch (e: IllegalArgumentException) {
+            println("[DEBUG_LOG] CRITICAL: Invalid arguments for mask assembly: ${e.message}")
             finalMask.release()
             throw e
+        } catch (e: IllegalStateException) {
+            println("[DEBUG_LOG] CRITICAL: Mask assembly process failed: ${e.message}")
+            finalMask.release()
+            throw e
+        } catch (e: Exception) {
+            println("[DEBUG_LOG] CRITICAL: Unexpected error in mask assembly: ${e.message}")
+            e.printStackTrace()
+            finalMask.release()
+            throw IllegalStateException("Unexpected error during mask assembly", e)
         }
     }
 
