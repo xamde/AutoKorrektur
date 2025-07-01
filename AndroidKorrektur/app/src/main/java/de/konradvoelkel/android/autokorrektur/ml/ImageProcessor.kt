@@ -47,7 +47,7 @@ class ImageProcessor(private val context: Context) {
         // Convert to OpenCV Mat
         val rgbMat = Mat()
         Utils.bitmapToMat(originalBitmap, rgbMat)
-        Imgproc.cvtColor(rgbMat, rgbMat, Imgproc.COLOR_RGBA2RGB)
+        Imgproc.cvtColor(rgbMat, rgbMat, Imgproc.COLOR_RGBA2BGR)
 
         // Optionally downscale the image
         if (downscaleMp != null) {

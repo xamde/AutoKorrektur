@@ -2,17 +2,19 @@ package de.konradvoelkel.android.autokorrektur
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
 import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.Assert.*
 
+@Suppress("DEPRECATION")
 @RunWith(AndroidJUnit4::class)
-class SimpleYoloTest {
+class MinimalTest {
 
     @Test
-    fun testYoloInitialization() {
-        println("[DEBUG_LOG] Starting simple YOLO initialization test")
+    fun testImageProcessorCreation() {
+        println("[DEBUG_LOG] Starting minimal ImageProcessor test")
 
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
 
@@ -31,7 +33,13 @@ class SimpleYoloTest {
         }
 
         try {
-            // Initialize YOLO inference
+            // Test ImageProcessor creation
+            println("[DEBUG_LOG] Creating ImageProcessor")
+            val imageProcessor = ImageProcessor(appContext)
+            assertNotNull("ImageProcessor should not be null", imageProcessor)
+            println("[DEBUG_LOG] ImageProcessor created successfully")
+
+            // Test YOLO creation
             println("[DEBUG_LOG] Creating YoloInference")
             val yoloInference = YoloInferenceTFLite(appContext)
             assertNotNull("YoloInference should not be null", yoloInference)
@@ -45,12 +53,12 @@ class SimpleYoloTest {
             yoloInference.close()
             println("[DEBUG_LOG] YOLO inference closed successfully")
 
-            println("[DEBUG_LOG] Simple YOLO initialization test completed successfully")
+            println("[DEBUG_LOG] Minimal test completed successfully")
 
         } catch (e: Exception) {
-            println("[DEBUG_LOG] YOLO initialization failed: ${e.message}")
+            println("[DEBUG_LOG] Minimal test failed: ${e.message}")
             e.printStackTrace()
-            fail("YOLO initialization failed: ${e.message}")
+            fail("Minimal test failed: ${e.message}")
         }
     }
 }
