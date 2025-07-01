@@ -3,6 +3,7 @@ package de.konradvoelkel.android.autokorrektur.ml
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
+import androidx.core.graphics.createBitmap
 import org.opencv.android.Utils
 import org.opencv.core.Core
 import org.opencv.core.CvType
@@ -11,7 +12,6 @@ import org.opencv.core.Scalar
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
 import java.io.IOException
-import androidx.core.graphics.createBitmap
 import kotlin.math.max
 import kotlin.math.sqrt
 

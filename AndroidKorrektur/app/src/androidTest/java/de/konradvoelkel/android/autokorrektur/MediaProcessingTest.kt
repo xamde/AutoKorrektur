@@ -1,17 +1,20 @@
 package de.konradvoelkel.android.autokorrektur
 
+import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
 import de.konradvoelkel.android.autokorrektur.ml.MiGanInference
+import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.junit.Assert.*
+import org.opencv.core.Core
 import org.opencv.core.Mat
 import org.opencv.core.Scalar
-import org.opencv.core.Core
-import android.net.Uri
-import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
 import java.io.File
 import java.io.FileOutputStream
 

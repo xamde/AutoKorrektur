@@ -1,7 +1,12 @@
 package de.konradvoelkel.android.autokorrektur.ml
 
 import android.content.Context
-import org.opencv.core.*
+import org.opencv.core.Core
+import org.opencv.core.CvType
+import org.opencv.core.Mat
+import org.opencv.core.Rect
+import org.opencv.core.Scalar
+import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
 import org.tensorflow.lite.Interpreter
 import java.io.IOException

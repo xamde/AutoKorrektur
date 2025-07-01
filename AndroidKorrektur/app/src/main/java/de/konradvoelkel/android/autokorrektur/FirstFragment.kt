@@ -22,14 +22,17 @@ import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.core.graphics.createBitmap
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import com.google.android.material.snackbar.Snackbar
 import de.konradvoelkel.android.autokorrektur.databinding.FragmentFirstBinding
 import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
-import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
 import de.konradvoelkel.android.autokorrektur.ml.MiGanInference
+import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import org.opencv.android.Utils
+import org.opencv.core.Mat
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -37,9 +40,6 @@ import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import androidx.core.view.isVisible
-import androidx.core.graphics.createBitmap
-import org.opencv.core.Mat
 
 /**
  * Data class to store batch processing results for CSV export

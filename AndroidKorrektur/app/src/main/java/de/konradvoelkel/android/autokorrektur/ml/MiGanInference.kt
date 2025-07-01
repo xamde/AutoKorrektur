@@ -10,7 +10,6 @@ import org.opencv.core.CvType
 import org.opencv.core.Mat
 import java.io.IOException
 import java.nio.ByteBuffer
-import java.nio.FloatBuffer
 
 /**
  * Handles Mi-GAN model inference for inpainting.
@@ -275,7 +274,7 @@ class MiGanInference(private val context: Context) {
      * @return A byte array in HWC format
      */
     private fun reorderToHWC(outputData: Any?, width: Int, height: Int): ByteArray {
-        val size = width * height
+        width * height
         val hwcData = ByteArray(height * width * 3)
 
         // Handle different output data types - prioritize direct ByteArray handling like JavaScript
