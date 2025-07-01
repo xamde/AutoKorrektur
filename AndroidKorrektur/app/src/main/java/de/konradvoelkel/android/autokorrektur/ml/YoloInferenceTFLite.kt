@@ -256,10 +256,12 @@ class YoloInferenceTFLite(private val context: Context) {
     ) {
         try {
             // For YOLO segmentation models, we typically have:
-            // Output 0: Detection boxes and scores
-            // Output 1: Segmentation masks (if available)
+            // Output 0: Detection boxes and scores with mask coefficients [1, 116, 8400]
+            // Output 1: Prototype masks [1, 32, 160, 160] (32 prototype masks at 160x160 resolution)
 
             val detectionsBuffer = outputs[0] as? ByteBuffer
+            val prototypeMasksBuffer = outputs[1] as? ByteBuffer
+
             if (detectionsBuffer != null) {
                 detectionsBuffer.rewind()
 
@@ -269,10 +271,23 @@ class YoloInferenceTFLite(private val context: Context) {
                 // Apply NMS to remove overlapping detections
                 val filteredDetections = applyNMS(detections, nmsThreshold)
 
+                // Extract prototype masks if available
+                var prototypeMasks: FloatArray? = null
+                if (prototypeMasksBuffer != null) {
+                    prototypeMasksBuffer.rewind()
+                    // Prototype masks shape: [1, 32, 160, 160] = 819200 floats
+                    val prototypeMaskSize = 32 * 160 * 160
+                    prototypeMasks = FloatArray(prototypeMaskSize)
+                    for (i in 0 until prototypeMaskSize) {
+                        prototypeMasks[i] = prototypeMasksBuffer.float
+                    }
+                    println("[DEBUG_LOG] Extracted prototype masks: ${prototypeMasks.size} values")
+                }
+
                 // Create masks for vehicle detections
                 for (detection in filteredDetections) {
                     if (vehicleClassIndices.contains(detection.classId)) {
-                        createDetectionMask(detection, overlayGray, xRatio, yRatio, modelWidth, modelHeight, upscaleFactor)
+                        createDetectionMask(detection, overlayGray, xRatio, yRatio, modelWidth, modelHeight, upscaleFactor, prototypeMasks)
                     }
                 }
             }
@@ -318,9 +333,10 @@ class YoloInferenceTFLite(private val context: Context) {
                     }
                 }
 
-                // Skip mask coefficients for now (we'll implement proper segmentation later)
+                // Read mask coefficients
+                val maskCoefficients = FloatArray(numMaskCoeffs)
                 for (j in 0 until numMaskCoeffs) {
-                    buffer.float
+                    maskCoefficients[j] = buffer.float
                 }
 
                 // Check if this is a vehicle class with sufficient confidence
@@ -330,7 +346,7 @@ class YoloInferenceTFLite(private val context: Context) {
                     val x2 = x + w / 2
                     val y2 = y + h / 2
 
-                    detections.add(Detection(x1, y1, x2, y2, maxScore, maxClassId))
+                    detections.add(Detection(x1, y1, x2, y2, maxScore, maxClassId, maskCoefficients))
                     println("[DEBUG_LOG] Found vehicle detection: class=$maxClassId, score=$maxScore, bbox=($x1,$y1,$x2,$y2)")
                 }
             }
@@ -394,9 +410,181 @@ class YoloInferenceTFLite(private val context: Context) {
     }
 
     /**
-     * Creates a mask for a single detection.
+     * Creates a mask for a single detection using prototype masks and mask coefficients.
      */
     private fun createDetectionMask(
+        detection: Detection,
+        overlayGray: Mat,
+        xRatio: Float,
+        yRatio: Float,
+        modelWidth: Int,
+        modelHeight: Int,
+        upscaleFactor: Float,
+        prototypeMasks: FloatArray?
+    ) {
+        if (prototypeMasks == null) {
+            // Fallback to rectangular mask if no prototype masks available
+            createRectangularMask(detection, overlayGray, xRatio, yRatio, modelWidth, modelHeight, upscaleFactor)
+            return
+        }
+
+        try {
+            // Assemble segmentation mask from prototype masks and mask coefficients
+            val segmentationMask = assembleMaskFromPrototypes(
+                detection.maskCoefficients,
+                prototypeMasks,
+                detection.x1, detection.y1, detection.x2, detection.y2,
+                modelWidth, modelHeight
+            )
+
+            // Apply the segmentation mask to the overlay
+            applySegmentationMask(segmentationMask, overlayGray, xRatio, yRatio, upscaleFactor)
+
+        } catch (e: Exception) {
+            println("[DEBUG_LOG] Error creating segmentation mask, falling back to rectangular: ${e.message}")
+            // Fallback to rectangular mask on error
+            createRectangularMask(detection, overlayGray, xRatio, yRatio, modelWidth, modelHeight, upscaleFactor)
+        }
+    }
+
+    /**
+     * Assembles a segmentation mask from prototype masks and mask coefficients.
+     * This implements the mask assembly logic similar to the JavaScript 3-model approach.
+     */
+    private fun assembleMaskFromPrototypes(
+        maskCoefficients: FloatArray,
+        prototypeMasks: FloatArray,
+        x1: Float, y1: Float, x2: Float, y2: Float,
+        modelWidth: Int, modelHeight: Int
+    ): Mat {
+        // Prototype masks are 32 masks of 160x160 each
+        val prototypeSize = 160
+        val numPrototypes = 32
+
+        // Create the final mask by combining prototype masks with coefficients
+        val finalMask = Mat.zeros(prototypeSize, prototypeSize, CvType.CV_32FC1)
+
+        try {
+            // Linear combination of prototype masks weighted by coefficients
+            for (i in 0 until numPrototypes) {
+                val coefficient = maskCoefficients[i]
+
+                // Extract the i-th prototype mask (160x160)
+                val startIdx = i * prototypeSize * prototypeSize
+                val prototypeMask = Mat(prototypeSize, prototypeSize, CvType.CV_32FC1)
+
+                val prototypeData = FloatArray(prototypeSize * prototypeSize)
+                for (j in 0 until prototypeSize * prototypeSize) {
+                    prototypeData[j] = prototypeMasks[startIdx + j]
+                }
+                prototypeMask.put(0, 0, prototypeData)
+
+                // Add weighted prototype to final mask
+                val weightedMask = Mat()
+                Core.multiply(prototypeMask, Scalar(coefficient.toDouble()), weightedMask)
+                Core.add(finalMask, weightedMask, finalMask)
+
+                prototypeMask.release()
+                weightedMask.release()
+            }
+
+            // Apply sigmoid activation to get probabilities
+            applySigmoid(finalMask)
+
+            // Crop mask to bounding box region and resize to model size
+            val croppedMask = cropAndResizeMask(finalMask, x1, y1, x2, y2, modelWidth, modelHeight)
+            finalMask.release()
+
+            return croppedMask
+
+        } catch (e: Exception) {
+            println("[DEBUG_LOG] Error in assembleMaskFromPrototypes: ${e.message}")
+            finalMask.release()
+            throw e
+        }
+    }
+
+    /**
+     * Applies sigmoid activation to a mask.
+     */
+    private fun applySigmoid(mask: Mat) {
+        val data = FloatArray((mask.total() * mask.channels()).toInt())
+        mask.get(0, 0, data)
+
+        for (i in data.indices) {
+            data[i] = (1.0f / (1.0f + kotlin.math.exp(-data[i]))).toFloat()
+        }
+
+        mask.put(0, 0, data)
+    }
+
+    /**
+     * Crops mask to bounding box and resizes to model dimensions.
+     */
+    private fun cropAndResizeMask(
+        mask: Mat, 
+        x1: Float, y1: Float, x2: Float, y2: Float,
+        modelWidth: Int, modelHeight: Int
+    ): Mat {
+        val maskSize = mask.rows() // 160
+
+        // Convert bounding box coordinates to mask coordinates (0-160 range)
+        val maskX1 = ((x1 / modelWidth) * maskSize).toInt().coerceIn(0, maskSize - 1)
+        val maskY1 = ((y1 / modelHeight) * maskSize).toInt().coerceIn(0, maskSize - 1)
+        val maskX2 = ((x2 / modelWidth) * maskSize).toInt().coerceIn(0, maskSize - 1)
+        val maskY2 = ((y2 / modelHeight) * maskSize).toInt().coerceIn(0, maskSize - 1)
+
+        val cropWidth = max(1, maskX2 - maskX1)
+        val cropHeight = max(1, maskY2 - maskY1)
+
+        // Crop the mask to bounding box
+        val cropRect = Rect(maskX1, maskY1, cropWidth, cropHeight)
+        val croppedMask = Mat(mask, cropRect)
+
+        // Resize to model dimensions
+        val resizedMask = Mat()
+        Imgproc.resize(croppedMask, resizedMask, Size(modelWidth.toDouble(), modelHeight.toDouble()))
+
+        return resizedMask
+    }
+
+    /**
+     * Applies the segmentation mask to the overlay.
+     */
+    private fun applySegmentationMask(
+        segmentationMask: Mat,
+        overlayGray: Mat,
+        xRatio: Float,
+        yRatio: Float,
+        upscaleFactor: Float
+    ) {
+        try {
+            // Convert segmentation mask to binary (threshold at 0.5)
+            val binaryMask = Mat()
+            Imgproc.threshold(segmentationMask, binaryMask, 0.5, 255.0, Imgproc.THRESH_BINARY)
+
+            // Convert to 8-bit
+            val mask8bit = Mat()
+            binaryMask.convertTo(mask8bit, CvType.CV_8UC1)
+
+            // Apply mask to overlay (set masked areas to black)
+            val invertedMask = Mat()
+            Core.bitwise_not(mask8bit, invertedMask)
+            Core.bitwise_and(overlayGray, invertedMask, overlayGray)
+
+            binaryMask.release()
+            mask8bit.release()
+            invertedMask.release()
+
+        } catch (e: Exception) {
+            println("[DEBUG_LOG] Error applying segmentation mask: ${e.message}")
+        }
+    }
+
+    /**
+     * Creates a rectangular mask for a detection (fallback method).
+     */
+    private fun createRectangularMask(
         detection: Detection,
         overlayGray: Mat,
         xRatio: Float,
@@ -493,6 +681,7 @@ class YoloInferenceTFLite(private val context: Context) {
         val x2: Float,
         val y2: Float,
         val confidence: Float,
-        val classId: Int
+        val classId: Int,
+        val maskCoefficients: FloatArray
     )
 }
