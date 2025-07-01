@@ -16,69 +16,69 @@
             android:id="@+id/imagesContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
+            android:layout_marginTop="50dp"
             android:gravity="center"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
+            android:orientation="horizontal"
             app:layout_constraintEnd_toEndOf="parent"
-            android:layout_marginTop="50dp"/>
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <!-- Select Image Button -->
         <Button
             android:id="@+id/fileSelect"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="@string/select_image"
             android:layout_marginTop="20dp"
-            app:layout_constraintTop_toBottomOf="@id/imagesContainer"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintWidth_percent="0.7"
+            android:text="@string/select_image"
             app:icon="@android:drawable/ic_menu_gallery"
-            app:iconGravity="textStart"/>
+            app:iconGravity="textStart"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/imagesContainer"
+            app:layout_constraintWidth_percent="0.7" />
 
         <!-- Start Inference Button -->
         <Button
             android:id="@+id/startInference"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="@string/start"
             android:layout_marginTop="20dp"
             android:enabled="false"
-            app:layout_constraintTop_toBottomOf="@id/fileSelect"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintWidth_percent="0.7"
+            android:text="@string/start"
             app:icon="@android:drawable/ic_media_play"
-            app:iconGravity="textStart"/>
+            app:iconGravity="textStart"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/fileSelect"
+            app:layout_constraintWidth_percent="0.7" />
 
         <!-- Download Button -->
         <Button
             android:id="@+id/download"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="@string/download"
             android:layout_marginTop="20dp"
-            app:layout_constraintTop_toBottomOf="@id/startInference"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintWidth_percent="0.7"
+            android:text="@string/download"
             app:icon="@android:drawable/ic_menu_save"
-            app:iconGravity="textStart"/>
+            app:iconGravity="textStart"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/startInference"
+            app:layout_constraintWidth_percent="0.7" />
 
         <!-- Options Button -->
         <Button
             android:id="@+id/optionsButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="@string/options"
             android:layout_marginTop="20dp"
-            app:layout_constraintTop_toBottomOf="@id/download"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintWidth_percent="0.7"
+            android:text="@string/options"
             app:icon="@android:drawable/ic_menu_preferences"
-            app:iconGravity="textStart"/>
+            app:iconGravity="textStart"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/download"
+            app:layout_constraintWidth_percent="0.7" />
 
         <!-- Options Panel (Initially Hidden) -->
         <androidx.cardview.widget.CardView
@@ -87,11 +87,11 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:visibility="gone"
-            app:layout_constraintTop_toBottomOf="@id/optionsButton"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
             app:cardCornerRadius="8dp"
-            app:cardElevation="4dp">
+            app:cardElevation="4dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/optionsButton">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -103,77 +103,77 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/multiple_images"
-                        android:textSize="16sp"/>
+                        android:textSize="16sp" />
 
                     <androidx.appcompat.widget.SwitchCompat
                         android:id="@+id/batchMode"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"/>
+                        android:layout_height="wrap_content" />
                 </LinearLayout>
 
                 <!-- Evaluation Mode Option -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
+                    android:layout_marginTop="16dp"
                     android:gravity="center_vertical"
-                    android:layout_marginTop="16dp">
+                    android:orientation="horizontal">
 
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/evaluation_mode"
-                        android:textSize="16sp"/>
+                        android:textSize="16sp" />
 
                     <androidx.appcompat.widget.SwitchCompat
                         android:id="@+id/evalData"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"/>
+                        android:layout_height="wrap_content" />
                 </LinearLayout>
 
                 <!-- Continue with Result Option -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
+                    android:layout_marginTop="16dp"
                     android:gravity="center_vertical"
-                    android:layout_marginTop="16dp">
+                    android:orientation="horizontal">
 
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/continue_with_result"
-                        android:textSize="16sp"/>
+                        android:textSize="16sp" />
 
                     <androidx.appcompat.widget.SwitchCompat
                         android:id="@+id/continueWithResult"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"/>
+                        android:layout_height="wrap_content" />
                 </LinearLayout>
 
                 <!-- Mask Upscale Slider -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
                     android:text="@string/mask_upscale"
-                    android:textSize="16sp"
-                    android:layout_marginTop="16dp"/>
+                    android:textSize="16sp" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
                     <SeekBar
                         android:id="@+id/maskUpscale"
@@ -181,29 +181,29 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:max="100"
-                        android:progress="20"/>
+                        android:progress="20" />
 
                     <TextView
                         android:id="@+id/maskUpscaleVal"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="1.20"
-                        android:layout_marginStart="8dp"/>
+                        android:layout_marginStart="8dp"
+                        android:text="1.20" />
                 </LinearLayout>
 
                 <!-- Mask Downshift Slider -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
                     android:text="@string/mask_downshift"
-                    android:textSize="16sp"
-                    android:layout_marginTop="16dp"/>
+                    android:textSize="16sp" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
                     <SeekBar
                         android:id="@+id/downshift"
@@ -211,29 +211,29 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:max="100"
-                        android:progress="20"/>
+                        android:progress="20" />
 
                     <TextView
                         android:id="@+id/downshiftVal"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0.020"
-                        android:layout_marginStart="8dp"/>
+                        android:layout_marginStart="8dp"
+                        android:text="0.020" />
                 </LinearLayout>
 
                 <!-- Score Threshold Slider -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
                     android:text="@string/score_threshold"
-                    android:textSize="16sp"
-                    android:layout_marginTop="16dp"/>
+                    android:textSize="16sp" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
                     <SeekBar
                         android:id="@+id/scoreThreshold"
@@ -241,43 +241,43 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:max="100"
-                        android:progress="20"/>
+                        android:progress="20" />
 
                     <TextView
                         android:id="@+id/scoreThresholdVal"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0.20"
-                        android:layout_marginStart="8dp"/>
+                        android:layout_marginStart="8dp"
+                        android:text="0.20" />
                 </LinearLayout>
 
                 <!-- Downscale Spinner -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
                     android:text="@string/downscale"
-                    android:textSize="16sp"
-                    android:layout_marginTop="16dp"/>
+                    android:textSize="16sp" />
 
                 <Spinner
                     android:id="@+id/downscaleMP"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"/>
+                    android:layout_marginTop="8dp" />
 
                 <!-- Segmentation Model Spinner -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
                     android:text="@string/segmentation_model"
-                    android:textSize="16sp"
-                    android:layout_marginTop="16dp"/>
+                    android:textSize="16sp" />
 
                 <Spinner
                     android:id="@+id/segModel"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"/>
+                    android:layout_marginTop="8dp" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
     </androidx.constraintlayout.widget.ConstraintLayout>

@@ -95,7 +95,14 @@ class ResultsTest {
             println("[DEBUG_LOG] RESULTS:")
             println("[DEBUG_LOG] - Total pixels: $totalPixels")
             println("[DEBUG_LOG] - Black pixels (cars): $blackPixels")
-            println("[DEBUG_LOG] - Black pixel ratio: ${String.format("%.6f", blackPixelRatio)} (${String.format("%.4f", blackPixelRatio * 100)}%)")
+            println(
+                "[DEBUG_LOG] - Black pixel ratio: ${
+                    String.format(
+                        "%.6f",
+                        blackPixelRatio
+                    )
+                } (${String.format("%.4f", blackPixelRatio * 100)}%)"
+            )
             println("[DEBUG_LOG] - Threshold: 0.001 (0.1%)")
             println("[DEBUG_LOG] - Cars detected: ${blackPixelRatio > 0.001}")
 

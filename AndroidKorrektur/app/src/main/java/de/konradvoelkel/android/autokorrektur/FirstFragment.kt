@@ -122,9 +122,11 @@ class FirstFragment : Fragment() {
                     ).show()
                 }
             }
+
             Activity.RESULT_CANCELED -> {
                 AppLogger.info("Gallery selection was canceled by user")
             }
+
             else -> {
                 AppLogger.error("Gallery selection failed with result code: ${result.resultCode}")
                 Snackbar.make(
@@ -226,7 +228,11 @@ class FirstFragment : Fragment() {
             AppLogger.debug("Checking OpenCV initialization")
             if (!org.opencv.android.OpenCVLoader.initDebug()) {
                 AppLogger.error("OpenCV initialization failed")
-                Snackbar.make(binding.root, "OpenCV initialization failed. Some features may not work.", Snackbar.LENGTH_LONG).show()
+                Snackbar.make(
+                    binding.root,
+                    "OpenCV initialization failed. Some features may not work.",
+                    Snackbar.LENGTH_LONG
+                ).show()
             } else {
                 AppLogger.info("OpenCV initialized successfully")
             }
@@ -246,7 +252,11 @@ class FirstFragment : Fragment() {
         } catch (e: Exception) {
             AppLogger.error("Failed to create ML inference objects", e)
             mlComponentsInitialized = false
-            Snackbar.make(binding.root, "Failed to initialize ML components: ${e.message}", Snackbar.LENGTH_LONG).show()
+            Snackbar.make(
+                binding.root,
+                "Failed to initialize ML components: ${e.message}",
+                Snackbar.LENGTH_LONG
+            ).show()
         }
 
         setupUI()
@@ -275,11 +285,16 @@ class FirstFragment : Fragment() {
                 // Save the processed image to gallery
                 val savedUri = saveImageToGallery(bitmap)
                 if (savedUri != null) {
-                    Snackbar.make(binding.root, "Image saved to gallery", Snackbar.LENGTH_SHORT).show()
+                    Snackbar.make(binding.root, "Image saved to gallery", Snackbar.LENGTH_SHORT)
+                        .show()
                 }
             } ?: run {
                 AppLogger.warn("Download attempted but no processed image available")
-                Snackbar.make(binding.root, "No processed image to download. Run inference first.", Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(
+                    binding.root,
+                    "No processed image to download. Run inference first.",
+                    Snackbar.LENGTH_SHORT
+                ).show()
             }
         }
 
@@ -369,7 +384,7 @@ class FirstFragment : Fragment() {
     private fun setupSpinners() {
         // Downscale spinner
         val downscaleOptions = arrayOf(
-            "No Scaling", "0.5 MP", "1 MP", "2 MP", "3 MP", 
+            "No Scaling", "0.5 MP", "1 MP", "2 MP", "3 MP",
             "4 MP", "5 MP", "6 MP", "7 MP", "8 MP", "9 MP", "10 MP"
         )
         val downscaleAdapter = ArrayAdapter(
@@ -419,6 +434,7 @@ class FirstFragment : Fragment() {
             ) == PackageManager.PERMISSION_GRANTED -> {
                 launchCamera()
             }
+
             else -> {
                 cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
             }
@@ -462,6 +478,7 @@ class FirstFragment : Fragment() {
             ) == PackageManager.PERMISSION_GRANTED -> {
                 launchGallery()
             }
+
             else -> {
                 storagePermissionLauncher.launch(readPermission)
             }
@@ -540,7 +557,11 @@ class FirstFragment : Fragment() {
         // Check if ML components are initialized
         if (!mlComponentsInitialized) {
             AppLogger.error("ML components not initialized")
-            Snackbar.make(binding.root, "ML components not initialized. Please restart the app.", Snackbar.LENGTH_LONG).show()
+            Snackbar.make(
+                binding.root,
+                "ML components not initialized. Please restart the app.",
+                Snackbar.LENGTH_LONG
+            ).show()
             return
         }
 
@@ -548,7 +569,11 @@ class FirstFragment : Fragment() {
         if (binding.batchMode.isChecked) {
             if (selectedImageUris.isEmpty()) {
                 AppLogger.warn("No images selected for batch processing")
-                Snackbar.make(binding.root, "Please select images for batch processing first", Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(
+                    binding.root,
+                    "Please select images for batch processing first",
+                    Snackbar.LENGTH_SHORT
+                ).show()
                 return
             }
             performBatchProcessing()
@@ -556,7 +581,8 @@ class FirstFragment : Fragment() {
             // Check if an image is selected for single processing
             if (selectedImageUri == null) {
                 AppLogger.warn("No image selected for inference")
-                Snackbar.make(binding.root, "Please select an image first", Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, "Please select an image first", Snackbar.LENGTH_SHORT)
+                    .show()
                 return
             }
             performSingleImageInference()
@@ -628,11 +654,12 @@ class FirstFragment : Fragment() {
                     // Step 1: Process input image
                     AppLogger.debug("Step 1: Processing input image")
                     // Determine input URI based on continue mode
-                    val processingUri = if (binding.continueWithResult.isChecked && resultImageUri != null) {
-                        resultImageUri!!
-                    } else {
-                        uri
-                    }
+                    val processingUri =
+                        if (binding.continueWithResult.isChecked && resultImageUri != null) {
+                            resultImageUri!!
+                        } else {
+                            uri
+                        }
 
                     val processedImage = try {
                         imageProcessor.processInputImage(
@@ -681,7 +708,11 @@ class FirstFragment : Fragment() {
 
                                 val tempMaskFile = File(requireContext().cacheDir, "mask_image.jpg")
                                 val maskOutputStream = FileOutputStream(tempMaskFile)
-                                maskBitmap.compress(Bitmap.CompressFormat.JPEG, 100, maskOutputStream)
+                                maskBitmap.compress(
+                                    Bitmap.CompressFormat.JPEG,
+                                    100,
+                                    maskOutputStream
+                                )
                                 maskOutputStream.close()
 
                                 val maskUri = FileProvider.getUriForFile(
@@ -730,9 +761,14 @@ class FirstFragment : Fragment() {
                                 Utils.matToBitmap(resultMat, processedBitmap!!)
 
                                 // Create a temporary file to display the processed image
-                                val tempFile = File(requireContext().cacheDir, "processed_image.jpg")
+                                val tempFile =
+                                    File(requireContext().cacheDir, "processed_image.jpg")
                                 val outputStream = FileOutputStream(tempFile)
-                                processedBitmap?.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                                processedBitmap?.compress(
+                                    Bitmap.CompressFormat.JPEG,
+                                    100,
+                                    outputStream
+                                )
                                 outputStream.close()
 
                                 // Get URI for the processed image
@@ -750,13 +786,21 @@ class FirstFragment : Fragment() {
                                 binding.startInference.isEnabled = true
                                 binding.startInference.text = "Start"
 
-                                Snackbar.make(binding.root, "ONNX inference completed successfully", Snackbar.LENGTH_SHORT).show()
+                                Snackbar.make(
+                                    binding.root,
+                                    "ONNX inference completed successfully",
+                                    Snackbar.LENGTH_SHORT
+                                ).show()
                                 AppLogger.info("Inference completed successfully")
                             } catch (e: Exception) {
                                 AppLogger.error("Error displaying result", e)
                                 binding.startInference.isEnabled = true
                                 binding.startInference.text = "Start"
-                                Snackbar.make(binding.root, "Error displaying result: ${e.message}", Snackbar.LENGTH_LONG).show()
+                                Snackbar.make(
+                                    binding.root,
+                                    "Error displaying result: ${e.message}",
+                                    Snackbar.LENGTH_LONG
+                                ).show()
                             }
                         }
                     } else {
@@ -772,7 +816,8 @@ class FirstFragment : Fragment() {
                             }
                             binding.startInference.isEnabled = true
                             binding.startInference.text = "Start"
-                            Snackbar.make(binding.root, "No image selected", Snackbar.LENGTH_SHORT).show()
+                            Snackbar.make(binding.root, "No image selected", Snackbar.LENGTH_SHORT)
+                                .show()
                         }
                     } else {
                         AppLogger.warn("Fragment not attached, skipping null URI error display")
@@ -794,28 +839,59 @@ class FirstFragment : Fragment() {
 
                         val errorMessages = when {
                             e.message?.contains("Failed to create YOLO session") == true -> {
-                                Pair("YOLO Model Loading Failed", "The YOLO model could not be loaded. This might be due to:\n• Corrupted model file\n• Insufficient memory\n• Incompatible model format\n\nCheck logcat for detailed error information.\n\nOriginal error: ${e.message}")
+                                Pair(
+                                    "YOLO Model Loading Failed",
+                                    "The YOLO model could not be loaded. This might be due to:\n• Corrupted model file\n• Insufficient memory\n• Incompatible model format\n\nCheck logcat for detailed error information.\n\nOriginal error: ${e.message}"
+                                )
                             }
+
                             e.message?.contains("Failed to create NMS session") == true -> {
-                                Pair("NMS Model Loading Failed", "The NMS model could not be loaded. Check logcat for details.\n\nOriginal error: ${e.message}")
+                                Pair(
+                                    "NMS Model Loading Failed",
+                                    "The NMS model could not be loaded. Check logcat for details.\n\nOriginal error: ${e.message}"
+                                )
                             }
+
                             e.message?.contains("Failed to create mask session") == true -> {
-                                Pair("Mask Model Loading Failed", "The Mask model could not be loaded. Check logcat for details.\n\nOriginal error: ${e.message}")
+                                Pair(
+                                    "Mask Model Loading Failed",
+                                    "The Mask model could not be loaded. Check logcat for details.\n\nOriginal error: ${e.message}"
+                                )
                             }
+
                             e.message?.contains("model") == true -> {
-                                Pair("Model Loading Failed", "One or more ML models failed to load. Check logcat for detailed error information.\n\nOriginal error: ${e.message}")
+                                Pair(
+                                    "Model Loading Failed",
+                                    "One or more ML models failed to load. Check logcat for detailed error information.\n\nOriginal error: ${e.message}"
+                                )
                             }
+
                             e.message?.contains("OpenCV") == true -> {
-                                Pair("OpenCV Error", "OpenCV initialization failed. This might indicate a problem with image processing.\n\nOriginal error: ${e.message}")
+                                Pair(
+                                    "OpenCV Error",
+                                    "OpenCV initialization failed. This might indicate a problem with image processing.\n\nOriginal error: ${e.message}"
+                                )
                             }
+
                             e.message?.contains("ONNX") == true -> {
-                                Pair("ONNX Runtime Error", "ONNX Runtime encountered an error during model execution.\n\nOriginal error: ${e.message}")
+                                Pair(
+                                    "ONNX Runtime Error",
+                                    "ONNX Runtime encountered an error during model execution.\n\nOriginal error: ${e.message}"
+                                )
                             }
+
                             e.message?.contains("initialize") == true -> {
-                                Pair("Initialization Failed", e.message ?: "Unknown initialization error")
+                                Pair(
+                                    "Initialization Failed",
+                                    e.message ?: "Unknown initialization error"
+                                )
                             }
+
                             else -> {
-                                Pair("Inference Error", "An error occurred during inference processing.\n\nOriginal error: ${e.message}")
+                                Pair(
+                                    "Inference Error",
+                                    "An error occurred during inference processing.\n\nOriginal error: ${e.message}"
+                                )
                             }
                         }
 
@@ -893,7 +969,8 @@ class FirstFragment : Fragment() {
                     // Update progress on UI thread
                     if (isAdded && !isDetached) {
                         requireActivity().runOnUiThread {
-                            binding.startInference.text = "Processing batch (${index + 1}/${selectedImageUris.size})..."
+                            binding.startInference.text =
+                                "Processing batch (${index + 1}/${selectedImageUris.size})..."
                         }
                     }
 
@@ -1012,7 +1089,8 @@ class FirstFragment : Fragment() {
         isProcessingBatch = false
 
         // Show results summary
-        val message = "Batch processing completed!\n$successCount/$totalCount images processed successfully"
+        val message =
+            "Batch processing completed!\n$successCount/$totalCount images processed successfully"
         Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG)
             .setAction("Export CSV") {
                 exportBatchResultsToCSV()
@@ -1063,15 +1141,20 @@ class FirstFragment : Fragment() {
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
             val fileName = "autokorrektur_batch_results_$timestamp.csv"
 
-            val csvFile = File(requireContext().getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), fileName)
+            val csvFile = File(
+                requireContext().getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS),
+                fileName
+            )
             csvFile.writeText(csvContent.toString())
 
             AppLogger.info("CSV exported to: ${csvFile.absolutePath}")
-            Snackbar.make(binding.root, "CSV exported to: ${csvFile.name}", Snackbar.LENGTH_LONG).show()
+            Snackbar.make(binding.root, "CSV exported to: ${csvFile.name}", Snackbar.LENGTH_LONG)
+                .show()
 
         } catch (e: Exception) {
             AppLogger.error("Failed to export CSV", e)
-            Snackbar.make(binding.root, "Failed to export CSV: ${e.message}", Snackbar.LENGTH_LONG).show()
+            Snackbar.make(binding.root, "Failed to export CSV: ${e.message}", Snackbar.LENGTH_LONG)
+                .show()
         }
     }
 
@@ -1080,7 +1163,8 @@ class FirstFragment : Fragment() {
             AppLogger.debug("Creating mask overlay visualization")
 
             // Load original image as bitmap
-            val originalBitmap = MediaStore.Images.Media.getBitmap(requireContext().contentResolver, originalUri)
+            val originalBitmap =
+                MediaStore.Images.Media.getBitmap(requireContext().contentResolver, originalUri)
 
             // Create a mutable copy of the original bitmap
             val overlayBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true)
@@ -1091,9 +1175,9 @@ class FirstFragment : Fragment() {
 
             // Scale mask bitmap to match original image size
             val scaledMaskBitmap = Bitmap.createScaledBitmap(
-                maskBitmap, 
-                overlayBitmap.width, 
-                overlayBitmap.height, 
+                maskBitmap,
+                overlayBitmap.width,
+                overlayBitmap.height,
                 true
             )
 
@@ -1195,11 +1279,15 @@ class FirstFragment : Fragment() {
                 }
 
                 val contentResolver = requireContext().contentResolver
-                imageUri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                imageUri = contentResolver.insert(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    contentValues
+                )
                 fos = imageUri?.let { contentResolver.openOutputStream(it) }
             } else {
                 // For older Android versions
-                val imagesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                val imagesDir =
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
                 val image = File(imagesDir, filename)
                 fos = FileOutputStream(image)
                 imageUri = Uri.fromFile(image)

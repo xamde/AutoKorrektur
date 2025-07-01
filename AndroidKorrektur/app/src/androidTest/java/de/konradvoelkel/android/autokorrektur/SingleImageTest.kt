@@ -159,7 +159,14 @@ class SingleImageTest {
         val blackPixelRatio = blackPixels.toDouble() / totalPixels.toDouble()
         val threshold = 0.001 // 0.1% threshold
 
-        println("[DEBUG_LOG] Black pixels: $blackPixels / $totalPixels (${String.format("%.4f", blackPixelRatio * 100)}%)")
+        println(
+            "[DEBUG_LOG] Black pixels: $blackPixels / $totalPixels (${
+                String.format(
+                    "%.4f",
+                    blackPixelRatio * 100
+                )
+            }%)"
+        )
 
         return blackPixelRatio > threshold
     }

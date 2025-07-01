@@ -8,8 +8,8 @@ stride: 32
 task: segment
 batch: 1
 imgsz:
-- 640
-- 640
+  - 640
+  - 640
 names:
   0: person
   1: bicycle

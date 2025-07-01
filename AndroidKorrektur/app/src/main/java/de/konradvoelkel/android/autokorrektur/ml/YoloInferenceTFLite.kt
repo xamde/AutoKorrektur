@@ -146,7 +146,8 @@ class YoloInferenceTFLite(private val context: Context) {
 
         try {
             // Prepare input buffer
-            val inputBuffer = ByteBuffer.allocateDirect(4 * inputWidth * inputHeight * inputChannels)
+            val inputBuffer =
+                ByteBuffer.allocateDirect(4 * inputWidth * inputHeight * inputChannels)
             inputBuffer.order(ByteOrder.nativeOrder())
 
             // Convert OpenCV Mat to ByteBuffer
@@ -175,7 +176,16 @@ class YoloInferenceTFLite(private val context: Context) {
             interpreter!!.runForMultipleInputsOutputs(arrayOf(inputBuffer), outputMap)
 
             // Process outputs to create segmentation mask
-            processOutputsToMask(outputMap, overlayGray, xRatio, yRatio, modelWidth, modelHeight, upscaleFactor, scoreThreshold)
+            processOutputsToMask(
+                outputMap,
+                overlayGray,
+                xRatio,
+                yRatio,
+                modelWidth,
+                modelHeight,
+                upscaleFactor,
+                scoreThreshold
+            )
 
             // Apply downshift if specified
             if (downshiftFactor > 0.0f) {
@@ -318,7 +328,16 @@ class YoloInferenceTFLite(private val context: Context) {
                 for (detection in filteredDetections) {
                     if (vehicleClassIndices.contains(detection.classId)) {
                         println("[DEBUG_LOG] Processing detection: class=${detection.classId}, confidence=${detection.confidence}")
-                        createDetectionMask(detection, overlayGray, xRatio, yRatio, modelWidth, modelHeight, upscaleFactor, prototypeMasks)
+                        createDetectionMask(
+                            detection,
+                            overlayGray,
+                            xRatio,
+                            yRatio,
+                            modelWidth,
+                            modelHeight,
+                            upscaleFactor,
+                            prototypeMasks
+                        )
                     }
                 }
                 println("[DEBUG_LOG] Completed mask creation for all detections")
@@ -386,7 +405,17 @@ class YoloInferenceTFLite(private val context: Context) {
                     val x2 = x + w / 2
                     val y2 = y + h / 2
 
-                    detections.add(Detection(x1, y1, x2, y2, maxScore, maxClassId, maskCoefficients))
+                    detections.add(
+                        Detection(
+                            x1,
+                            y1,
+                            x2,
+                            y2,
+                            maxScore,
+                            maxClassId,
+                            maskCoefficients
+                        )
+                    )
                     println("[DEBUG_LOG] Found vehicle detection: class=$maxClassId, score=$maxScore, bbox=($x1,$y1,$x2,$y2)")
                 }
             }
@@ -474,7 +503,15 @@ class YoloInferenceTFLite(private val context: Context) {
             println("[DEBUG_LOG] Falling back to rectangular mask (clearly identified as fallback)")
 
             // Use rectangular mask as fallback with clear identification
-            createRectangularMask(detection, overlayGray, xRatio, yRatio, modelWidth, modelHeight, upscaleFactor)
+            createRectangularMask(
+                detection,
+                overlayGray,
+                xRatio,
+                yRatio,
+                modelWidth,
+                modelHeight,
+                upscaleFactor
+            )
             return
         }
 
@@ -484,7 +521,15 @@ class YoloInferenceTFLite(private val context: Context) {
             println("[DEBUG_LOG] Detection data may be corrupted or model format mismatch")
             println("[DEBUG_LOG] Falling back to rectangular mask (clearly identified as fallback)")
 
-            createRectangularMask(detection, overlayGray, xRatio, yRatio, modelWidth, modelHeight, upscaleFactor)
+            createRectangularMask(
+                detection,
+                overlayGray,
+                xRatio,
+                yRatio,
+                modelWidth,
+                modelHeight,
+                upscaleFactor
+            )
             return
         }
 
@@ -506,14 +551,30 @@ class YoloInferenceTFLite(private val context: Context) {
         } catch (e: IllegalArgumentException) {
             println("[DEBUG_LOG] ERROR: Invalid parameters for mask assembly: ${e.message}")
             println("[DEBUG_LOG] Falling back to rectangular mask due to invalid inputs (clearly identified as fallback)")
-            createRectangularMask(detection, overlayGray, xRatio, yRatio, modelWidth, modelHeight, upscaleFactor)
+            createRectangularMask(
+                detection,
+                overlayGray,
+                xRatio,
+                yRatio,
+                modelWidth,
+                modelHeight,
+                upscaleFactor
+            )
 
         } catch (e: Exception) {
             println("[DEBUG_LOG] ERROR: Unexpected error in mask assembly: ${e.message}")
             println("[DEBUG_LOG] ${e.javaClass.simpleName}: ${e.message}")
             println("[DEBUG_LOG] Falling back to rectangular mask due to processing error (clearly identified as fallback)")
             e.printStackTrace()
-            createRectangularMask(detection, overlayGray, xRatio, yRatio, modelWidth, modelHeight, upscaleFactor)
+            createRectangularMask(
+                detection,
+                overlayGray,
+                xRatio,
+                yRatio,
+                modelWidth,
+                modelHeight,
+                upscaleFactor
+            )
         }
     }
 
@@ -661,7 +722,7 @@ class YoloInferenceTFLite(private val context: Context) {
      * Crops mask to bounding box and resizes to model dimensions.
      */
     private fun cropAndResizeMask(
-        mask: Mat, 
+        mask: Mat,
         x1: Float, y1: Float, x2: Float, y2: Float,
         modelWidth: Int, modelHeight: Int
     ): Mat {
@@ -682,7 +743,11 @@ class YoloInferenceTFLite(private val context: Context) {
 
         // Resize to model dimensions
         val resizedMask = Mat()
-        Imgproc.resize(croppedMask, resizedMask, Size(modelWidth.toDouble(), modelHeight.toDouble()))
+        Imgproc.resize(
+            croppedMask,
+            resizedMask,
+            Size(modelWidth.toDouble(), modelHeight.toDouble())
+        )
 
         return resizedMask
     }

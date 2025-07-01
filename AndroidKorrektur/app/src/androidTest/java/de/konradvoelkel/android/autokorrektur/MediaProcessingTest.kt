@@ -112,8 +112,14 @@ class MediaProcessingTest {
                         downscaleMp = null
                     )
 
-                    assertNotNull("Processed image should not be null for $mediaFile", processedImage)
-                    assertNotNull("Transformed mat should not be null for $mediaFile", processedImage.transformedMat)
+                    assertNotNull(
+                        "Processed image should not be null for $mediaFile",
+                        processedImage
+                    )
+                    assertNotNull(
+                        "Transformed mat should not be null for $mediaFile",
+                        processedImage.transformedMat
+                    )
 
                     println("[DEBUG_LOG] Loaded image $mediaFile: ${processedImage.originalMat.rows()}x${processedImage.originalMat.cols()}")
                     println("[DEBUG_LOG] Transformed mat: ${processedImage.transformedMat.rows()}x${processedImage.transformedMat.cols()}, type: ${processedImage.transformedMat.type()}, channels: ${processedImage.transformedMat.channels()}")
@@ -122,7 +128,11 @@ class MediaProcessingTest {
                     // Debug: Check some pixel values
                     val samplePixels = FloatArray(12) // 4 pixels * 3 channels
                     processedImage.transformedMat.get(100, 100, samplePixels)
-                    println("[DEBUG_LOG] Sample pixel values at (100,100): [${samplePixels.take(6).joinToString(", ")}]")
+                    println(
+                        "[DEBUG_LOG] Sample pixel values at (100,100): [${
+                            samplePixels.take(6).joinToString(", ")
+                        }]"
+                    )
 
                     // Run YOLO inference
                     println("[DEBUG_LOG] Running YOLO inference for $mediaFile")
@@ -203,7 +213,14 @@ class MediaProcessingTest {
         val blackPixelRatio = blackPixels.toDouble() / totalPixels.toDouble()
         val threshold = 0.0001 // 0.01% threshold (more lenient for debugging)
 
-        println("[DEBUG_LOG] Black pixels: $blackPixels / $totalPixels (${String.format("%.4f", blackPixelRatio * 100)}%)")
+        println(
+            "[DEBUG_LOG] Black pixels: $blackPixels / $totalPixels (${
+                String.format(
+                    "%.4f",
+                    blackPixelRatio * 100
+                )
+            }%)"
+        )
 
         return blackPixelRatio > threshold
     }
@@ -269,8 +286,10 @@ class MediaProcessingTest {
             )
 
             assertNotNull("Processed image should not be null", processedImage)
-            assertTrue("Original image should have valid dimensions", 
-                processedImage.originalMat.rows() > 0 && processedImage.originalMat.cols() > 0)
+            assertTrue(
+                "Original image should have valid dimensions",
+                processedImage.originalMat.rows() > 0 && processedImage.originalMat.cols() > 0
+            )
 
             println("[DEBUG_LOG] Image processed successfully: ${processedImage.originalMat.rows()}x${processedImage.originalMat.cols()}")
 

@@ -48,6 +48,7 @@ class MainActivity : AppCompatActivity() {
                 // Show a message about settings
                 true
             }
+
             else -> super.onOptionsItemSelected(item)
         }
     }

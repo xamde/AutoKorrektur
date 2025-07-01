@@ -9,6 +9,5 @@
         android:id="@+id/FirstFragment"
         android:name="de.konradvoelkel.android.autokorrektur.FirstFragment"
         android:label="@string/first_fragment_label"
-        tools:layout="@layout/fragment_first">
-    </fragment>
+        tools:layout="@layout/fragment_first"></fragment>
 </navigation>
