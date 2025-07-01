@@ -3,9 +3,10 @@ package de.konradvoelkel.android.autokorrektur
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.junit.Assert.*
 
 @RunWith(AndroidJUnit4::class)
 class SimpleYoloTest {

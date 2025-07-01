@@ -7,7 +7,8 @@ import java.io.File
 import java.io.FileWriter
 import java.io.IOException
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 /**
  * A comprehensive logging utility that writes to both Android Log and a persistent log file.
