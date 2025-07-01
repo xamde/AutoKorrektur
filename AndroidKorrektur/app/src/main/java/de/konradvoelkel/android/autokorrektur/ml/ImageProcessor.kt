@@ -59,7 +59,14 @@ class ImageProcessor(private val context: Context) {
                 val newWidth = Math.round(rgbMat.cols() * scaleFactor)
                 val newHeight = Math.round(rgbMat.rows() * scaleFactor)
 
-                Imgproc.resize(rgbMat, rgbMat, Size(newWidth.toDouble(), newHeight.toDouble()), 0.0, 0.0, Imgproc.INTER_AREA)
+                Imgproc.resize(
+                    rgbMat,
+                    rgbMat,
+                    Size(newWidth.toDouble(), newHeight.toDouble()),
+                    0.0,
+                    0.0,
+                    Imgproc.INTER_AREA
+                )
             }
         }
 
@@ -67,7 +74,10 @@ class ImageProcessor(private val context: Context) {
         val preprocessingResult = preprocessing(rgbMat, modelWidth, modelHeight)
 
         // Convert Mats back to Bitmaps
-        val transformedBitmap = createBitmap(preprocessingResult.transformedMatForBitmap.cols(), preprocessingResult.transformedMatForBitmap.rows())
+        val transformedBitmap = createBitmap(
+            preprocessingResult.transformedMatForBitmap.cols(),
+            preprocessingResult.transformedMatForBitmap.rows()
+        )
         Utils.matToBitmap(preprocessingResult.transformedMatForBitmap, transformedBitmap)
 
         return ProcessedImage(
@@ -108,7 +118,14 @@ class ImageProcessor(private val context: Context) {
         // Resize to dimensions divisible by stride
         val (w, h) = divStride(stride, rgbMat.cols(), rgbMat.rows())
         val resizedMat = Mat()
-        Imgproc.resize(rgbMat, resizedMat, Size(w.toDouble(), h.toDouble()), 0.0, 0.0, Imgproc.INTER_LANCZOS4)
+        Imgproc.resize(
+            rgbMat,
+            resizedMat,
+            Size(w.toDouble(), h.toDouble()),
+            0.0,
+            0.0,
+            Imgproc.INTER_LANCZOS4
+        )
 
         // Padding image to square dimensions
         val maxSize = max(resizedMat.rows(), resizedMat.cols())
@@ -124,11 +141,15 @@ class ImageProcessor(private val context: Context) {
 
         // Resize to model input size
         val transformedMatForBitmap = Mat()
-        Imgproc.resize(paddedMat, transformedMatForBitmap, Size(modelWidth.toDouble(), modelHeight.toDouble()))
+        Imgproc.resize(
+            paddedMat,
+            transformedMatForBitmap,
+            Size(modelWidth.toDouble(), modelHeight.toDouble())
+        )
 
         // Create normalized version for ML inference
         val transformedMat = Mat()
-        transformedMatForBitmap.convertTo(transformedMat, CvType.CV_32FC3, 1.0/255.0)
+        transformedMatForBitmap.convertTo(transformedMat, CvType.CV_32FC3, 1.0 / 255.0)
 
         return PreprocessingResult(transformedMat, transformedMatForBitmap, xRatio, yRatio)
     }

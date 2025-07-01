@@ -80,8 +80,16 @@ class ImageSelectionTest {
             println("[DEBUG_LOG] Y ratio: ${processedImage.yRatio}")
 
             // Verify that the transformed image has the expected model dimensions
-            assertEquals("Transformed image width should match model width", modelWidth, processedImage.transformedBitmap.width)
-            assertEquals("Transformed image height should match model height", modelHeight, processedImage.transformedBitmap.height)
+            assertEquals(
+                "Transformed image width should match model width",
+                modelWidth,
+                processedImage.transformedBitmap.width
+            )
+            assertEquals(
+                "Transformed image height should match model height",
+                modelHeight,
+                processedImage.transformedBitmap.height
+            )
 
             // Verify that ratios are positive
             assertTrue("X ratio should be positive", processedImage.xRatio > 0)
@@ -122,7 +130,10 @@ class ImageSelectionTest {
                 println("[DEBUG_LOG] Testing with system drawable $index: $drawableId")
 
                 val mockupImageUri = createMockupImageFromDrawable(appContext, drawableId)
-                assertNotNull("Mockup image URI should not be null for drawable $drawableId", mockupImageUri)
+                assertNotNull(
+                    "Mockup image URI should not be null for drawable $drawableId",
+                    mockupImageUri
+                )
 
                 val processedImage = imageProcessor.processInputImage(
                     uri = mockupImageUri!!,
@@ -130,7 +141,10 @@ class ImageSelectionTest {
                     modelHeight = 320
                 )
 
-                assertNotNull("Processed image should not be null for drawable $drawableId", processedImage)
+                assertNotNull(
+                    "Processed image should not be null for drawable $drawableId",
+                    processedImage
+                )
                 println("[DEBUG_LOG] Successfully processed image from drawable $drawableId")
             }
 
@@ -283,7 +297,10 @@ class ImageSelectionTest {
                     println("[DEBUG_LOG] Result size: ${resultMat.cols()}x${resultMat.rows()}")
 
                     // Verify the complete pipeline worked
-                    assertTrue("Result Mat should have positive dimensions", resultMat.cols() > 0 && resultMat.rows() > 0)
+                    assertTrue(
+                        "Result Mat should have positive dimensions",
+                        resultMat.cols() > 0 && resultMat.rows() > 0
+                    )
                     println("[DEBUG_LOG] Complete processing pipeline test completed successfully")
 
                 } catch (e: Exception) {

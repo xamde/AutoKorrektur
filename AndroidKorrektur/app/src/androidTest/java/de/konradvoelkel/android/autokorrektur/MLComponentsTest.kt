@@ -153,7 +153,10 @@ class MLComponentsTest {
             mat8UC3.setTo(org.opencv.core.Scalar(128.0, 64.0, 192.0)) // Set some test values
 
             // Use reflection to access the private orderInCHW method
-            val orderInCHWMethod = MiGanInference::class.java.getDeclaredMethod("orderInCHW", org.opencv.core.Mat::class.java)
+            val orderInCHWMethod = MiGanInference::class.java.getDeclaredMethod(
+                "orderInCHW",
+                org.opencv.core.Mat::class.java
+            )
             orderInCHWMethod.isAccessible = true
 
             val result8UC3 = orderInCHWMethod.invoke(miGanInference, mat8UC3) as FloatArray
@@ -214,7 +217,10 @@ class MLComponentsTest {
             mat8UC3.setTo(org.opencv.core.Scalar(128.0, 64.0, 192.0)) // Set some test values
 
             // Use reflection to access the private orderInCHWAsBytes method
-            val orderInCHWAsBytesMethod = MiGanInference::class.java.getDeclaredMethod("orderInCHWAsBytes", org.opencv.core.Mat::class.java)
+            val orderInCHWAsBytesMethod = MiGanInference::class.java.getDeclaredMethod(
+                "orderInCHWAsBytes",
+                org.opencv.core.Mat::class.java
+            )
             orderInCHWAsBytesMethod.isAccessible = true
 
             val result8UC3 = orderInCHWAsBytesMethod.invoke(miGanInference, mat8UC3) as ByteArray

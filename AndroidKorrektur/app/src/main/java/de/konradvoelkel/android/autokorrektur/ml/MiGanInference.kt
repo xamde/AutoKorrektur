@@ -129,6 +129,7 @@ class MiGanInference(private val context: Context) {
                     outputTensor.value
                 }
             }
+
             else -> {
                 println("[DEBUG_LOG] Unexpected tensor type, using value")
                 outputTensor.value
@@ -255,7 +256,8 @@ class MiGanInference(private val context: Context) {
                 for (y in 0 until h) {
                     for (x in 0 until w) {
                         // Convert from 0-255 to 0.0-1.0
-                        chwArray[i * h * w + y * w + x] = (channelData[y * w + x].toInt() and 0xFF) / 255.0f
+                        chwArray[i * h * w + y * w + x] =
+                            (channelData[y * w + x].toInt() and 0xFF) / 255.0f
                     }
                 }
             }
@@ -284,10 +286,12 @@ class MiGanInference(private val context: Context) {
                 // Treat as uint8 data (like JavaScript uint8Data)
                 reorderCHWToHWCFromBytes(outputData, width, height, hwcData)
             }
+
             is FloatArray -> {
                 println("[DEBUG_LOG] Processing FloatArray, size: ${outputData.size}")
                 reorderCHWToHWCFromFloats(outputData, width, height, hwcData)
             }
+
             is Array<*> -> {
                 println("[DEBUG_LOG] Output is nested Array, attempting to extract data")
                 try {
@@ -299,8 +303,20 @@ class MiGanInference(private val context: Context) {
                     val flatData = tryExtractFlatData(outputData)
                     if (flatData != null) {
                         when (flatData) {
-                            is ByteArray -> reorderCHWToHWCFromBytes(flatData, width, height, hwcData)
-                            is FloatArray -> reorderCHWToHWCFromFloats(flatData, width, height, hwcData)
+                            is ByteArray -> reorderCHWToHWCFromBytes(
+                                flatData,
+                                width,
+                                height,
+                                hwcData
+                            )
+
+                            is FloatArray -> reorderCHWToHWCFromFloats(
+                                flatData,
+                                width,
+                                height,
+                                hwcData
+                            )
+
                             else -> throw IllegalArgumentException("Could not extract usable data from nested array")
                         }
                     } else {
@@ -308,6 +324,7 @@ class MiGanInference(private val context: Context) {
                     }
                 }
             }
+
             else -> {
                 println("[DEBUG_LOG] Unexpected output type: ${outputData?.javaClass?.name}")
                 throw IllegalArgumentException("Unexpected model output type: ${outputData?.javaClass?.name}")
@@ -320,7 +337,12 @@ class MiGanInference(private val context: Context) {
     /**
      * Reorders CHW byte data to HWC format (similar to JavaScript version).
      */
-    private fun reorderCHWToHWCFromBytes(uint8Data: ByteArray, width: Int, height: Int, hwcData: ByteArray) {
+    private fun reorderCHWToHWCFromBytes(
+        uint8Data: ByteArray,
+        width: Int,
+        height: Int,
+        hwcData: ByteArray
+    ) {
         val size = width * height
 
         for (h in 0 until height) {
@@ -349,7 +371,12 @@ class MiGanInference(private val context: Context) {
     /**
      * Reorders CHW float data to HWC format.
      */
-    private fun reorderCHWToHWCFromFloats(floatData: FloatArray, width: Int, height: Int, hwcData: ByteArray) {
+    private fun reorderCHWToHWCFromFloats(
+        floatData: FloatArray,
+        width: Int,
+        height: Int,
+        hwcData: ByteArray
+    ) {
         val size = width * height
 
         for (h in 0 until height) {
@@ -386,10 +413,12 @@ class MiGanInference(private val context: Context) {
                     println("[DEBUG_LOG] Found ByteArray at index 0")
                     outputData[0] as ByteArray
                 }
+
                 outputData.isNotEmpty() && outputData[0] is FloatArray -> {
                     println("[DEBUG_LOG] Found FloatArray at index 0")
                     outputData[0] as FloatArray
                 }
+
                 else -> {
                     println("[DEBUG_LOG] Could not find flat data in nested structure")
                     null
@@ -424,7 +453,11 @@ class MiGanInference(private val context: Context) {
     /**
      * Extracts FloatArray from nested Array structure.
      */
-    private fun extractFloatArrayFromNestedArray(outputData: Array<*>, width: Int, height: Int): FloatArray {
+    private fun extractFloatArrayFromNestedArray(
+        outputData: Array<*>,
+        width: Int,
+        height: Int
+    ): FloatArray {
         return try {
             val size = width * height * 3
             val floatArray = FloatArray(size)
@@ -442,7 +475,10 @@ class MiGanInference(private val context: Context) {
             floatArray
         } catch (e: Exception) {
             println("[DEBUG_LOG] Failed to extract from nested array: ${e.message}")
-            throw IllegalArgumentException("Failed to extract FloatArray from nested Array structure", e)
+            throw IllegalArgumentException(
+                "Failed to extract FloatArray from nested Array structure",
+                e
+            )
         }
     }
 
