@@ -210,7 +210,7 @@ class YoloInferenceTFLite(private val context: Context) {
             mat.copyTo(resizedMat)
         }
 
-        // Convert to RGB if needed and normalize
+        // Convert to RGB if needed (input is already normalized from ImageProcessor)
         val rgbMat = Mat()
         if (resizedMat.channels() == 4) {
             Imgproc.cvtColor(resizedMat, rgbMat, Imgproc.COLOR_BGRA2RGB)
@@ -220,9 +220,13 @@ class YoloInferenceTFLite(private val context: Context) {
             resizedMat.copyTo(rgbMat)
         }
 
-        // Convert to float and normalize to [0, 1]
+        // Input is already normalized to [0, 1] by ImageProcessor, just ensure it's float
         val floatMat = Mat()
-        rgbMat.convertTo(floatMat, CvType.CV_32FC3, 1.0 / 255.0)
+        if (rgbMat.type() != CvType.CV_32FC3) {
+            rgbMat.convertTo(floatMat, CvType.CV_32FC3)
+        } else {
+            rgbMat.copyTo(floatMat)
+        }
 
         // Copy data to buffer
         val data = FloatArray(inputWidth * inputHeight * inputChannels)
@@ -279,41 +283,62 @@ class YoloInferenceTFLite(private val context: Context) {
     }
 
     /**
-     * Parses detection results from TensorFlow Lite output buffer.
+     * Parses detection results from TensorFlow Lite output buffer for yolo11s-seg model.
+     * Output format: [1, 116, 8400] where 116 = 80 classes + 4 bbox + 32 mask coefficients
      */
     private fun parseDetections(buffer: ByteBuffer, scoreThreshold: Float): List<Detection> {
         val detections = mutableListOf<Detection>()
         buffer.rewind()
 
         try {
-            // YOLO output format: [batch, num_detections, 85] where 85 = 4 (bbox) + 1 (conf) + 80 (classes)
-            // This is a simplified parser - actual format may vary based on model
-            val numDetections = buffer.remaining() / (4 * 85) // Assuming 85 values per detection
+            // yolo11s-seg output format: [1, 116, 8400]
+            // 116 = 4 (bbox: x, y, w, h) + 80 (class scores) + 32 (mask coefficients)
+            val numDetections = 8400
+            val numClasses = 80
+            val numMaskCoeffs = 32
+            val totalFeatures = 4 + numClasses + numMaskCoeffs // 116
 
-            for (i in 0 until minOf(numDetections, 8400)) { // Limit to reasonable number
+            println("[DEBUG_LOG] Parsing detections: $numDetections detections, $totalFeatures features each")
+
+            for (i in 0 until numDetections) {
+                // Read bbox coordinates (x, y, w, h)
                 val x = buffer.float
                 val y = buffer.float
                 val w = buffer.float
                 val h = buffer.float
-                val confidence = buffer.float
 
-                // Skip class probabilities for now and use confidence as class score
-                for (j in 0 until 80) {
-                    buffer.float // Skip class probabilities
+                // Read class scores
+                var maxScore = 0f
+                var maxClassId = -1
+                for (classId in 0 until numClasses) {
+                    val score = buffer.float
+                    if (score > maxScore) {
+                        maxScore = score
+                        maxClassId = classId
+                    }
                 }
 
-                if (confidence > scoreThreshold) {
+                // Skip mask coefficients for now (we'll implement proper segmentation later)
+                for (j in 0 until numMaskCoeffs) {
+                    buffer.float
+                }
+
+                // Check if this is a vehicle class with sufficient confidence
+                if (maxScore > scoreThreshold && vehicleClassIndices.contains(maxClassId)) {
                     val x1 = x - w / 2
                     val y1 = y - h / 2
                     val x2 = x + w / 2
                     val y2 = y + h / 2
 
-                    // Assume car class (index 2) for simplicity
-                    detections.add(Detection(x1, y1, x2, y2, confidence, 2))
+                    detections.add(Detection(x1, y1, x2, y2, maxScore, maxClassId))
+                    println("[DEBUG_LOG] Found vehicle detection: class=$maxClassId, score=$maxScore, bbox=($x1,$y1,$x2,$y2)")
                 }
             }
+
+            println("[DEBUG_LOG] Total vehicle detections found: ${detections.size}")
         } catch (e: Exception) {
             println("[DEBUG_LOG] Error parsing detections: ${e.message}")
+            e.printStackTrace()
         }
 
         return detections

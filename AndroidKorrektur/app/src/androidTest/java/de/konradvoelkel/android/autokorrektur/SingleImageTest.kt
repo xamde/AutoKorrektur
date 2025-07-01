@@ -3,7 +3,6 @@ package de.konradvoelkel.android.autokorrektur
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
-import de.konradvoelkel.android.autokorrektur.ml.YoloInference
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.Assert.*
@@ -11,6 +10,7 @@ import org.opencv.core.Mat
 import org.opencv.core.Scalar
 import org.opencv.core.Core
 import android.net.Uri
+import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
 import java.io.File
 import java.io.FileOutputStream
 
@@ -22,6 +22,7 @@ class SingleImageTest {
         println("[DEBUG_LOG] Starting single image processing test")
 
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
+        val testContext = InstrumentationRegistry.getInstrumentation().context
 
         // Initialize OpenCV first
         try {
@@ -40,7 +41,7 @@ class SingleImageTest {
         try {
             // Initialize YOLO inference
             println("[DEBUG_LOG] Creating YoloInference")
-            val yoloInference = YoloInference(appContext)
+            val yoloInference = YoloInferenceTFLite(appContext)
             assertNotNull("YoloInference should not be null", yoloInference)
 
             println("[DEBUG_LOG] Initializing YOLO model")
@@ -57,9 +58,9 @@ class SingleImageTest {
             println("[DEBUG_LOG] Processing media file: $mediaFile")
 
             try {
-                // Copy media file from assets to internal storage for processing
-                println("[DEBUG_LOG] Copying file from assets")
-                val mediaInputStream = appContext.assets.open(mediaFile)
+                // Copy media file from test assets to internal storage for processing
+                println("[DEBUG_LOG] Copying file from test assets")
+                val mediaInputStream = testContext.assets.open(mediaFile)
                 val tempFile = File(appContext.cacheDir, mediaFile)
                 val outputStream = FileOutputStream(tempFile)
 
