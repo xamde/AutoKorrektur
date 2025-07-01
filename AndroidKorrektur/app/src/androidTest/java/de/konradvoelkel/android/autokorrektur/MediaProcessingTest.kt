@@ -71,8 +71,8 @@ class MediaProcessingTest {
             )
 
             val expectedCarDetections = mapOf(
-                "example1.jpeg" to false,      // Adjust based on actual YOLO results
-                "example2.png" to false,       // Adjust based on actual YOLO results
+                "example1.jpeg" to true,      // funny, this value was previously wrong by AI :-)
+                "example2.png" to true,       // funny, this value was previously wrong by AI :-)
                 "example2Other.png" to false, // Should NOT contain cars
                 "example2This.png" to false   // Should NOT contain cars
             )
