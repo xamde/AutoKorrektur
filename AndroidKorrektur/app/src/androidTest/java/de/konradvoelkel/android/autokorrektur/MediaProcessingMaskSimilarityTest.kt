@@ -1,12 +1,15 @@
 package de.konradvoelkel.android.autokorrektur
 
 import android.net.Uri
-import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor // Your ImageProcessor
-import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite // Your YoloInference
+import androidx.test.platform.app.InstrumentationRegistry
+import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
+import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -143,7 +146,6 @@ class MediaProcessingMaskSimilarityTest { // Renamed for clarity
 
         val modelWidth = 640  // Adjust to your YOLO model's input width
         val modelHeight = 640 // Adjust to your YOLO model's input height
-        val scoreThreshold = 0.25f // Adjust as needed
         val minAcceptablePixelAgreementRatio = 0.80 // 80% agreement
 
         var processedImage: ImageProcessor.ProcessedImage? = null
