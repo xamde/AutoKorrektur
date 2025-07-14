@@ -480,8 +480,8 @@ class YoloInferenceTFLite(private val context: Context) {
 
     /**
      * Creates a mask for a single detection using prototype masks and mask coefficients.
-     * Enhanced with robust error handling and intelligent fallback strategies.
-     * Prioritizes proper segmentation but provides graceful degradation when needed.
+     * Enhanced with robust error handling that fails fast instead of falling back to inferior results.
+     * This approach makes debugging easier by exposing real issues rather than masking them with fallbacks.
      */
     private fun createDetectionMask(
         detection: Detection,
@@ -496,41 +496,18 @@ class YoloInferenceTFLite(private val context: Context) {
         println("[DEBUG_LOG] Creating detection mask for class=${detection.classId}, confidence=${detection.confidence}")
         println("[DEBUG_LOG] Detection bounds: (${detection.x1}, ${detection.y1}) to (${detection.x2}, ${detection.y2})")
 
-        // Check if we have proper segmentation capabilities
+        // Validate inputs first - fail fast on invalid conditions
         if (prototypeMasks == null) {
-            println("[DEBUG_LOG] WARNING: No prototype masks available from model")
+            println("[DEBUG_LOG] CRITICAL ERROR: No prototype masks available from model")
             println("[DEBUG_LOG] Model appears to be detection-only, not segmentation model")
-            println("[DEBUG_LOG] Falling back to rectangular mask (clearly identified as fallback)")
-
-            // Use rectangular mask as fallback with clear identification
-            createRectangularMask(
-                detection,
-                overlayGray,
-                xRatio,
-                yRatio,
-                modelWidth,
-                modelHeight,
-                upscaleFactor
-            )
-            return
+            println("[DEBUG_LOG] Cannot perform proper segmentation without prototype masks")
+            throw IllegalStateException("Prototype masks required for proper segmentation - model may not support segmentation")
         }
 
-        // Validate mask coefficients
         if (detection.maskCoefficients.size != 32) {
-            println("[DEBUG_LOG] WARNING: Invalid mask coefficients size: ${detection.maskCoefficients.size}, expected 32")
+            println("[DEBUG_LOG] CRITICAL ERROR: Invalid mask coefficients size: ${detection.maskCoefficients.size}, expected 32")
             println("[DEBUG_LOG] Detection data may be corrupted or model format mismatch")
-            println("[DEBUG_LOG] Falling back to rectangular mask (clearly identified as fallback)")
-
-            createRectangularMask(
-                detection,
-                overlayGray,
-                xRatio,
-                yRatio,
-                modelWidth,
-                modelHeight,
-                upscaleFactor
-            )
-            return
+            throw IllegalArgumentException("Invalid mask coefficients size: expected 32, got ${detection.maskCoefficients.size}")
         }
 
         // Attempt proper segmentation mask assembly
@@ -549,32 +526,21 @@ class YoloInferenceTFLite(private val context: Context) {
             println("[DEBUG_LOG] Successfully applied proper segmentation mask")
 
         } catch (e: IllegalArgumentException) {
-            println("[DEBUG_LOG] ERROR: Invalid parameters for mask assembly: ${e.message}")
-            println("[DEBUG_LOG] Falling back to rectangular mask due to invalid inputs (clearly identified as fallback)")
-            createRectangularMask(
-                detection,
-                overlayGray,
-                xRatio,
-                yRatio,
-                modelWidth,
-                modelHeight,
-                upscaleFactor
-            )
+            println("[DEBUG_LOG] CRITICAL ERROR: Invalid parameters for mask assembly: ${e.message}")
+            println("[DEBUG_LOG] This indicates a fundamental issue with detection data or model output")
+            throw IllegalArgumentException("Mask assembly failed due to invalid parameters: ${e.message}", e)
+
+        } catch (e: IllegalStateException) {
+            println("[DEBUG_LOG] CRITICAL ERROR: Mask assembly processing failed: ${e.message}")
+            println("[DEBUG_LOG] This indicates an issue with the mask assembly algorithm or data corruption")
+            throw IllegalStateException("Mask assembly processing failed: ${e.message}", e)
 
         } catch (e: Exception) {
-            println("[DEBUG_LOG] ERROR: Unexpected error in mask assembly: ${e.message}")
+            println("[DEBUG_LOG] CRITICAL ERROR: Unexpected error in mask assembly: ${e.message}")
             println("[DEBUG_LOG] ${e.javaClass.simpleName}: ${e.message}")
-            println("[DEBUG_LOG] Falling back to rectangular mask due to processing error (clearly identified as fallback)")
+            println("[DEBUG_LOG] This indicates an unexpected system or processing error")
             e.printStackTrace()
-            createRectangularMask(
-                detection,
-                overlayGray,
-                xRatio,
-                yRatio,
-                modelWidth,
-                modelHeight,
-                upscaleFactor
-            )
+            throw RuntimeException("Unexpected error in mask assembly: ${e.message}", e)
         }
     }
 
@@ -785,38 +751,6 @@ class YoloInferenceTFLite(private val context: Context) {
         }
     }
 
-    /**
-     * Creates a rectangular mask for a detection (fallback method).
-     */
-    private fun createRectangularMask(
-        detection: Detection,
-        overlayGray: Mat,
-        xRatio: Float,
-        yRatio: Float,
-        modelWidth: Int,
-        modelHeight: Int,
-        upscaleFactor: Float
-    ) {
-        // Scale detection to original image coordinates
-        val scaledX1 = (detection.x1 * xRatio * upscaleFactor).toInt()
-        val scaledY1 = (detection.y1 * yRatio * upscaleFactor).toInt()
-        val scaledX2 = (detection.x2 * xRatio * upscaleFactor).toInt()
-        val scaledY2 = (detection.y2 * yRatio * upscaleFactor).toInt()
-
-        // Clamp to image bounds
-        val x1 = max(0, min(scaledX1, modelWidth - 1))
-        val y1 = max(0, min(scaledY1, modelHeight - 1))
-        val x2 = max(0, min(scaledX2, modelWidth - 1))
-        val y2 = max(0, min(scaledY2, modelHeight - 1))
-
-        if (x2 > x1 && y2 > y1) {
-            // Create a rectangular mask for the detection
-            val rect = Rect(x1, y1, x2 - x1, y2 - y1)
-            val roi = Mat(overlayGray, rect)
-            roi.setTo(Scalar(0.0))  // Set detected area to black
-            roi.release()
-        }
-    }
 
     /**
      * Shifts a mask down by the specified factor and fills the top with white pixels.
