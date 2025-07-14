@@ -29,10 +29,10 @@ class ImageProcessor(private val context: Context) {
      * @param modelHeight The height of the model input
      * @param downscaleMp The maximum megapixels to downscale to, or null for no downscaling
      * @return A triple containing:
-     *   - The original RGB bitmap
-     *   - The transformed bitmap for model input
-     *   - The x ratio of the image
-     *   - The y ratio of the image
+     * - The original RGB bitmap
+     * - The transformed bitmap for model input
+     * - The x ratio of the image
+     * - The y ratio of the image
      */
     @Throws(IOException::class)
     fun processInputImage(
@@ -47,7 +47,9 @@ class ImageProcessor(private val context: Context) {
         // Convert to OpenCV Mat
         val rgbMat = Mat()
         Utils.bitmapToMat(originalBitmap, rgbMat)
-        Imgproc.cvtColor(rgbMat, rgbMat, Imgproc.COLOR_RGBA2BGR)
+        // CRITICAL CHANGE: Convert from RGBA (Android Bitmap default) to RGB, not BGR.
+        // Most YOLO models expect RGB channel order.
+        Imgproc.cvtColor(rgbMat, rgbMat, Imgproc.COLOR_RGBA2RGB)
 
         // Optionally downscale the image
         if (downscaleMp != null) {
@@ -150,6 +152,10 @@ class ImageProcessor(private val context: Context) {
         // Create normalized version for ML inference
         val transformedMat = Mat()
         transformedMatForBitmap.convertTo(transformedMat, CvType.CV_32FC3, 1.0 / 255.0)
+
+        // Release intermediate Mats
+        resizedMat.release()
+        paddedMat.release()
 
         return PreprocessingResult(transformedMat, transformedMatForBitmap, xRatio, yRatio)
     }
