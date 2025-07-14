@@ -58,7 +58,7 @@ class CarDetectionDebugTest {
 
             // Process the image
             val processedImage = imageProcessor.processInputImage(
-                uri = fileUri,
+                imageUri = fileUri,
                 modelWidth = modelWidth,
                 modelHeight = modelHeight,
                 downscaleMp = null

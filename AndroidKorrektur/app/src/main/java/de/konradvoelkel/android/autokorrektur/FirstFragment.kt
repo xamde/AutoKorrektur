@@ -665,7 +665,7 @@ class FirstFragment : Fragment() {
 
                     val processedImage = try {
                         imageProcessor.processInputImage(
-                            uri = processingUri,
+                            imageUri = processingUri,
                             modelWidth = 640,  // YOLO model input width
                             modelHeight = 640, // YOLO model input height
                             downscaleMp = downscaleMp
@@ -981,7 +981,7 @@ class FirstFragment : Fragment() {
 
                         // Step 1: Process input image
                         val processedImage = imageProcessor.processInputImage(
-                            uri = uri,
+                            imageUri = uri,
                             modelWidth = 640,
                             modelHeight = 640,
                             downscaleMp = downscaleMp
@@ -1160,7 +1160,7 @@ class FirstFragment : Fragment() {
         }
     }
 
-    private fun createMaskOverlay(originalUri: Uri, maskMat: Mat) {
+    private fun createMaskOverlay(originalUri: Uri, maskMatrix: Mat) {
         try {
             AppLogger.debug("Creating mask overlay visualization")
 
@@ -1172,8 +1172,8 @@ class FirstFragment : Fragment() {
             val overlayBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true)
 
             // Convert mask to bitmap
-            val maskBitmap = createBitmap(maskMat.cols(), maskMat.rows())
-            Utils.matToBitmap(maskMat, maskBitmap)
+            val maskBitmap = createBitmap(maskMatrix.cols(), maskMatrix.rows())
+            Utils.matToBitmap(maskMatrix, maskBitmap)
 
             // Scale mask bitmap to match original image size
             val scaledMaskBitmap = maskBitmap.scale(overlayBitmap.width, overlayBitmap.height)
