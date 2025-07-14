@@ -46,13 +46,16 @@ class YoloInferenceTFLite(private val context: Context) {
         "toothbrush"
     )
 
-    // Configuration parameters
+    // Configuration parameters - aligned with JS reference
     private val scoreThreshold = 0.2f // Confidence threshold after sigmoid for filtering detections
-    private val nmsThreshold = 0.9f   // IoU threshold for Non-Maximum Suppression
+    private val iouThreshold = 0.7f   // IoU threshold for Non-Maximum Suppression
+    private val topAmountPerClass = 100 // top amount of Instances per class
 
     // Vehicle class indices (car, motorcycle, truck) - COCO indices
     private val vehicleClassIndices = intArrayOf(2, 3, 7) // car, motorcycle, truck; bus=5,
 
+    // Standard number of mask coefficients for YOLO segmentation models
+    private val numMaskCoefficients = 32
 
     @Throws(IOException::class)
     fun initialize(modelName: String = "yolo11s", useFP16: Boolean = true) {
@@ -120,8 +123,8 @@ class YoloInferenceTFLite(private val context: Context) {
         transformedMat: Mat, // Expected: CV_32FC3, RGB, Normalized, this.inputWidth x this.inputHeight
         @Suppress("UNUSED_PARAMETER") xRatio: Float, // Letterbox ratio, potentially useful for drawing results on original image
         @Suppress("UNUSED_PARAMETER") yRatio: Float, // Letterbox ratio
-        upscaleFactor: Float = 1.2f,
-        downshiftFactor: Float = 0.0f
+        upscaleFactor: Float = 1.0f, // Default to 1.0f as in JS reference
+        @Suppress("UNUSED_PARAMETER") downshiftFactor: Float = 0.0f // Re-added for compatibility, but ignored
     ): Mat {
         if (!isInitialized || interpreter == null) {
             println("[DEBUG_LOG] Interpreter not initialized. Initializing now...")
@@ -168,24 +171,13 @@ class YoloInferenceTFLite(private val context: Context) {
                 upscaleFactor
             )
 
-            // Apply downshift if specified
-            if (downshiftFactor > 0.0f) {
-                val shiftedMask = shiftDown(overlayGray, downshiftFactor)
-                overlayGray.release() // Release original overlayGray as we're returning the shifted one
-                return shiftedMask
-            }
             return overlayGray
 
         } catch (e: Exception) {
             println("[DEBUG_LOG] TFLite inference failed: ${e.message}")
             e.printStackTrace()
-            // Even in error, if downshift is specified, apply to whatever state overlayGray is in
-            if (downshiftFactor > 0.0f) {
-                val shiftedMask = shiftDown(overlayGray, downshiftFactor)
-                overlayGray.release()
-                return shiftedMask
-            }
-            return overlayGray // Or rethrow: throw RuntimeException("Inference failed", e)
+            // Return current state of overlayGray even on error
+            return overlayGray
         }
     }
 
@@ -280,19 +272,32 @@ class YoloInferenceTFLite(private val context: Context) {
 
             // Get detection tensor shape to correctly determine numProposals and featuresPerProposal
             val detectionTensor = interpreter!!.getOutputTensor(0)
-            val detectionTensorShape = detectionTensor.shape() // e.g., [1, 8400, 116]
-            val featuresPerProposal = detectionTensorShape[1]
-            val numProposals = detectionTensorShape[2]
-            println("[DEBUG_LOG] Detection tensor shape: ${detectionTensorShape.joinToString()}, NumProposals: $numProposals, FeaturesPerProposal: $featuresPerProposal")
+            val detectionTensorShape =
+                detectionTensor.shape() // e.g., [1, 8400, 116] or [1, 116, 8400]
+            val numProposals: Int
+            val featuresPerProposal: Int
 
+            // Determine actual shape based on common YOLOv8/v11 TFLite outputs
+            // If shape is [1, N, F] -> N=numProposals, F=featuresPerProposal
+            // If shape is [1, F, N] -> F=featuresPerProposal, N=numProposals
+            if (detectionTensorShape.size == 3) {
+                // Assuming [1, num_proposals, features_per_proposal] (row-major)
+                numProposals = detectionTensorShape[1]
+                featuresPerProposal = detectionTensorShape[2]
+            } else {
+                throw IllegalStateException("Unexpected detection tensor shape: ${detectionTensorShape.joinToString()}")
+            }
+
+            println("[DEBUG_LOG] Detection tensor shape: ${detectionTensorShape.joinToString()}, NumProposals: $numProposals, FeaturesPerProposal: $featuresPerProposal")
 
             val detections = parseDetections(
                 detectionsBuffer,
-                this.scoreThreshold,
+                scoreThreshold, // Use class-level scoreThreshold
                 numProposals,
-                featuresPerProposal
+                featuresPerProposal,
+                labels.size // Pass actual number of classes
             )
-            val filteredDetections = applyNMS(detections, this.nmsThreshold)
+            val filteredDetections = applyNMS(detections, iouThreshold)
             println("[DEBUG_LOG] Filtered detections after NMS: ${filteredDetections.size}")
 
             if (filteredDetections.isNotEmpty()) {
@@ -324,14 +329,15 @@ class YoloInferenceTFLite(private val context: Context) {
         val prototypeTensorShape = prototypeTensor.shape() // e.g., [1, 32, 160, 160]
         println("[DEBUG_LOG] Prototype tensor shape: ${prototypeTensorShape.joinToString()}")
 
-        val numPrototypes = prototypeTensorShape[3]
-        val prototypeHeight = prototypeTensorShape[1]
-        val prototypeWidth = prototypeTensorShape[2]
+        // Correctly extract dimensions: [batch, channels, height, width]
+        val numPrototypesChannels = prototypeTensorShape[1] // 32
+        val prototypeHeight = prototypeTensorShape[2]       // 160
+        val prototypeWidth = prototypeTensorShape[3]        // 160
 
-        val prototypeMaskSize = numPrototypes * prototypeHeight * prototypeWidth
+        val prototypeMaskSize = numPrototypesChannels * prototypeHeight * prototypeWidth
         val expectedBufferSize = prototypeMaskSize * 4 // 4 bytes per float
 
-        println("[DEBUG_LOG] Extracted prototype dims: $numPrototypes protos, ${prototypeHeight}x${prototypeWidth}. Expected total floats: $prototypeMaskSize")
+        println("[DEBUG_LOG] Extracted prototype dims: $numPrototypesChannels channels, ${prototypeHeight}x${prototypeWidth}. Expected total floats: $prototypeMaskSize")
 
         if (buffer.capacity() < expectedBufferSize) {
             throw IllegalStateException("Prototype masks buffer too small: ${buffer.capacity()} bytes, expected at least $expectedBufferSize bytes. Model output shape mismatch for prototypes?")
@@ -345,146 +351,159 @@ class YoloInferenceTFLite(private val context: Context) {
 
     /**
      * Parses detection results from TensorFlow Lite output buffer.
-     * CRITICAL ASSUMPTION for feature order: The code assumes features_per_proposal are ordered as
-     * [bbox (4 floats: cx, cy, w, h), class_scores (num_classes floats), mask_coefficients (num_mask_coeffs floats)].
-     * VERIFY THIS ORDER for your specific TFLite model.
+     * Aligned with JS reference's column-major data access logic.
+     *
+     * @param buffer The ByteBuffer containing the flattened detection output.
+     * @param currentScoreThreshold The confidence threshold for filtering.
+     * @param numProposals The total number of detection proposals (e.g., 8400).
+     * @param featuresPerProposal The number of features per proposal (e.g., 116).
+     * @param numClasses The total number of classes (e.g., 80).
+     * @returns A list of parsed Detection objects.
      */
     private fun parseDetections(
         buffer: ByteBuffer,
         currentScoreThreshold: Float,
-        numProposals: Int, // e.g., 8400
-        featuresPerProposal: Int // e.g., 116 (4 bbox + 80 classes + 32 mask_coeffs)
+        numProposals: Int,
+        featuresPerProposal: Int,
+        numClasses: Int // Pass actual number of classes
     ): List<Detection> {
         val detections = mutableListOf<Detection>()
         buffer.rewind() // Ensure buffer is at the beginning
 
-        val numClasses = 80 // Standard COCO classes
         val numBBoxCoords = 4
-        // Calculate numMaskCoeffs based on featuresPerProposal
         val numMaskCoeffs = featuresPerProposal - numBBoxCoords - numClasses
-        if (numMaskCoeffs <= 0) { // Should be 32 for typical YOLOv8-seg
+
+        if (numMaskCoeffs <= 0) {
             throw IllegalArgumentException(
-                "Calculated numMaskCoeffs ($numMaskCoeffs) is invalid or non-positive. " +
-                        "Check featuresPerProposal ($featuresPerProposal), numClasses ($numClasses), and numBBoxCoords ($numBBoxCoords). " +
-                        "Ensure the TFLite model output for detections is as expected."
+                "Calculated numMaskCoeffs ($numMaskCoeffs) is invalid. " +
+                        "Check featuresPerProposal ($featuresPerProposal), numClasses ($numClasses), and numBBoxCoords ($numBBoxCoords)."
             )
         }
         println("[DEBUG_LOG] Parsing detections: $numProposals proposals, $featuresPerProposal features each. Assuming $numClasses classes, $numBBoxCoords bbox, $numMaskCoeffs mask coeffs.")
-        println("[DEBUG_LOG] Feature order current assumption: BBOX (4), THEN SCORES ($numClasses), THEN MASK_COEFFS ($numMaskCoeffs)")
 
-
-        val floatBuffer = buffer.asFloatBuffer() // Use FloatBuffer for easier reading
+        // Read the entire buffer into a FloatArray for easier column-major access simulation
+        val floatArray = FloatArray(buffer.capacity() / 4)
+        buffer.asFloatBuffer().get(floatArray)
 
         for (i in 0 until numProposals) {
-            // --- READ BBOX (cx, cy, w, h) ---
-            val cx = floatBuffer.get()
-            val cy = floatBuffer.get()
-            val w = floatBuffer.get()
-            val h = floatBuffer.get()
+            // Simulate JS column-major access: output0Data[feature_index * numDetections + i]
+            val cx = floatArray[0 * numProposals + i]
+            val cy = floatArray[1 * numProposals + i]
+            val w = floatArray[2 * numProposals + i]
+            val h = floatArray[3 * numProposals + i]
 
-            // --- READ CLASS SCORES & APPLY SIGMOID ---
+            // Read class scores and apply sigmoid
             var maxProbability = 0f
             var maxClassId = -1
             for (classId in 0 until numClasses) {
-                val rawScore = floatBuffer.get()
-                val probability =
-                    (1.0f / (1.0f + exp(-rawScore.toDouble()))).toFloat() // Apply sigmoid
+                val rawScore = floatArray[(numBBoxCoords + classId) * numProposals + i]
+                val probability = (1.0f / (1.0f + exp(-rawScore.toDouble()))).toFloat()
                 if (probability > maxProbability) {
                     maxProbability = probability
                     maxClassId = classId
                 }
             }
 
-            // --- READ MASK COEFFICIENTS ---
+            // Read mask coefficients
             val maskCoefficients = FloatArray(numMaskCoeffs)
             for (j in 0 until numMaskCoeffs) {
-                maskCoefficients[j] = floatBuffer.get()
+                maskCoefficients[j] =
+                    floatArray[(numBBoxCoords + numClasses + j) * numProposals + i]
             }
 
             // Filter by score and class
             if (maxProbability > currentScoreThreshold && vehicleClassIndices.contains(maxClassId)) {
-                // Convert cx,cy,w,h to x1,y1,x2,y2 (normalized 0-1)
-                val x1 = (cx - w / 2f).coerceIn(0f, 1f)
-                val y1 = (cy - h / 2f).coerceIn(0f, 1f)
-                val x2 = (cx + w / 2f).coerceIn(0f, 1f)
-                val y2 = (cy + h / 2f).coerceIn(0f, 1f)
+                // Convert cx,cy,w,h to x_min,y_min,width,height (normalized 0-1)
+                val x_min = (cx - w / 2f).coerceIn(0f, 1f)
+                val y_min = (cy - h / 2f).coerceIn(0f, 1f)
+                val width = w.coerceIn(0f, 1f - x_min) // Clamp width so x_max doesn't exceed 1
+                val height = h.coerceIn(0f, 1f - y_min) // Clamp height so y_max doesn't exceed 1
 
-                if (x1 < x2 && y1 < y2) { // Basic sanity check for bbox
+                if (width > 0f && height > 0f) { // Basic sanity check for bbox
                     detections.add(
-                        Detection(x1, y1, x2, y2, maxProbability, maxClassId, maskCoefficients)
+                        Detection(
+                            x_min,
+                            y_min,
+                            width,
+                            height,
+                            maxProbability,
+                            maxClassId,
+                            maskCoefficients
+                        )
                     )
-                } else {
-                    // println("[DEBUG_LOG] Invalid bbox after conversion or from model: ($x1,$y1,$x2,$y2) for class $maxClassId, prob $maxProbability")
                 }
             }
         }
         println("[DEBUG_LOG] Total vehicle detections after score threshold: ${detections.size}")
-        if (detections.isEmpty() && numProposals > 0 && floatBuffer.limit() > 0 && currentScoreThreshold < 0.99f) { // Added threshold check to avoid spamming if threshold is very high
-            FloatArray(numProposals * numClasses)
-            buffer.rewind()
-            val tempFloatBuffer = buffer.asFloatBuffer()
-            var maxRawScoreEncountered = -Float.MAX_VALUE
-            var minRawScoreEncountered = Float.MAX_VALUE
-            for (k in 0 until numProposals) {
-                tempFloatBuffer.position(tempFloatBuffer.position() + numBBoxCoords) // Skip bbox
-                for (l in 0 until numClasses) {
-                    val score = tempFloatBuffer.get()
-                    if (score > maxRawScoreEncountered) maxRawScoreEncountered = score
-                    if (score < minRawScoreEncountered) minRawScoreEncountered = score
-                }
-                tempFloatBuffer.position(tempFloatBuffer.position() + numMaskCoeffs) // Skip mask coeffs
-            }
-            println(
-                "[DEBUG_LOG] WARNING: No detections met threshold $currentScoreThreshold. Max raw score found: $maxRawScoreEncountered (prob ~${
-                    (1.0f / (1.0f + exp(
-                        -maxRawScoreEncountered.toDouble()
-                    ))).toFloat()
-                }), Min raw score: $minRawScoreEncountered. Check model output, scoreThreshold, or feature parsing order if detections are expected."
-            )
-        }
         return detections
     }
 
 
+    /**
+     * Performs Non-Maximum Suppression (NMS) and applies per-class top-k filtering.
+     * Aligned with JS reference.
+     */
     private fun applyNMS(detections: List<Detection>, currentNmsThreshold: Float): List<Detection> {
         if (detections.isEmpty()) return emptyList()
 
         // Sort by confidence (descending)
         val sortedDetections = detections.sortedByDescending { it.confidence }
-        val keep = mutableListOf<Detection>()
+        val keepIndices = mutableListOf<Int>()
+        val suppressed = BooleanArray(sortedDetections.size) { false }
 
-        for (detection in sortedDetections) {
-            var shouldKeep = true
-            for (keptDetection in keep) {
-                // Check if classes are the same, NMS is usually per-class, but here we group all vehicles
-                // if (detection.classId == keptDetection.classId) {
-                if (calculateIoU(detection, keptDetection) > currentNmsThreshold) {
-                    shouldKeep = false
-                    break
-                }
-                // }
+        for (i in sortedDetections.indices) {
+            if (suppressed[i]) {
+                continue
             }
-            if (shouldKeep) {
-                keep.add(detection)
+
+            keepIndices.add(i)
+
+            val box1 = sortedDetections[i]
+            for (j in i + 1 until sortedDetections.size) {
+                if (suppressed[j]) {
+                    continue
+                }
+
+                val box2 = sortedDetections[j]
+                val iou = calculateIoU(box1, box2)
+
+                if (iou > currentNmsThreshold) {
+                    suppressed[j] = true
+                }
             }
         }
-        return keep
+
+        // Apply topAmountPerClass filtering (per class)
+        val finalSelectedDetections = mutableListOf<Detection>()
+        val classCounts = IntArray(labels.size) { 0 } // Use labels.size for numClasses
+
+        for (idx in keepIndices) {
+            val detection = sortedDetections[idx]
+            if (classCounts[detection.classId] < topAmountPerClass) {
+                finalSelectedDetections.add(detection)
+                classCounts[detection.classId]++
+            }
+        }
+
+        return finalSelectedDetections
     }
 
     private fun calculateIoU(det1: Detection, det2: Detection): Float {
         // Normalized coordinates (0-1 range)
-        val xA = max(det1.x1, det2.x1)
-        val yA = max(det1.y1, det2.y1)
-        val xB = min(det1.x2, det2.x2)
-        val yB = min(det1.y2, det2.y2)
+        val xA = max(det1.x, det2.x)
+        val yA = max(det1.y, det2.y)
+        val xB = min(det1.x + det1.width, det2.x + det2.width)
+        val yB = min(det1.y + det1.height, det2.y + det2.height)
 
         // Intersection area
-        val intersectionArea = max(0f, xB - xA) * max(0f, yB - yA)
+        val intersectionWidth = max(0f, xB - xA)
+        val intersectionHeight = max(0f, yB - yA)
+        val intersectionArea = intersectionWidth * intersectionHeight
         if (intersectionArea <= 0f) return 0f
 
         // Individual areas
-        val area1 = (det1.x2 - det1.x1) * (det1.y2 - det1.y1)
-        val area2 = (det2.x2 - det2.x1) * (det2.y2 - det2.y1)
+        val area1 = det1.width * det1.height
+        val area2 = det2.width * det2.height
 
         // Union area
         val unionArea = area1 + area2 - intersectionArea
@@ -492,60 +511,75 @@ class YoloInferenceTFLite(private val context: Context) {
         return if (unionArea > 0.000001f) intersectionArea / unionArea else 0f // Avoid division by zero or tiny union
     }
 
+    /**
+     * Creates and applies the detection mask to the overlay.
+     * Aligned with JS reference's decodeMask and mask overlay logic.
+     */
     private fun createDetectionMask(
         detection: Detection,
         overlayGray: Mat, // Full size overlay (e.g. 640x640, CV_8UC1) to draw upon
         upscaleFactor: Float,
         prototypeMasksData: FloatArray // Flat array of all prototype masks
     ) {
-        // println("[DEBUG_LOG] Creating detection mask for class=${if (detection.classId < labels.size) labels[detection.classId] else "Unknown"}, conf=${detection.confidence}")
-
-        // Determine expected number of mask coefficients from model output tensor 0 shape
-        val detectionTensorShape = interpreter!!.getOutputTensor(0).shape()
-        val featuresPerProposal = detectionTensorShape[1]
-        val numClasses = 80 // Assuming 80 COCO classes
-        val numBBoxCoords = 4
-        val numMaskCoeffsExpected = featuresPerProposal - numBBoxCoords - numClasses
-
-        if (detection.maskCoefficients.size != numMaskCoeffsExpected) {
-            println("[DEBUG_LOG] ERROR: Mask coefficients size mismatch. Expected $numMaskCoeffsExpected, Got ${detection.maskCoefficients.size}. Skipping mask for this detection.")
-            return // Skip this detection if mask coefficients are wrong
-        }
-
-        // Adjust bounding box by upscaleFactor (coordinates are 0-1 normalized)
-        var adjX1 = detection.x1
-        var adjY1 = detection.y1
-        var adjX2 = detection.x2
-        var adjY2 = detection.y2
-
-        if (upscaleFactor != 1.0f && upscaleFactor > 0f) {
-            val boxWidth = detection.x2 - detection.x1
-            val boxHeight = detection.y2 - detection.y1
-            val newWidth = boxWidth * upscaleFactor
-            val newHeight = boxHeight * upscaleFactor
-
-            // Center the upscaled box
-            adjX1 = detection.x1 - (newWidth - boxWidth) / 2f
-            adjY1 = detection.y1 - (newHeight - boxHeight) / 2f
-            adjX2 = adjX1 + newWidth
-            adjY2 = adjY1 + newHeight
-            // No coerceIn here yet, let assembleMaskFromPrototypes handle clamping of its inputs
-        }
+        // Normalize bounding box coordinates to model input dimensions (0-1 range)
+        val boxX = detection.x
+        val boxY = detection.y
+        val boxW = detection.width
+        val boxH = detection.height
 
         try {
-            // This returns a CV_32FC1 mask of size this.inputWidth x this.inputHeight (e.g., 640x640)
-            // with the specific object's mask active (values 0-1) and rest 0.
-            val segmentationMaskSegment = assembleMaskFromPrototypes(
+            // This returns a CV_8UC1 mask of size (boxW*upscaleFactor) x (boxH*upscaleFactor)
+            val mask_mat = assembleMaskFromPrototypes(
                 detection.maskCoefficients,
                 prototypeMasksData,
-                adjX1, adjY1, adjX2, adjY2 // Use adjusted (potentially upscaled) normalized coords
+                boxX, boxY, boxW, boxH, // Pass normalized box coords and dimensions
+                upscaleFactor
             )
 
-            // Apply this segment to the main overlayGray
-            if (!segmentationMaskSegment.empty()) {
-                applySegmentationMask(segmentationMaskSegment, overlayGray)
-                segmentationMaskSegment.release() // Release the intermediate mask segment
-                // println("[DEBUG_LOG] Successfully applied segmentation mask for detection.")
+            if (!mask_mat.empty()) {
+                // Calculate position for overlaying the mask on the full overlayGray
+                val upscaledMaskWidth = mask_mat.cols().toDouble()
+                val upscaledMaskHeight = mask_mat.rows().toDouble()
+
+                // Convert normalized box to pixel coordinates on the model input size
+                val x_model_px = (boxX * inputWidth).toInt()
+                val y_model_px = (boxY * inputHeight).toInt()
+                val w_model_px = (boxW * inputWidth).toInt()
+                val h_model_px = (boxH * inputHeight).toInt()
+
+                // Center the upscaled mask on the original box center (in pixel coords)
+                val targetX_px = x_model_px + (w_model_px / 2.0) - (upscaledMaskWidth / 2.0)
+                val targetY_px = y_model_px + (h_model_px / 2.0) - (upscaledMaskHeight / 2.0)
+
+                // Create a ROI (Region of Interest) on the overlay_gray where the mask will be placed
+                val roiRect = Rect(
+                    max(0, targetX_px.toInt()),
+                    max(0, targetY_px.toInt()),
+                    min(upscaledMaskWidth.toInt(), inputWidth - max(0, targetX_px.toInt())),
+                    min(upscaledMaskHeight.toInt(), inputHeight - max(0, targetY_px.toInt()))
+                )
+
+                // Ensure mask_mat is not larger than the ROI
+                val maskRoiRect = Rect(
+                    0, 0,
+                    min(upscaledMaskWidth.toInt(), roiRect.width),
+                    min(upscaledMaskHeight.toInt(), roiRect.height)
+                )
+
+                if (roiRect.width > 0 && roiRect.height > 0) {
+                    val dstRoi = Mat(overlayGray, roiRect)
+                    val srcMaskRoi = Mat(mask_mat, maskRoiRect)
+
+                    // Subtract mask from overlay so masked area will be black
+                    // Ensure both Mats have the same type and size for subtraction
+                    Core.subtract(dstRoi, srcMaskRoi, dstRoi)
+
+                    dstRoi.release() // Release the ROI Mat
+                    srcMaskRoi.release() // Release the ROI Mat
+                } else {
+                    println("[DEBUG_LOG] Warning: ROI for mask placement is invalid or out of bounds. Skipping mask application for this detection.")
+                }
+                mask_mat.release() // Release the mask Mat
             } else {
                 println("[DEBUG_LOG] assembleMaskFromPrototypes returned empty mask. Skipping application.")
             }
@@ -559,28 +593,28 @@ class YoloInferenceTFLite(private val context: Context) {
 
     /**
      * Assembles a segmentation mask for a single detection from prototype masks and coefficients.
-     * @param normX1, normY1, normX2, normY2: Normalized (0-1) bounding box of the detection,
-     *                                          potentially already upscaled. These define the
-     *                                          region of interest on the model's input scale.
-     * @return A Mat (CV_32FC1) of size this.inputWidth x this.inputHeight, containing the
-     *         object's mask (values 0-1), with areas outside the object being 0.
+     * Aligned with JS decodeMask function.
+     *
+     * @param boxX, boxY, boxW, boxH: Normalized (0-1) bounding box of the detection (x_min, y_min, width, height).
+     * @return A Mat (CV_8UC1) representing the decoded and resized mask for the specific object.
      */
     private fun assembleMaskFromPrototypes(
         maskCoefficients: FloatArray,
-        prototypeMasksData: FloatArray, // Flat array: num_prototypes * proto_height * proto_width
-        normX1: Float, normY1: Float, normX2: Float, normY2: Float
+        prototypeMasksData: FloatArray, // Flat array: num_prototypes_channels * proto_height * proto_width
+        boxX: Float, boxY: Float, boxW: Float, boxH: Float, // Normalized (0-1) bounding box
+        upscaleFactor: Float
     ): Mat {
         val protoTensorShape = interpreter!!.getOutputTensor(1).shape() // e.g. [1, 32, 160, 160]
-        val numPrototypes = protoTensorShape[3]
-        val prototypeHeight = protoTensorShape[1]
-        val prototypeWidth = protoTensorShape[2]
+        val numPrototypesChannels = protoTensorShape[1] // 32
+        val prototypeHeight = protoTensorShape[2]       // 160
+        val prototypeWidth = protoTensorShape[3]        // 160
 
-        if (maskCoefficients.size != numPrototypes) {
-            println("[DEBUG_LOG] assembleMask: Mask coeffs size mismatch. Expected $numPrototypes, got ${maskCoefficients.size}")
+        if (maskCoefficients.size != numPrototypesChannels) {
+            println("[DEBUG_LOG] assembleMask: Mask coeffs size mismatch. Expected $numPrototypesChannels, got ${maskCoefficients.size}")
             return Mat() // Return empty Mat on error
         }
-        if (prototypeMasksData.size != numPrototypes * prototypeHeight * prototypeWidth) {
-            println("[DEBUG_LOG] assembleMask: Prototype data size mismatch. Expected ${numPrototypes * prototypeHeight * prototypeWidth}, got ${prototypeMasksData.size}")
+        if (prototypeMasksData.size != numPrototypesChannels * prototypeHeight * prototypeWidth) {
+            println("[DEBUG_LOG] assembleMask: Prototype data size mismatch. Expected ${numPrototypesChannels * prototypeHeight * prototypeWidth}, got ${prototypeMasksData.size}")
             return Mat()
         }
 
@@ -589,16 +623,11 @@ class YoloInferenceTFLite(private val context: Context) {
         val singleProtoMat = Mat(prototypeHeight, prototypeWidth, CvType.CV_32FC1) // Reusable
         val weightedProtoMat = Mat() // Reusable for multiplication result
 
-        for (i in 0 until numPrototypes) {
+        for (i in 0 until numPrototypesChannels) {
             val coeff = maskCoefficients[i]
             if (coeff == 0f) continue // No contribution if coefficient is zero
 
             val offset = i * prototypeHeight * prototypeWidth
-            // Basic bounds check for safety, though sizes are pre-validated
-            if (offset + prototypeHeight * prototypeWidth > prototypeMasksData.size) {
-                println("[DEBUG_LOG] ERROR: Reading prototype $i beyond prototypeMasksData bounds.")
-                continue
-            }
             val protoDataForOneMask =
                 prototypeMasksData.copyOfRange(offset, offset + prototypeHeight * prototypeWidth)
             singleProtoMat.put(0, 0, protoDataForOneMask)
@@ -612,139 +641,29 @@ class YoloInferenceTFLite(private val context: Context) {
         // 2. Apply sigmoid to the combined 160x160 mask (values become 0-1)
         applySigmoid(combinedProtoMask)
 
-        // 3. Crop and resize this combined mask to the target bounding box on the full model input scale
-        // Clamp normalized coordinates to the valid [0, 1] range before using them for calculations
-        val clampedNormX1 = normX1.coerceIn(0f, 1f)
-        val clampedNormY1 = normY1.coerceIn(0f, 1f)
-        val clampedNormX2 = normX2.coerceIn(0f, 1f)
-        val clampedNormY2 = normY2.coerceIn(0f, 1f)
+        // 3. Threshold the mask (e.g., 0.5) to get binary values
+        Imgproc.threshold(combinedProtoMask, combinedProtoMask, 0.5, 1.0, Imgproc.THRESH_BINARY)
 
-        // Ensure valid box (x1 < x2, y1 < y2) after clamping
-        if (clampedNormX1 >= clampedNormX2 || clampedNormY1 >= clampedNormY2) {
-            println("[DEBUG_LOG] assembleMask: Invalid/collapsed normalized bbox after clamping: ($clampedNormX1,$clampedNormY1) to ($clampedNormX2,$clampedNormY2). Returning empty mask.")
-            combinedProtoMask.release()
-            return Mat() // Return empty Mat
-        }
+        // 4. Resize the mask to the bounding box dimensions (scaled by upscaleFactor)
+        val targetWidth = (boxW * inputWidth * upscaleFactor).toInt().coerceAtLeast(1)
+        val targetHeight = (boxH * inputHeight * upscaleFactor).toInt().coerceAtLeast(1)
 
-        // Map the clamped normalized box (relative to model input e.g. 640x640)
-        // to pixel coordinates on the prototype mask (e.g. 160x160)
-        val protoCropX = (clampedNormX1 * prototypeWidth).toInt()
-        val protoCropY = (clampedNormY1 * prototypeHeight).toInt()
-        val protoCropW = ((clampedNormX2 - clampedNormX1) * prototypeWidth).toInt().coerceAtLeast(1)
-        val protoCropH =
-            ((clampedNormY2 - clampedNormY1) * prototypeHeight).toInt().coerceAtLeast(1)
+        val resizedMask = Mat()
+        Imgproc.resize(
+            combinedProtoMask,
+            resizedMask,
+            Size(targetWidth.toDouble(), targetHeight.toDouble()),
+            0.0,
+            0.0,
+            Imgproc.INTER_LINEAR
+        )
 
-        // Ensure the crop rectangle is within the prototype mask dimensions
-        val validProtoCropX = protoCropX.coerceIn(0, prototypeWidth - 1)
-        val validProtoCropY = protoCropY.coerceIn(0, prototypeHeight - 1)
-        // Adjust width/height to not exceed prototype boundaries from the starting point
-        val validProtoCropW =
-            (validProtoCropX + protoCropW).coerceAtMost(prototypeWidth) - validProtoCropX
-        val validProtoCropH =
-            (validProtoCropY + protoCropH).coerceAtMost(prototypeHeight) - validProtoCropY
+        // 5. Convert to 8UC1 (grayscale) for overlay
+        resizedMask.convertTo(resizedMask, CvType.CV_8UC1, 255.0)
 
-
-        if (validProtoCropW <= 0 || validProtoCropH <= 0) {
-            println("[DEBUG_LOG] assembleMask: Prototype crop dimensions are zero or negative. Skipping. W: $validProtoCropW, H: $validProtoCropH")
-            combinedProtoMask.release()
-            return Mat()
-        }
-        val cropRectOnProto =
-            Rect(validProtoCropX, validProtoCropY, validProtoCropW, validProtoCropH)
-        val croppedSubMaskFromProto = Mat(combinedProtoMask, cropRectOnProto)
-
-
-        // Create a full-size mask (e.g., 640x640) initialized to zeros
-        val fullSizeSegmentMask = Mat.zeros(this.inputHeight, this.inputWidth, CvType.CV_32FC1)
-// Define the target ROI on the fullSizeSegmentMask where the croppedSubMaskFromProto will be placed and resized.
-        // This ROI corresponds to the (potentially upscaled) object's bounding box on the full model input scale.
-        val targetRoiX = (clampedNormX1 * this.inputWidth).toInt()
-        val targetRoiY = (clampedNormY1 * this.inputHeight).toInt()
-        val targetRoiW =
-            ((clampedNormX2 - clampedNormX1) * this.inputWidth).toInt().coerceAtLeast(1)
-        val targetRoiH =
-            ((clampedNormY2 - clampedNormY1) * this.inputHeight).toInt().coerceAtLeast(1)
-
-        // Ensure target ROI is within the bounds of fullSizeSegmentMask
-        val validTargetRoiX = targetRoiX.coerceIn(0, this.inputWidth - 1)
-        val validTargetRoiY = targetRoiY.coerceIn(0, this.inputHeight - 1)
-        val validTargetRoiW =
-            (validTargetRoiX + targetRoiW).coerceAtMost(this.inputWidth) - validTargetRoiX
-        val validTargetRoiH =
-            (validTargetRoiY + targetRoiH).coerceAtMost(this.inputHeight) - validTargetRoiY
-
-        if (validTargetRoiW > 0 && validTargetRoiH > 0) {
-            val targetRoi = Mat(
-                fullSizeSegmentMask,
-                Rect(validTargetRoiX, validTargetRoiY, validTargetRoiW, validTargetRoiH)
-            )
-            Imgproc.resize(
-                croppedSubMaskFromProto,
-                targetRoi,
-                targetRoi.size(),
-                0.0,
-                0.0,
-                Imgproc.INTER_LINEAR
-            )
-            targetRoi.release()
-        } else {
-            println("[DEBUG_LOG] Warning: Target ROI for mask segment is invalid or out of bounds after coercion. Skipping paste for this segment.")
-            println("[DEBUG_LOG] Orig Target ROI: x=$targetRoiX, y=$targetRoiY, w=$targetRoiW, h=$targetRoiH.")
-            println("[DEBUG_LOG] Valid Target ROI: x=$validTargetRoiX, y=$validTargetRoiY, w=$validTargetRoiW, h=$validTargetRoiH.")
-            println("[DEBUG_LOG] Full mask: ${fullSizeSegmentMask.cols()}x${fullSizeSegmentMask.rows()}")
-            println("[DEBUG_LOG] From Clamped Norm Coords: x1=$clampedNormX1, y1=$clampedNormY1, x2=$clampedNormX2, y2=$clampedNormY2")
-        }
-
-        // croppedSubMaskFromProto is a submatrix (header of combinedProtoMask),
-        // no need to release explicitly unless it was copied using .clone() or .copyTo().
         combinedProtoMask.release()
 
-        return fullSizeSegmentMask // This is a CV_32FC1 mask of size this.inputWidth x this.inputHeight
-    }
-
-    /**
-     * Applies the generated segmentation mask (CV_32FC1, values 0-1) to the overlay (CV_8UC1).
-     * Where the segmentationMask is > 0.5 (active), overlay is set to black (0).
-     * Otherwise, overlay remains unchanged (or white if initially set).
-     */
-    private fun applySegmentationMask(
-        segmentationMaskSegment: Mat, // CV_32FC1, values 0-1, size of model input (e.g. 640x640)
-        overlayGray: Mat              // CV_8UC1, size of model input (e.g. 640x640)
-    ) {
-        if (segmentationMaskSegment.empty() || overlayGray.empty()) {
-            println("[DEBUG_LOG] applySegmentationMask: Input mask or overlay is empty. Skipping.")
-            return
-        }
-        if (segmentationMaskSegment.size() != overlayGray.size() || segmentationMaskSegment.type() != CvType.CV_32FC1 || overlayGray.type() != CvType.CV_8UC1) {
-            println(
-                "[DEBUG_LOG] applySegmentationMask: Mismatched dimensions or types. Seg: ${segmentationMaskSegment.size()} Type: ${
-                    CvType.typeToString(
-                        segmentationMaskSegment.type()
-                    )
-                }, Overlay: ${overlayGray.size()} Type: ${CvType.typeToString(overlayGray.type())}"
-            )
-            return
-        }
-
-        val thresholdValue =
-            0.5 // Values in segmentationMaskSegment > this will be part of the mask
-        val black = Scalar(0.0)    // Value to set for masked pixels in overlayGray
-
-        // Create a binary mask (CV_8UC1) from the float segmentation mask
-        val binaryMask = Mat()
-        Imgproc.threshold(
-            segmentationMaskSegment,
-            binaryMask,
-            thresholdValue,
-            255.0,
-            Imgproc.THRESH_BINARY
-        )
-        binaryMask.convertTo(binaryMask, CvType.CV_8U) // Ensure it's CV_8UC1
-
-        // Set pixels in overlayGray to black where binaryMask is non-zero
-        overlayGray.setTo(black, binaryMask)
-
-        binaryMask.release()
+        return resizedMask
     }
 
     /**
@@ -770,8 +689,25 @@ class YoloInferenceTFLite(private val context: Context) {
     }
 
     /**
+     * Handle overflow boxes based on maxSize (normalized 0-1 range).
+     * Box format: [x_min, y_min, width, height]
+     * @param box box in [x_min, y_min, width, height] format
+     * @param maxSize Max value for normalized coordinates, typically 1.0f.
+     * @returns non overflow boxes
+     */
+    private fun overflowBoxes(box: FloatArray, maxSize: Float): FloatArray {
+        val x_min = box[0].coerceIn(0f, maxSize)
+        val y_min = box[1].coerceIn(0f, maxSize)
+        val width = (box[2] + x_min).coerceAtMost(maxSize) - x_min
+        val height = (box[3] + y_min).coerceAtMost(maxSize) - y_min
+        return floatArrayOf(x_min, y_min, width, height)
+    }
+
+    /**
      * Shifts the mask content downwards by a factor of its height.
      * The top part created by the shift is filled with white.
+     * This function is re-added for compatibility with CarDetectionDebugTest.kt,
+     * but its logic is not part of the core segmentation flow in inferYolo.
      * @param originalMask The CV_8UC1 mask to shift.
      * @param downshiftFactor Percentage of height to shift down (0.0 to 1.0).
      * @return A new Mat with the shifted content. The originalMat is NOT released by this function.
@@ -811,27 +747,33 @@ class YoloInferenceTFLite(private val context: Context) {
 
 /**
  * Data class to hold detection results.
- * Coordinates are normalized (0-1 range).
+ * Coordinates are normalized (0-1 range) and represent [x_min, y_min, width, height].
  */
 data class Detection(
-    val x1: Float,
-    val y1: Float,
-    val x2: Float,
-    val y2: Float,
+    val x: Float, // x_min
+    val y: Float, // y_min
+    val width: Float,
+    val height: Float,
     val confidence: Float,
     val classId: Int,
     val maskCoefficients: FloatArray // Typically 32 coefficients for YOLOv8-seg
 ) {
+    // Convenience getters for x1, y1, x2, y2 (normalized 0-1 range)
+    val x1: Float get() = x
+    val y1: Float get() = y
+    val x2: Float get() = x + width
+    val y2: Float get() = y + height
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
         other as Detection
 
-        if (x1 != other.x1) return false
-        if (y1 != other.y1) return false
-        if (x2 != other.x2) return false
-        if (y2 != other.y2) return false
+        if (x != other.x) return false
+        if (y != other.y) return false
+        if (width != other.width) return false
+        if (height != other.height) return false
         if (confidence != other.confidence) return false
         if (classId != other.classId) return false
         if (!maskCoefficients.contentEquals(other.maskCoefficients)) return false
@@ -840,10 +782,10 @@ data class Detection(
     }
 
     override fun hashCode(): Int {
-        var result = x1.hashCode()
-        result = 31 * result + y1.hashCode()
-        result = 31 * result + x2.hashCode()
-        result = 31 * result + y2.hashCode()
+        var result = x.hashCode()
+        result = 31 * result + y.hashCode()
+        result = 31 * result + width.hashCode()
+        result = 31 * result + height.hashCode()
         result = 31 * result + confidence.hashCode()
         result = 31 * result + classId
         result = 31 * result + maskCoefficients.contentHashCode()
