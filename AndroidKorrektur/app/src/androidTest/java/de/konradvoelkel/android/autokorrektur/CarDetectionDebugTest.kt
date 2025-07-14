@@ -5,6 +5,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
 import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
+import org.junit.Assert.assertFalse // For asserting false
+import org.junit.Assert.assertTrue // For asserting true
 import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -29,10 +31,17 @@ class CarDetectionDebugTest {
             fail("OpenCV initialization failed")
         }
 
+        var yoloInference: YoloInferenceTFLite? = null
+        var tempFile: File? = null
+        var processedImage: ImageProcessor.ProcessedImage? = null
+        var resultMask: Mat? = null
+        val blackMask = Mat()
+        val whiteMask = Mat()
+
         try {
             // Initialize YOLO inference
-            val yoloInference = YoloInferenceTFLite(appContext)
-            yoloInference.initialize("yolo11s")
+            yoloInference = YoloInferenceTFLite(appContext)
+            yoloInference.initialize("yolo11s") // Ensure this matches your model name
 
             // Initialize ImageProcessor
             val imageProcessor = ImageProcessor(appContext)
@@ -43,7 +52,7 @@ class CarDetectionDebugTest {
 
             // Copy media file from test assets
             val mediaInputStream = testContext.assets.open(mediaFile)
-            val tempFile = File(appContext.cacheDir, mediaFile)
+            tempFile = File(appContext.cacheDir, mediaFile)
             val outputStream = FileOutputStream(tempFile)
 
             mediaInputStream.use { input ->
@@ -51,55 +60,58 @@ class CarDetectionDebugTest {
                     input.copyTo(output)
                 }
             }
+            mediaInputStream.close()
+            outputStream.close()
+
 
             val fileUri = Uri.fromFile(tempFile)
-            val modelWidth = 640
-            val modelHeight = 640
+            val modelWidth = 640 // Assuming YOLOv11s default, adjust if different
+            val modelHeight = 640 // Assuming YOLOv11s default, adjust if different
 
             // Process the image
-            val processedImage = imageProcessor.processInputImage(
+            processedImage = imageProcessor.processInputImage(
                 imageUri = fileUri,
                 modelWidth = modelWidth,
                 modelHeight = modelHeight,
-                downscaleMp = null
+                downscaleMp = null // Or your desired downscale setting
             )
 
             println("[DEBUG_LOG] Image processed: ${processedImage.originalMat.rows()}x${processedImage.originalMat.cols()}")
             println("[DEBUG_LOG] Transformed: ${processedImage.transformedMat.rows()}x${processedImage.transformedMat.cols()}")
 
-            // Run YOLO inference with detailed logging
-            val resultMask = yoloInference.inferYolo(
+            // Run YOLO inference
+            resultMask = yoloInference.inferYolo(
                 transformedMat = processedImage.transformedMat,
                 xRatio = processedImage.xRatio,
                 yRatio = processedImage.yRatio,
-                //modelWidth = modelWidth,
-                //modelHeight = modelHeight,
-                upscaleFactor = 1.2f,
-                //scoreThreshold = 0.1f,
-                downshiftFactor = 0.0f
+                upscaleFactor = 1.2f,    // Use relevant default or test values
+                //scoreThreshold = 0.1f, // Use relevant default or test values
+                downshiftFactor = 0.0f   // Use relevant default or test values
             )
 
             println("[DEBUG_LOG] Result mask: ${resultMask.rows()}x${resultMask.cols()}")
+            assertTrue("Result mask should not be empty", !resultMask.empty())
+
 
             // Analyze the mask in detail
             val totalPixels = resultMask.rows() * resultMask.cols()
             var blackPixels = 0
-            var whitePixels = 0
-            var grayPixels = 0
-
-            // Count different pixel values
-            val blackMask = Mat()
-            val whiteMask = Mat()
-
-            Core.inRange(resultMask, Scalar(0.0), Scalar(10.0), blackMask)
+            // ... (pixel counting logic as in your original test) ...
+            Core.inRange(
+                resultMask,
+                Scalar(0.0),
+                Scalar(10.0),
+                blackMask
+            ) // Assuming black pixels (0-10) are detections
             blackPixels = Core.countNonZero(blackMask)
 
             Core.inRange(resultMask, Scalar(245.0), Scalar(255.0), whiteMask)
-            whitePixels = Core.countNonZero(whiteMask)
+            val whitePixels = Core.countNonZero(whiteMask)
 
-            grayPixels = totalPixels - blackPixels - whitePixels
+            val grayPixels = totalPixels - blackPixels - whitePixels
 
-            println("[DEBUG_LOG] Pixel analysis:")
+
+            println("[DEBUG_LOG] Pixel analysis for $mediaFile:")
             println("[DEBUG_LOG] - Total pixels: $totalPixels")
             println(
                 "[DEBUG_LOG] - Black pixels (0-10): $blackPixels (${
@@ -126,44 +138,201 @@ class CarDetectionDebugTest {
                 }%)"
             )
 
-            // Sample some pixel values
-            val sampleData = ByteArray(100)
-            resultMask.get(100, 100, sampleData)
-            println(
-                "[DEBUG_LOG] Sample pixel values at (100,100): ${
-                    sampleData.take(10).joinToString(", ")
-                }"
-            )
 
             // Check car detection using the same logic as the test
-            val blackPixelRatio = blackPixels.toDouble() / totalPixels.toDouble()
-            val threshold = 0.0001 // 0.01%
-            val carsDetected = blackPixelRatio > threshold
+            val blackPixelRatio =
+                if (totalPixels > 0) blackPixels.toDouble() / totalPixels.toDouble() else 0.0
+            val detectionThreshold = 0.0001 // Your defined threshold for detecting a car (0.01%)
+            val carsDetected = blackPixelRatio > detectionThreshold
 
             println(
-                "[DEBUG_LOG] Car detection result: $carsDetected (ratio: ${
+                "[DEBUG_LOG] Car detection result for $mediaFile: $carsDetected (ratio: ${
                     String.format(
                         "%.6f",
                         blackPixelRatio
                     )
-                }, threshold: $threshold)"
+                }, threshold: $detectionThreshold)"
             )
 
+            // Assert that a car IS detected for example1.jpeg
+            assertTrue("Car should be detected in $mediaFile", carsDetected)
+
+
+            println("[DEBUG_LOG] Debug test for $mediaFile completed")
+
+        } catch (e: Exception) {
+            println("[DEBUG_LOG] Error in debug test for example1.jpeg: ${e.message}")
+            e.printStackTrace()
+            fail("Debug test for example1.jpeg failed: ${e.message}")
+        } finally {
             // Clean up
             blackMask.release()
             whiteMask.release()
-            processedImage.originalMat.release()
-            processedImage.transformedMat.release()
-            resultMask.release()
-            tempFile.delete()
-            yoloInference.close()
+            processedImage?.originalMat?.release()
+            processedImage?.transformedMat?.release()
+            resultMask?.release()
+            tempFile?.delete()
+            yoloInference?.close()
+        }
+    }
 
-            println("[DEBUG_LOG] Debug test completed")
+    @Test
+    fun debugNoCarDetectionForExample1Result() {
+        println("[DEBUG_LOG] Starting NO car detection debug for example1Result.jpeg")
+
+        val appContext = InstrumentationRegistry.getInstrumentation().targetContext
+        val testContext = InstrumentationRegistry.getInstrumentation().context
+
+        // Initialize OpenCV
+        if (!org.opencv.android.OpenCVLoader.initDebug()) {
+            fail("OpenCV initialization failed")
+        }
+
+        var yoloInference: YoloInferenceTFLite? = null
+        var tempFile: File? = null
+        var processedImage: ImageProcessor.ProcessedImage? = null
+        var resultMask: Mat? = null
+        val blackMask = Mat() // For counting detected pixels
+        val whiteMask =
+            Mat() // For counting background pixels (optional, but good for full analysis)
+        
+        // Process example1Result.jpeg
+        val mediaFile = "example1Result.jpeg"
+        println("[DEBUG_LOG] Processing $mediaFile")
+
+        try {
+            // Initialize YOLO inference
+            yoloInference = YoloInferenceTFLite(appContext)
+            // Ensure you use the same model name as your other test or the one you are debugging
+            yoloInference.initialize("yolo11s")
+
+            // Initialize ImageProcessor
+            val imageProcessor = ImageProcessor(appContext)
+
+            // Copy media file from test assets
+            val mediaInputStream = testContext.assets.open(mediaFile)
+            tempFile = File(appContext.cacheDir, mediaFile)
+            val outputStream = FileOutputStream(tempFile)
+
+            mediaInputStream.use { input ->
+                outputStream.use { output ->
+                    input.copyTo(output)
+                }
+            }
+            mediaInputStream.close()
+            outputStream.close()
+
+            val fileUri = Uri.fromFile(tempFile)
+            // Use the same model dimensions as your YOLO model expects
+            val modelWidth = 640
+            val modelHeight = 640
+
+            // Process the image
+            processedImage = imageProcessor.processInputImage(
+                imageUri = fileUri,
+                modelWidth = modelWidth,
+                modelHeight = modelHeight,
+                downscaleMp = null // Or your desired downscale setting for this test
+            )
+
+            println("[DEBUG_LOG] Image processed: ${processedImage.originalMat.rows()}x${processedImage.originalMat.cols()}")
+            println("[DEBUG_LOG] Transformed: ${processedImage.transformedMat.rows()}x${processedImage.transformedMat.cols()}")
+
+            // Run YOLO inference
+            // Use parameters that you expect to yield no detection, or typical parameters
+            // if the image itself should inherently result in no car detection.
+            resultMask = yoloInference.inferYolo(
+                transformedMat = processedImage.transformedMat,
+                xRatio = processedImage.xRatio,
+                yRatio = processedImage.yRatio,
+                upscaleFactor = 1.2f,    // Consistent with the other test
+                //scoreThreshold = 0.1f, // Consistent with the other test, or adjust if needed for "no detection"
+                downshiftFactor = 0.0f   // Consistent with the other test
+            )
+
+            println("[DEBUG_LOG] Result mask: ${resultMask.rows()}x${resultMask.cols()}")
+            assertTrue("Result mask should not be empty", !resultMask.empty())
+
+
+            // Analyze the mask in detail
+            val totalPixels = resultMask.rows() * resultMask.cols()
+            var blackPixels = 0
+            // Assuming your mask uses black pixels (0-10 range) to indicate detected objects (cars)
+            // and white (245-255 range) for background.
+            Core.inRange(resultMask, Scalar(0.0), Scalar(10.0), blackMask)
+            blackPixels = Core.countNonZero(blackMask)
+
+            Core.inRange(resultMask, Scalar(245.0), Scalar(255.0), whiteMask)
+            val whitePixels = Core.countNonZero(whiteMask)
+
+            val grayPixels = totalPixels - blackPixels - whitePixels
+
+
+            println("[DEBUG_LOG] Pixel analysis for $mediaFile:")
+            println("[DEBUG_LOG] - Total pixels: $totalPixels")
+            println(
+                "[DEBUG_LOG] - Black pixels (0-10): $blackPixels (${
+                    String.format(
+                        "%.4f",
+                        blackPixels.toDouble() / totalPixels * 100
+                    )
+                }%)"
+            )
+            println(
+                "[DEBUG_LOG] - White pixels (245-255): $whitePixels (${
+                    String.format(
+                        "%.4f",
+                        whitePixels.toDouble() / totalPixels * 100
+                    )
+                }%)"
+            )
+            println(
+                "[DEBUG_LOG] - Gray pixels (11-244): $grayPixels (${
+                    String.format(
+                        "%.4f",
+                        grayPixels.toDouble() / totalPixels * 100
+                    )
+                }%)"
+            )
+
+            // Check car detection logic
+            // The black pixel ratio should be below the threshold if no car is detected
+            val blackPixelRatio =
+                if (totalPixels > 0) blackPixels.toDouble() / totalPixels.toDouble() else 0.0
+            val detectionThreshold = 0.0001 // Using the same threshold as your other test (0.01%)
+            // This means if more than 0.01% of pixels are black, it's a "detection"
+            val carsDetected = blackPixelRatio > detectionThreshold
+
+            println(
+                "[DEBUG_LOG] Car detection result for $mediaFile: $carsDetected (ratio: ${
+                    String.format(
+                        "%.6f",
+                        blackPixelRatio
+                    )
+                }, threshold: $detectionThreshold)"
+            )
+
+            // Assert that NO car is detected for example1Result.jpeg
+            assertFalse(
+                "Car should NOT be detected in $mediaFile. Black pixel ratio was $blackPixelRatio",
+                carsDetected
+            )
+
+            println("[DEBUG_LOG] Debug NO car detection test for $mediaFile completed")
 
         } catch (e: Exception) {
-            println("[DEBUG_LOG] Error in debug test: ${e.message}")
+            println("[DEBUG_LOG] Error in NO car detection debug test for $mediaFile: ${e.message}")
             e.printStackTrace()
-            fail("Debug test failed: ${e.message}")
+            fail("Debug NO car detection test for $mediaFile failed: ${e.message}")
+        } finally {
+            // Clean up resources
+            blackMask.release()
+            whiteMask.release()
+            processedImage?.originalMat?.release()
+            processedImage?.transformedMat?.release()
+            resultMask?.release()
+            tempFile?.delete()
+            yoloInference?.close()
         }
     }
 }
