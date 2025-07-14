@@ -80,7 +80,7 @@ class DebugMaskTest {
                 // Process the image using ImageProcessor
                 println("[DEBUG_LOG] Processing image with ImageProcessor")
                 val processedImage = imageProcessor.processInputImage(
-                    uri = fileUri,
+                    imageUri = fileUri,
                     modelWidth = modelWidth,
                     modelHeight = modelHeight,
                     downscaleMp = null

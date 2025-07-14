@@ -24,7 +24,7 @@ class ImageProcessor(private val context: Context) {
     /**
      * Processes an input image for ML inference.
      *
-     * @param uri The URI of the image to process
+     * @param imageUri The URI of the image to process
      * @param modelWidth The width of the model input
      * @param modelHeight The height of the model input
      * @param downscaleMp The maximum megapixels to downscale to, or null for no downscaling
@@ -36,13 +36,13 @@ class ImageProcessor(private val context: Context) {
      */
     @Throws(IOException::class)
     fun processInputImage(
-        uri: Uri,
+        imageUri: Uri,
         modelWidth: Int,
         modelHeight: Int,
         downscaleMp: Float? = null
     ): ProcessedImage {
         // Load the image from URI
-        val originalBitmap = loadBitmapFromUri(uri)
+        val originalBitmap = loadBitmapFromUri(imageUri)
 
         // Convert to OpenCV Mat
         val rgbMat = Mat()
@@ -163,38 +163,38 @@ class ImageProcessor(private val context: Context) {
      * @return A pair of width and height divisible by stride
      */
     private fun divStride(stride: Int, width: Int, height: Int): Pair<Int, Int> {
-        var w = width
-        var h = height
+        var widthDivisibleByStride = width
+        var heightDivisibleByStride = height
 
-        if (w % stride != 0) {
-            w = if (w % stride >= stride / 2) {
-                (w / stride + 1) * stride
+        if (widthDivisibleByStride % stride != 0) {
+            widthDivisibleByStride = if (widthDivisibleByStride % stride >= stride / 2) {
+                (widthDivisibleByStride / stride + 1) * stride
             } else {
-                (w / stride) * stride
+                (widthDivisibleByStride / stride) * stride
             }
         }
 
-        if (h % stride != 0) {
-            h = if (h % stride >= stride / 2) {
-                (h / stride + 1) * stride
+        if (heightDivisibleByStride % stride != 0) {
+            heightDivisibleByStride = if (heightDivisibleByStride % stride >= stride / 2) {
+                (heightDivisibleByStride / stride + 1) * stride
             } else {
-                (h / stride) * stride
+                (heightDivisibleByStride / stride) * stride
             }
         }
 
-        return Pair(w, h)
+        return Pair(widthDivisibleByStride, heightDivisibleByStride)
     }
 
     /**
      * Loads a bitmap from a URI.
      *
-     * @param uri The URI of the image
+     * @param imageUri The URI of the image
      * @return The loaded bitmap
      */
     @Throws(IOException::class)
-    private fun loadBitmapFromUri(uri: Uri): Bitmap {
-        val inputStream = context.contentResolver.openInputStream(uri)
-            ?: throw IOException("Could not open input stream for URI: $uri")
+    private fun loadBitmapFromUri(imageUri: Uri): Bitmap {
+        val inputStream = context.contentResolver.openInputStream(imageUri)
+            ?: throw IOException("Could not open input stream for URI: $imageUri")
 
         val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
         inputStream.close()

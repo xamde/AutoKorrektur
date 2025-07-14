@@ -62,7 +62,7 @@ class ImageSelectionTest {
             val downscaleMp = 2.0f
 
             val processedImage = imageProcessor.processInputImage(
-                uri = mockupImageUri!!,
+                imageUri = mockupImageUri!!,
                 modelWidth = modelWidth,
                 modelHeight = modelHeight,
                 downscaleMp = downscaleMp
@@ -136,7 +136,7 @@ class ImageSelectionTest {
                 )
 
                 val processedImage = imageProcessor.processInputImage(
-                    uri = mockupImageUri!!,
+                    imageUri = mockupImageUri!!,
                     modelWidth = 320,
                     modelHeight = 320
                 )
@@ -241,7 +241,7 @@ class ImageSelectionTest {
             val downscaleMp = 2.0f
 
             val processedImage = imageProcessor.processInputImage(
-                uri = mockupImageUri!!,
+                imageUri = mockupImageUri!!,
                 modelWidth = modelWidth,
                 modelHeight = modelHeight,
                 downscaleMp = downscaleMp

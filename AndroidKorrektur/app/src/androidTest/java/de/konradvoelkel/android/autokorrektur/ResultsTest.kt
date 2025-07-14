@@ -55,7 +55,7 @@ class ResultsTest {
 
             // Process the image
             val processedImage = imageProcessor.processInputImage(
-                uri = fileUri,
+                imageUri = fileUri,
                 modelWidth = 640,
                 modelHeight = 640,
                 downscaleMp = null

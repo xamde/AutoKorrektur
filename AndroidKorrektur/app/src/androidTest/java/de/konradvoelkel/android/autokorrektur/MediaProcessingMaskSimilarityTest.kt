@@ -159,7 +159,7 @@ class MediaProcessingMaskSimilarityTest { // Renamed for clarity
             val fileUri = Uri.fromFile(inputFile)
 
             processedImage = imageProcessor.processInputImage(
-                uri = fileUri,
+                imageUri = fileUri,
                 modelWidth = modelWidth,
                 modelHeight = modelHeight,
                 downscaleMp = null
