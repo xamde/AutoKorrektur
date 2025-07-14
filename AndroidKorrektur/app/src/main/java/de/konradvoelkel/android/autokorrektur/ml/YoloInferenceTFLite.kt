@@ -84,7 +84,9 @@ class YoloInferenceTFLite(private val context: Context) {
             modelBuffer.rewind()
 
             val options = Interpreter.Options()
-            options.setNumThreads(Runtime.getRuntime().availableProcessors()) // Use available processors
+            options.setNumThreads(
+                Runtime.getRuntime().availableProcessors()
+            ) // Use available processors
             interpreter = Interpreter(modelBuffer, options)
 
             val inputTensor = interpreter!!.getInputTensor(0)
@@ -132,7 +134,8 @@ class YoloInferenceTFLite(private val context: Context) {
 
         try {
             // Prepare input buffer
-            val inputBufferCapacity = 4 * this.inputWidth * this.inputHeight * this.inputChannels // 4 bytes per float
+            val inputBufferCapacity =
+                4 * this.inputWidth * this.inputHeight * this.inputChannels // 4 bytes per float
             val inputBuffer = ByteBuffer.allocateDirect(inputBufferCapacity)
             inputBuffer.order(ByteOrder.nativeOrder())
             matToByteBuffer(transformedMat, inputBuffer) // Populate inputBuffer from transformedMat
@@ -147,8 +150,10 @@ class YoloInferenceTFLite(private val context: Context) {
                 val outputShape = outputTensor.shape()
                 println("[DEBUG_LOG] Output $i shape: [${outputShape.joinToString(", ")}]")
                 // Calculate size needed for the buffer based on tensor shape (product of dimensions) * bytes_per_element
-                val outputSize = outputShape.fold(1L) { acc, dim -> acc * dim }.toInt() // Use Long for intermediate to avoid overflow
-                val outputBuffer = ByteBuffer.allocateDirect(4 * outputSize) // Assuming Float32 output
+                val outputSize = outputShape.fold(1L) { acc, dim -> acc * dim }
+                    .toInt() // Use Long for intermediate to avoid overflow
+                val outputBuffer =
+                    ByteBuffer.allocateDirect(4 * outputSize) // Assuming Float32 output
                 outputBuffer.order(ByteOrder.nativeOrder())
                 outputMap[i] = outputBuffer
             }
@@ -198,10 +203,16 @@ class YoloInferenceTFLite(private val context: Context) {
 
         // --- Precondition Checks (Optional but good for debugging) ---
         if (mat.width() != this.inputWidth || mat.height() != this.inputHeight) {
-            println("[DEBUG_LOG] WARNING: matToByteBuffer input Mat dimensions (${mat.width()}x${mat.height()}) " +
-                    "do not match model input dimensions (${this.inputWidth}x${this.inputHeight}). Resizing.")
+            println(
+                "[DEBUG_LOG] WARNING: matToByteBuffer input Mat dimensions (${mat.width()}x${mat.height()}) " +
+                        "do not match model input dimensions (${this.inputWidth}x${this.inputHeight}). Resizing."
+            )
             val tempResizedMat = Mat()
-            Imgproc.resize(mat, tempResizedMat, Size(this.inputWidth.toDouble(), this.inputHeight.toDouble()))
+            Imgproc.resize(
+                mat,
+                tempResizedMat,
+                Size(this.inputWidth.toDouble(), this.inputHeight.toDouble())
+            )
             val data = FloatArray(this.inputWidth * this.inputHeight * this.inputChannels)
             tempResizedMat.get(0, 0, data)
             for (value in data) {
@@ -211,9 +222,16 @@ class YoloInferenceTFLite(private val context: Context) {
             return
         }
         if (mat.type() != CvType.CV_32FC3) {
-            println("[DEBUG_LOG] CRITICAL WARNING: matToByteBuffer input Mat type is not CV_32FC3. Type: ${CvType.typeToString(mat.type())}")
+            println(
+                "[DEBUG_LOG] CRITICAL WARNING: matToByteBuffer input Mat type is not CV_32FC3. Type: ${
+                    CvType.typeToString(
+                        mat.type()
+                    )
+                }"
+            )
             val floatMat = Mat()
-            val conversionFactor = if(CvType.depth(mat.type()) == CvType.CV_8U) 1.0/255.0 else 1.0
+            val conversionFactor =
+                if (CvType.depth(mat.type()) == CvType.CV_8U) 1.0 / 255.0 else 1.0
             mat.convertTo(floatMat, CvType.CV_32FC3, conversionFactor)
             val data = FloatArray(this.inputWidth * this.inputHeight * this.inputChannels)
             floatMat.get(0, 0, data)
@@ -224,8 +242,10 @@ class YoloInferenceTFLite(private val context: Context) {
             return
         }
         if (mat.channels() != this.inputChannels) {
-            println("[DEBUG_LOG] CRITICAL WARNING: matToByteBuffer input Mat channels (${mat.channels()}) " +
-                    "do not match model input channels (${this.inputChannels}). Expected RGB.")
+            println(
+                "[DEBUG_LOG] CRITICAL WARNING: matToByteBuffer input Mat channels (${mat.channels()}) " +
+                        "do not match model input channels (${this.inputChannels}). Expected RGB."
+            )
             throw IllegalArgumentException("Input Mat channels mismatch model expectation (expected ${this.inputChannels} for RGB).")
         }
         // --- End Precondition Checks ---
@@ -266,7 +286,12 @@ class YoloInferenceTFLite(private val context: Context) {
             println("[DEBUG_LOG] Detection tensor shape: ${detectionTensorShape.joinToString()}, NumProposals: $numProposals, FeaturesPerProposal: $featuresPerProposal")
 
 
-            val detections = parseDetections(detectionsBuffer, this.scoreThreshold, numProposals, featuresPerProposal)
+            val detections = parseDetections(
+                detectionsBuffer,
+                this.scoreThreshold,
+                numProposals,
+                featuresPerProposal
+            )
             val filteredDetections = applyNMS(detections, this.nmsThreshold)
             println("[DEBUG_LOG] Filtered detections after NMS: ${filteredDetections.size}")
 
@@ -274,7 +299,7 @@ class YoloInferenceTFLite(private val context: Context) {
                 val prototypeMasks = extractPrototypeMasks(prototypeMasksBuffer)
                 println("[DEBUG_LOG] Creating masks for ${filteredDetections.size} vehicle detections")
                 for (detection in filteredDetections) {
-                    println("[DEBUG_LOG] Processing detection: class=${if (detection.classId < labels.size && detection.classId >=0) labels[detection.classId] else "Unknown"} (${detection.classId}), confidence=${detection.confidence}")
+                    println("[DEBUG_LOG] Processing detection: class=${if (detection.classId < labels.size && detection.classId >= 0) labels[detection.classId] else "Unknown"} (${detection.classId}), confidence=${detection.confidence}")
                     createDetectionMask(
                         detection,
                         overlayGray,
@@ -338,9 +363,11 @@ class YoloInferenceTFLite(private val context: Context) {
         // Calculate numMaskCoeffs based on featuresPerProposal
         val numMaskCoeffs = featuresPerProposal - numBBoxCoords - numClasses
         if (numMaskCoeffs <= 0) { // Should be 32 for typical YOLOv8-seg
-            throw IllegalArgumentException("Calculated numMaskCoeffs ($numMaskCoeffs) is invalid or non-positive. " +
-                    "Check featuresPerProposal ($featuresPerProposal), numClasses ($numClasses), and numBBoxCoords ($numBBoxCoords). " +
-                    "Ensure the TFLite model output for detections is as expected.")
+            throw IllegalArgumentException(
+                "Calculated numMaskCoeffs ($numMaskCoeffs) is invalid or non-positive. " +
+                        "Check featuresPerProposal ($featuresPerProposal), numClasses ($numClasses), and numBBoxCoords ($numBBoxCoords). " +
+                        "Ensure the TFLite model output for detections is as expected."
+            )
         }
         println("[DEBUG_LOG] Parsing detections: $numProposals proposals, $featuresPerProposal features each. Assuming $numClasses classes, $numBBoxCoords bbox, $numMaskCoeffs mask coeffs.")
         println("[DEBUG_LOG] Feature order current assumption: BBOX (4), THEN SCORES ($numClasses), THEN MASK_COEFFS ($numMaskCoeffs)")
@@ -360,7 +387,8 @@ class YoloInferenceTFLite(private val context: Context) {
             var maxClassId = -1
             for (classId in 0 until numClasses) {
                 val rawScore = floatBuffer.get()
-                val probability = (1.0f / (1.0f + exp(-rawScore.toDouble()))).toFloat() // Apply sigmoid
+                val probability =
+                    (1.0f / (1.0f + exp(-rawScore.toDouble()))).toFloat() // Apply sigmoid
                 if (probability > maxProbability) {
                     maxProbability = probability
                     maxClassId = classId
@@ -392,12 +420,12 @@ class YoloInferenceTFLite(private val context: Context) {
         }
         println("[DEBUG_LOG] Total vehicle detections after score threshold: ${detections.size}")
         if (detections.isEmpty() && numProposals > 0 && floatBuffer.limit() > 0 && currentScoreThreshold < 0.99f) { // Added threshold check to avoid spamming if threshold is very high
-            val tempScores = FloatArray(numProposals * numClasses)
+            FloatArray(numProposals * numClasses)
             buffer.rewind()
             val tempFloatBuffer = buffer.asFloatBuffer()
             var maxRawScoreEncountered = -Float.MAX_VALUE
             var minRawScoreEncountered = Float.MAX_VALUE
-            for(k in 0 until numProposals) {
+            for (k in 0 until numProposals) {
                 tempFloatBuffer.position(tempFloatBuffer.position() + numBBoxCoords) // Skip bbox
                 for (l in 0 until numClasses) {
                     val score = tempFloatBuffer.get()
@@ -406,7 +434,13 @@ class YoloInferenceTFLite(private val context: Context) {
                 }
                 tempFloatBuffer.position(tempFloatBuffer.position() + numMaskCoeffs) // Skip mask coeffs
             }
-            println("[DEBUG_LOG] WARNING: No detections met threshold $currentScoreThreshold. Max raw score found: $maxRawScoreEncountered (prob ~${(1.0f / (1.0f + exp(-maxRawScoreEncountered.toDouble()))).toFloat()}), Min raw score: $minRawScoreEncountered. Check model output, scoreThreshold, or feature parsing order if detections are expected.")
+            println(
+                "[DEBUG_LOG] WARNING: No detections met threshold $currentScoreThreshold. Max raw score found: $maxRawScoreEncountered (prob ~${
+                    (1.0f / (1.0f + exp(
+                        -maxRawScoreEncountered.toDouble()
+                    ))).toFloat()
+                }), Min raw score: $minRawScoreEncountered. Check model output, scoreThreshold, or feature parsing order if detections are expected."
+            )
         }
         return detections
     }
@@ -565,7 +599,8 @@ class YoloInferenceTFLite(private val context: Context) {
                 println("[DEBUG_LOG] ERROR: Reading prototype $i beyond prototypeMasksData bounds.")
                 continue
             }
-            val protoDataForOneMask = prototypeMasksData.copyOfRange(offset, offset + prototypeHeight * prototypeWidth)
+            val protoDataForOneMask =
+                prototypeMasksData.copyOfRange(offset, offset + prototypeHeight * prototypeWidth)
             singleProtoMat.put(0, 0, protoDataForOneMask)
 
             Core.multiply(singleProtoMat, Scalar(coeff.toDouble()), weightedProtoMat)
@@ -596,14 +631,17 @@ class YoloInferenceTFLite(private val context: Context) {
         val protoCropX = (clampedNormX1 * prototypeWidth).toInt()
         val protoCropY = (clampedNormY1 * prototypeHeight).toInt()
         val protoCropW = ((clampedNormX2 - clampedNormX1) * prototypeWidth).toInt().coerceAtLeast(1)
-        val protoCropH = ((clampedNormY2 - clampedNormY1) * prototypeHeight).toInt().coerceAtLeast(1)
+        val protoCropH =
+            ((clampedNormY2 - clampedNormY1) * prototypeHeight).toInt().coerceAtLeast(1)
 
         // Ensure the crop rectangle is within the prototype mask dimensions
-        val validProtoCropX = protoCropX.coerceIn(0, prototypeWidth -1)
-        val validProtoCropY = protoCropY.coerceIn(0, prototypeHeight -1)
+        val validProtoCropX = protoCropX.coerceIn(0, prototypeWidth - 1)
+        val validProtoCropY = protoCropY.coerceIn(0, prototypeHeight - 1)
         // Adjust width/height to not exceed prototype boundaries from the starting point
-        val validProtoCropW = (validProtoCropX + protoCropW).coerceAtMost(prototypeWidth) - validProtoCropX
-        val validProtoCropH = (validProtoCropY + protoCropH).coerceAtMost(prototypeHeight) - validProtoCropY
+        val validProtoCropW =
+            (validProtoCropX + protoCropW).coerceAtMost(prototypeWidth) - validProtoCropX
+        val validProtoCropH =
+            (validProtoCropY + protoCropH).coerceAtMost(prototypeHeight) - validProtoCropY
 
 
         if (validProtoCropW <= 0 || validProtoCropH <= 0) {
@@ -611,7 +649,8 @@ class YoloInferenceTFLite(private val context: Context) {
             combinedProtoMask.release()
             return Mat()
         }
-        val cropRectOnProto = Rect(validProtoCropX, validProtoCropY, validProtoCropW, validProtoCropH)
+        val cropRectOnProto =
+            Rect(validProtoCropX, validProtoCropY, validProtoCropW, validProtoCropH)
         val croppedSubMaskFromProto = Mat(combinedProtoMask, cropRectOnProto)
 
 
@@ -621,18 +660,32 @@ class YoloInferenceTFLite(private val context: Context) {
         // This ROI corresponds to the (potentially upscaled) object's bounding box on the full model input scale.
         val targetRoiX = (clampedNormX1 * this.inputWidth).toInt()
         val targetRoiY = (clampedNormY1 * this.inputHeight).toInt()
-        val targetRoiW = ((clampedNormX2 - clampedNormX1) * this.inputWidth).toInt().coerceAtLeast(1)
-        val targetRoiH = ((clampedNormY2 - clampedNormY1) * this.inputHeight).toInt().coerceAtLeast(1)
+        val targetRoiW =
+            ((clampedNormX2 - clampedNormX1) * this.inputWidth).toInt().coerceAtLeast(1)
+        val targetRoiH =
+            ((clampedNormY2 - clampedNormY1) * this.inputHeight).toInt().coerceAtLeast(1)
 
         // Ensure target ROI is within the bounds of fullSizeSegmentMask
         val validTargetRoiX = targetRoiX.coerceIn(0, this.inputWidth - 1)
         val validTargetRoiY = targetRoiY.coerceIn(0, this.inputHeight - 1)
-        val validTargetRoiW = (validTargetRoiX + targetRoiW).coerceAtMost(this.inputWidth) - validTargetRoiX
-        val validTargetRoiH = (validTargetRoiY + targetRoiH).coerceAtMost(this.inputHeight) - validTargetRoiY
+        val validTargetRoiW =
+            (validTargetRoiX + targetRoiW).coerceAtMost(this.inputWidth) - validTargetRoiX
+        val validTargetRoiH =
+            (validTargetRoiY + targetRoiH).coerceAtMost(this.inputHeight) - validTargetRoiY
 
         if (validTargetRoiW > 0 && validTargetRoiH > 0) {
-            val targetRoi = Mat(fullSizeSegmentMask, Rect(validTargetRoiX, validTargetRoiY, validTargetRoiW, validTargetRoiH))
-            Imgproc.resize(croppedSubMaskFromProto, targetRoi, targetRoi.size(), 0.0, 0.0, Imgproc.INTER_LINEAR)
+            val targetRoi = Mat(
+                fullSizeSegmentMask,
+                Rect(validTargetRoiX, validTargetRoiY, validTargetRoiW, validTargetRoiH)
+            )
+            Imgproc.resize(
+                croppedSubMaskFromProto,
+                targetRoi,
+                targetRoi.size(),
+                0.0,
+                0.0,
+                Imgproc.INTER_LINEAR
+            )
             targetRoi.release()
         } else {
             println("[DEBUG_LOG] Warning: Target ROI for mask segment is invalid or out of bounds after coercion. Skipping paste for this segment.")
@@ -663,16 +716,29 @@ class YoloInferenceTFLite(private val context: Context) {
             return
         }
         if (segmentationMaskSegment.size() != overlayGray.size() || segmentationMaskSegment.type() != CvType.CV_32FC1 || overlayGray.type() != CvType.CV_8UC1) {
-            println("[DEBUG_LOG] applySegmentationMask: Mismatched dimensions or types. Seg: ${segmentationMaskSegment.size()} Type: ${CvType.typeToString(segmentationMaskSegment.type())}, Overlay: ${overlayGray.size()} Type: ${CvType.typeToString(overlayGray.type())}")
+            println(
+                "[DEBUG_LOG] applySegmentationMask: Mismatched dimensions or types. Seg: ${segmentationMaskSegment.size()} Type: ${
+                    CvType.typeToString(
+                        segmentationMaskSegment.type()
+                    )
+                }, Overlay: ${overlayGray.size()} Type: ${CvType.typeToString(overlayGray.type())}"
+            )
             return
         }
 
-        val thresholdValue = 0.5 // Values in segmentationMaskSegment > this will be part of the mask
+        val thresholdValue =
+            0.5 // Values in segmentationMaskSegment > this will be part of the mask
         val black = Scalar(0.0)    // Value to set for masked pixels in overlayGray
 
         // Create a binary mask (CV_8UC1) from the float segmentation mask
         val binaryMask = Mat()
-        Imgproc.threshold(segmentationMaskSegment, binaryMask, thresholdValue, 255.0, Imgproc.THRESH_BINARY)
+        Imgproc.threshold(
+            segmentationMaskSegment,
+            binaryMask,
+            thresholdValue,
+            255.0,
+            Imgproc.THRESH_BINARY
+        )
         binaryMask.convertTo(binaryMask, CvType.CV_8U) // Ensure it's CV_8UC1
 
         // Set pixels in overlayGray to black where binaryMask is non-zero
@@ -686,7 +752,13 @@ class YoloInferenceTFLite(private val context: Context) {
      */
     private fun applySigmoid(mat: Mat) { // Input/Output Mat is CV_32FC1
         if (mat.type() != CvType.CV_32FC1) {
-            println("[DEBUG_LOG] applySigmoid: Mat type is not CV_32FC1. Type: ${CvType.typeToString(mat.type())}")
+            println(
+                "[DEBUG_LOG] applySigmoid: Mat type is not CV_32FC1. Type: ${
+                    CvType.typeToString(
+                        mat.type()
+                    )
+                }"
+            )
             return
         }
         val data = FloatArray((mat.total() * mat.channels()).toInt())
@@ -717,7 +789,8 @@ class YoloInferenceTFLite(private val context: Context) {
             return allWhite
         }
 
-        val shiftedMask = Mat(height, width, originalMask.type(), Scalar(255.0)) // Initialize with white
+        val shiftedMask =
+            Mat(height, width, originalMask.type(), Scalar(255.0)) // Initialize with white
 
         // Define region of interest (ROI) for the part of the original mask to keep
         val sourceRoi = Rect(0, 0, width, height - shiftPixels)
