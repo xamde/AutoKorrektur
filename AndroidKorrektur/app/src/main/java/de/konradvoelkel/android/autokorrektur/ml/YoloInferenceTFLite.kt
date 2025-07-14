@@ -261,8 +261,8 @@ class YoloInferenceTFLite(private val context: Context) {
             // Get detection tensor shape to correctly determine numProposals and featuresPerProposal
             val detectionTensor = interpreter!!.getOutputTensor(0)
             val detectionTensorShape = detectionTensor.shape() // e.g., [1, 8400, 116]
-            val numProposals = detectionTensorShape[1]
-            val featuresPerProposal = detectionTensorShape[2]
+            val featuresPerProposal = detectionTensorShape[1]
+            val numProposals = detectionTensorShape[2]
             println("[DEBUG_LOG] Detection tensor shape: ${detectionTensorShape.joinToString()}, NumProposals: $numProposals, FeaturesPerProposal: $featuresPerProposal")
 
 
@@ -299,9 +299,9 @@ class YoloInferenceTFLite(private val context: Context) {
         val prototypeTensorShape = prototypeTensor.shape() // e.g., [1, 32, 160, 160]
         println("[DEBUG_LOG] Prototype tensor shape: ${prototypeTensorShape.joinToString()}")
 
-        val numPrototypes = prototypeTensorShape[1] // e.g., 32
-        val prototypeHeight = prototypeTensorShape[2] // e.g., 160
-        val prototypeWidth = prototypeTensorShape[3]  // e.g., 160
+        val numPrototypes = prototypeTensorShape[3]
+        val prototypeHeight = prototypeTensorShape[1]
+        val prototypeWidth = prototypeTensorShape[2]
 
         val prototypeMaskSize = numPrototypes * prototypeHeight * prototypeWidth
         val expectedBufferSize = prototypeMaskSize * 4 // 4 bytes per float
@@ -468,7 +468,7 @@ class YoloInferenceTFLite(private val context: Context) {
 
         // Determine expected number of mask coefficients from model output tensor 0 shape
         val detectionTensorShape = interpreter!!.getOutputTensor(0).shape()
-        val featuresPerProposal = detectionTensorShape[2]
+        val featuresPerProposal = detectionTensorShape[1]
         val numClasses = 80 // Assuming 80 COCO classes
         val numBBoxCoords = 4
         val numMaskCoeffsExpected = featuresPerProposal - numBBoxCoords - numClasses
