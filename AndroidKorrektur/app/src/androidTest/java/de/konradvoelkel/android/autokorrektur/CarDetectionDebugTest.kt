@@ -5,7 +5,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
 import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
-import org.junit.Assert.*
+import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.opencv.core.Core
@@ -90,32 +90,64 @@ class CarDetectionDebugTest {
             // Count different pixel values
             val blackMask = Mat()
             val whiteMask = Mat()
-            
+
             Core.inRange(resultMask, Scalar(0.0), Scalar(10.0), blackMask)
             blackPixels = Core.countNonZero(blackMask)
-            
+
             Core.inRange(resultMask, Scalar(245.0), Scalar(255.0), whiteMask)
             whitePixels = Core.countNonZero(whiteMask)
-            
+
             grayPixels = totalPixels - blackPixels - whitePixels
 
             println("[DEBUG_LOG] Pixel analysis:")
             println("[DEBUG_LOG] - Total pixels: $totalPixels")
-            println("[DEBUG_LOG] - Black pixels (0-10): $blackPixels (${String.format("%.4f", blackPixels.toDouble() / totalPixels * 100)}%)")
-            println("[DEBUG_LOG] - White pixels (245-255): $whitePixels (${String.format("%.4f", whitePixels.toDouble() / totalPixels * 100)}%)")
-            println("[DEBUG_LOG] - Gray pixels (11-244): $grayPixels (${String.format("%.4f", grayPixels.toDouble() / totalPixels * 100)}%)")
+            println(
+                "[DEBUG_LOG] - Black pixels (0-10): $blackPixels (${
+                    String.format(
+                        "%.4f",
+                        blackPixels.toDouble() / totalPixels * 100
+                    )
+                }%)"
+            )
+            println(
+                "[DEBUG_LOG] - White pixels (245-255): $whitePixels (${
+                    String.format(
+                        "%.4f",
+                        whitePixels.toDouble() / totalPixels * 100
+                    )
+                }%)"
+            )
+            println(
+                "[DEBUG_LOG] - Gray pixels (11-244): $grayPixels (${
+                    String.format(
+                        "%.4f",
+                        grayPixels.toDouble() / totalPixels * 100
+                    )
+                }%)"
+            )
 
             // Sample some pixel values
             val sampleData = ByteArray(100)
             resultMask.get(100, 100, sampleData)
-            println("[DEBUG_LOG] Sample pixel values at (100,100): ${sampleData.take(10).joinToString(", ")}")
+            println(
+                "[DEBUG_LOG] Sample pixel values at (100,100): ${
+                    sampleData.take(10).joinToString(", ")
+                }"
+            )
 
             // Check car detection using the same logic as the test
             val blackPixelRatio = blackPixels.toDouble() / totalPixels.toDouble()
             val threshold = 0.0001 // 0.01%
             val carsDetected = blackPixelRatio > threshold
 
-            println("[DEBUG_LOG] Car detection result: $carsDetected (ratio: ${String.format("%.6f", blackPixelRatio)}, threshold: $threshold)")
+            println(
+                "[DEBUG_LOG] Car detection result: $carsDetected (ratio: ${
+                    String.format(
+                        "%.6f",
+                        blackPixelRatio
+                    )
+                }, threshold: $threshold)"
+            )
 
             // Clean up
             blackMask.release()

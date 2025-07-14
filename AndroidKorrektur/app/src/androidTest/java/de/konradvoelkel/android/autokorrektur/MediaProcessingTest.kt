@@ -90,7 +90,10 @@ class MediaProcessingTest {
             )
 
             assertNotNull("Result mask should not be null for $carImageFile", resultMask)
-            assertTrue("Result mask should not be empty", resultMask!!.rows() > 0 && resultMask.cols() > 0)
+            assertTrue(
+                "Result mask should not be empty",
+                resultMask!!.rows() > 0 && resultMask.cols() > 0
+            )
 
             // --- Verification ---
             val totalPixelsInMask = resultMask.rows() * resultMask.cols()
