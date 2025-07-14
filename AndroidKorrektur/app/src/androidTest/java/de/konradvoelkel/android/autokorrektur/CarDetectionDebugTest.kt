@@ -85,7 +85,6 @@ class CarDetectionDebugTest {
                 xRatio = processedImage.xRatio,
                 yRatio = processedImage.yRatio,
                 upscaleFactor = 1.2f,    // Use relevant default or test values
-                //scoreThreshold = 0.1f, // Use relevant default or test values
                 downshiftFactor = 0.0f   // Use relevant default or test values
             )
 
@@ -195,7 +194,7 @@ class CarDetectionDebugTest {
         val blackMask = Mat() // For counting detected pixels
         val whiteMask =
             Mat() // For counting background pixels (optional, but good for full analysis)
-        
+
         // Process example1Result.jpeg
         val mediaFile = "example1Result.jpeg"
         println("[DEBUG_LOG] Processing $mediaFile")
@@ -246,7 +245,6 @@ class CarDetectionDebugTest {
                 xRatio = processedImage.xRatio,
                 yRatio = processedImage.yRatio,
                 upscaleFactor = 1.2f,    // Consistent with the other test
-                //scoreThreshold = 0.1f, // Consistent with the other test, or adjust if needed for "no detection"
                 downshiftFactor = 0.0f   // Consistent with the other test
             )
 
