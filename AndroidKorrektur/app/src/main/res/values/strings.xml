@@ -28,4 +28,9 @@
     <string name="downscale">Downscale to Max Image Size</string>
     <string name="segmentation_model">Segmentation Model</string>
     <string name="lorem_ipsum">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</string>
+    <string name="start_batch_processing_images">Start Batch Processing (%1$d images)</string>
+    <string name="select_multiple_images">Select Multiple Images</string>
+    <string name="start_btn">Start</string>
+    <string name="select_image_btn">Select Image</string>
+    <string name="processing">Processing...</string>
 </resources>

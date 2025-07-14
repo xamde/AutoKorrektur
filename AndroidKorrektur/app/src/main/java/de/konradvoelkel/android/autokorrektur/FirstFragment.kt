@@ -40,6 +40,7 @@ import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.core.graphics.scale
 
 /**
  * Data class to store batch processing results for CSV export
@@ -206,7 +207,8 @@ class FirstFragment : Fragment() {
             }
 
             binding.startInference.isEnabled = true
-            binding.startInference.text = "Start Batch Processing (${uris.size} images)"
+            binding.startInference.text =
+                getString(R.string.start_batch_processing_images, uris.size)
         } else {
             AppLogger.info("No images selected for batch processing")
         }
@@ -319,12 +321,12 @@ class FirstFragment : Fragment() {
                 } else {
                     "Start Batch Processing"
                 }
-                binding.fileSelect.text = "Select Multiple Images"
+                binding.fileSelect.text = getString(R.string.select_multiple_images)
             } else {
                 // Single mode enabled
                 binding.startInference.isEnabled = selectedImageUri != null
-                binding.startInference.text = "Start"
-                binding.fileSelect.text = "Select Image"
+                binding.startInference.text = getString(R.string.start)
+                binding.fileSelect.text = getString(R.string.select_image)
                 // Clear batch selections when switching to single mode
                 selectedImageUris.clear()
             }
@@ -593,7 +595,7 @@ class FirstFragment : Fragment() {
 
         // Disable the button and show processing state
         binding.startInference.isEnabled = false
-        binding.startInference.text = "Processing..."
+        binding.startInference.text = getString(R.string.processing)
 
         // Clear the images container
         clearImagesContainer()
@@ -784,7 +786,7 @@ class FirstFragment : Fragment() {
                                 }
 
                                 binding.startInference.isEnabled = true
-                                binding.startInference.text = "Start"
+                                binding.startInference.text = getString(R.string.start)
 
                                 Snackbar.make(
                                     binding.root,
@@ -795,7 +797,7 @@ class FirstFragment : Fragment() {
                             } catch (e: Exception) {
                                 AppLogger.error("Error displaying result", e)
                                 binding.startInference.isEnabled = true
-                                binding.startInference.text = "Start"
+                                binding.startInference.text = getString(R.string.start)
                                 Snackbar.make(
                                     binding.root,
                                     "Error displaying result: ${e.message}",
@@ -815,7 +817,7 @@ class FirstFragment : Fragment() {
                                 return@runOnUiThread
                             }
                             binding.startInference.isEnabled = true
-                            binding.startInference.text = "Start"
+                            binding.startInference.text = getString(R.string.start)
                             Snackbar.make(binding.root, "No image selected", Snackbar.LENGTH_SHORT)
                                 .show()
                         }
@@ -835,7 +837,7 @@ class FirstFragment : Fragment() {
                         }
 
                         binding.startInference.isEnabled = true
-                        binding.startInference.text = "Start"
+                        binding.startInference.text = getString(R.string.start)
 
                         val errorMessages = when {
                             e.message?.contains("Failed to create YOLO session") == true -> {
@@ -1174,12 +1176,7 @@ class FirstFragment : Fragment() {
             Utils.matToBitmap(maskMat, maskBitmap)
 
             // Scale mask bitmap to match original image size
-            val scaledMaskBitmap = Bitmap.createScaledBitmap(
-                maskBitmap,
-                overlayBitmap.width,
-                overlayBitmap.height,
-                true
-            )
+            val scaledMaskBitmap = maskBitmap.scale(overlayBitmap.width, overlayBitmap.height)
 
             // Create overlay by applying red tint to mask areas
             val overlayCanvas = android.graphics.Canvas(overlayBitmap)
