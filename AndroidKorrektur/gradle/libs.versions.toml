@@ -11,7 +11,7 @@ constraintlayout = "2.2.1"
 navigationFragmentKtx = "2.9.0"
 navigationUiKtx = "2.9.0"
 onnxruntimeAndroid = "latest.release"
-opencv = "4.11.0"
+opencv = "4.12.0"
 tensorflowLite = "2.17.0"
 
 [libraries]
