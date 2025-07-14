@@ -58,7 +58,7 @@ class YoloInferenceTFLite(private val context: Context) {
     private val numMaskCoefficients = 32
 
     @Throws(IOException::class)
-    fun initialize(modelName: String = "yolo11s", useFP16: Boolean = true) {
+    fun initialize(modelName: String = "yolo11s", useFP16: Boolean = false) {
         if (isInitialized) {
             println("[DEBUG_LOG] TFLite YoloInference already initialized")
             return
