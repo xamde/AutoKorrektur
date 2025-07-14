@@ -102,10 +102,10 @@ class SingleImageTest {
                     transformedMat = processedImage.transformedMat,
                     xRatio = processedImage.xRatio,
                     yRatio = processedImage.yRatio,
-                    modelWidth = modelWidth,
-                    modelHeight = modelHeight,
+                    //modelWidth = modelWidth,
+                    //modelHeight = modelHeight,
                     upscaleFactor = 1.2f,
-                    scoreThreshold = 0.5f,
+                    //scoreThreshold = 0.5f,
                     downshiftFactor = 0.0f
                 )
                 println("[DEBUG_LOG] YOLO inference completed")

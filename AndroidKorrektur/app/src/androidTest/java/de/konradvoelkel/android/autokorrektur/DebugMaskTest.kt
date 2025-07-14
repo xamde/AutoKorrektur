@@ -99,10 +99,10 @@ class DebugMaskTest {
                     transformedMat = processedImage.transformedMat,
                     xRatio = processedImage.xRatio,
                     yRatio = processedImage.yRatio,
-                    modelWidth = modelWidth,
-                    modelHeight = modelHeight,
+                    //modelWidth = modelWidth,
+                    //modelHeight = modelHeight,
                     upscaleFactor = 1.2f,
-                    scoreThreshold = 0.01f,  // Very low threshold to ensure detections
+                    //scoreThreshold = 0.01f,  // Very low threshold to ensure detections
                     downshiftFactor = 0.0f
                 )
                 println("[DEBUG_LOG] YOLO inference completed successfully")

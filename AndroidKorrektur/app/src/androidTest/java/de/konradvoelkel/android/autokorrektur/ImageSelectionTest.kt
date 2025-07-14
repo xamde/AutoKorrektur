@@ -269,10 +269,10 @@ class ImageSelectionTest {
                     transformedMat = processedImage.transformedMat,
                     xRatio = processedImage.xRatio,
                     yRatio = processedImage.yRatio,
-                    modelWidth = modelWidth,
-                    modelHeight = modelHeight,
+                    //modelWidth = modelWidth,
+                    //modelHeight = modelHeight,
                     upscaleFactor = 1.2f,
-                    scoreThreshold = 0.5f
+                    //scoreThreshold = 0.5f
                 )
 
                 assertNotNull("Mask Mat should not be null", maskMat)

@@ -76,10 +76,10 @@ class ResultsTest {
                 transformedMat = processedImage.transformedMat,
                 xRatio = processedImage.xRatio,
                 yRatio = processedImage.yRatio,
-                modelWidth = 640,
-                modelHeight = 640,
+                //modelWidth = 640,
+                //modelHeight = 640,
                 upscaleFactor = 1.2f,
-                scoreThreshold = 0.05f,
+                //scoreThreshold = 0.05f,
                 downshiftFactor = 0.0f
             )
             println("[DEBUG_LOG] YOLO inference completed")

@@ -681,10 +681,10 @@ class FirstFragment : Fragment() {
                             transformedMat = processedImage.transformedMat,
                             xRatio = processedImage.xRatio,
                             yRatio = processedImage.yRatio,
-                            modelWidth = 640,
-                            modelHeight = 640,
+                            //modelWidth = 640,
+                            //modelHeight = 640,
                             upscaleFactor = maskUpscale,
-                            scoreThreshold = scoreThreshold,
+                            //scoreThreshold = scoreThreshold,
                             downshiftFactor = downshift
                         )
                     } catch (e: Exception) {
@@ -990,10 +990,10 @@ class FirstFragment : Fragment() {
                             transformedMat = processedImage.transformedMat,
                             xRatio = processedImage.xRatio,
                             yRatio = processedImage.yRatio,
-                            modelWidth = 640,
-                            modelHeight = 640,
+                            //modelWidth = 640,
+                            //modelHeight = 640,
                             upscaleFactor = maskUpscale,
-                            scoreThreshold = scoreThreshold,
+                            //scoreThreshold = scoreThreshold,
                             downshiftFactor = downshift
                         )
 

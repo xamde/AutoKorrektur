@@ -72,10 +72,10 @@ class CarDetectionDebugTest {
                 transformedMat = processedImage.transformedMat,
                 xRatio = processedImage.xRatio,
                 yRatio = processedImage.yRatio,
-                modelWidth = modelWidth,
-                modelHeight = modelHeight,
+                //modelWidth = modelWidth,
+                //modelHeight = modelHeight,
                 upscaleFactor = 1.2f,
-                scoreThreshold = 0.1f,
+                //scoreThreshold = 0.1f,
                 downshiftFactor = 0.0f
             )
 
