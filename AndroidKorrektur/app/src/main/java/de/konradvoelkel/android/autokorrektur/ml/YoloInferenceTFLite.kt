@@ -571,9 +571,9 @@ class YoloInferenceTFLite(private val context: Context) {
         normX1: Float, normY1: Float, normX2: Float, normY2: Float
     ): Mat {
         val protoTensorShape = interpreter!!.getOutputTensor(1).shape() // e.g. [1, 32, 160, 160]
-        val numPrototypes = protoTensorShape[1]
-        val prototypeHeight = protoTensorShape[2]
-        val prototypeWidth = protoTensorShape[3]
+        val numPrototypes = protoTensorShape[3]
+        val prototypeHeight = protoTensorShape[1]
+        val prototypeWidth = protoTensorShape[2]
 
         if (maskCoefficients.size != numPrototypes) {
             println("[DEBUG_LOG] assembleMask: Mask coeffs size mismatch. Expected $numPrototypes, got ${maskCoefficients.size}")
