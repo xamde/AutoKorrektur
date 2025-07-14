@@ -23,6 +23,128 @@ import java.io.FileOutputStream
 class MediaProcessingTest {
 
     @Test
+    fun testCarDetectionMaskIsSensible() {
+        println("[DEBUG_LOG] Starting car detection sensible mask test")
+
+        val appContext = InstrumentationRegistry.getInstrumentation().targetContext
+        val testContext = InstrumentationRegistry.getInstrumentation().context
+
+        // Initialize OpenCV
+        try {
+            println("[DEBUG_LOG] Initializing OpenCV for sensible mask test")
+            if (!org.opencv.android.OpenCVLoader.initDebug()) {
+                fail("OpenCV initialization failed - required for sensible mask test")
+            }
+            println("[DEBUG_LOG] OpenCV initialized successfully")
+        } catch (e: Exception) {
+            fail("OpenCV initialization check failed: ${e.message}")
+        }
+
+        lateinit var yoloInference: YoloInferenceTFLite
+        lateinit var imageProcessor: ImageProcessor
+        var tempFile: File? = null
+        var processedImage: ImageProcessor.ProcessedImage? = null
+        var resultMask: Mat? = null
+
+        try {
+            println("[DEBUG_LOG] Creating YoloInference and ImageProcessor")
+            yoloInference = YoloInferenceTFLite(appContext)
+            imageProcessor = ImageProcessor(appContext)
+
+            println("[DEBUG_LOG] Initializing YOLO model")
+            yoloInference.initialize("yolo11s") // Or your model name
+
+            val carImageFile = "example1.jpeg" // An image known to contain a car
+
+            println("[DEBUG_LOG] Processing media file: $carImageFile")
+
+            val mediaInputStream = testContext.assets.open(carImageFile)
+            tempFile = File(appContext.cacheDir, carImageFile)
+            val outputStream = FileOutputStream(tempFile)
+            mediaInputStream.use { input -> outputStream.use { output -> input.copyTo(output) } }
+            val fileUri = Uri.fromFile(tempFile)
+
+            val modelWidth = 640 // Or your model's input width
+            val modelHeight = 640 // Or your model's input height
+
+            processedImage = imageProcessor.processInputImage(
+                uri = fileUri,
+                modelWidth = modelWidth,
+                modelHeight = modelHeight,
+                downscaleMp = null
+            )
+
+            assertNotNull("Processed image should not be null", processedImage)
+            assertNotNull("Transformed mat should not be null", processedImage!!.transformedMat)
+
+            println("[DEBUG_LOG] Running YOLO inference for $carImageFile")
+            resultMask = yoloInference.inferYolo(
+                transformedMat = processedImage.transformedMat,
+                xRatio = processedImage.xRatio,
+                yRatio = processedImage.yRatio,
+                modelWidth = modelWidth,
+                modelHeight = modelHeight,
+                upscaleFactor = 1.2f,
+                scoreThreshold = 0.25f, // Use a reasonable threshold for actual detections
+                downshiftFactor = 0.0f
+            )
+
+            assertNotNull("Result mask should not be null for $carImageFile", resultMask)
+            assertTrue("Result mask should not be empty", resultMask!!.rows() > 0 && resultMask.cols() > 0)
+
+            // --- Verification ---
+            val totalPixelsInMask = resultMask.rows() * resultMask.cols()
+            val blackMask = Mat()
+            // Cars are black (0), background is white (255)
+            Core.inRange(resultMask, Scalar(0.0), Scalar(10.0), blackMask)
+            val detectedPixels = Core.countNonZero(blackMask)
+            blackMask.release()
+
+            println("[DEBUG_LOG] $carImageFile - Detected pixels: $detectedPixels / Total pixels: $totalPixelsInMask")
+
+            assertTrue("A car should be detected in $carImageFile", detectedPixels > 0)
+
+            // Check if the mask is substantially smaller than the whole image
+            // This threshold is arbitrary, adjust as needed.
+            // It means less than 95% of the image is considered "car"
+            val maxAllowedDetectionRatio = 0.95
+            val detectedRatio = detectedPixels.toDouble() / totalPixelsInMask.toDouble()
+
+            println("[DEBUG_LOG] Detected ratio: $detectedRatio (Max allowed: $maxAllowedDetectionRatio)")
+            assertTrue(
+                "Detected mask for $carImageFile should be smaller than the whole image. Ratio: $detectedRatio",
+                detectedRatio < maxAllowedDetectionRatio
+            )
+
+            // Also check it's not negligibly small (e.g. just a few pixels)
+            // This threshold is also arbitrary.
+            val minSensibleDetectionRatio = 0.001 // e.g. 0.1% of the image
+            assertTrue(
+                "Detected mask for $carImageFile should be of a sensible size. Ratio: $detectedRatio",
+                detectedRatio > minSensibleDetectionRatio
+            )
+
+
+            println("[DEBUG_LOG] Sensible mask test for $carImageFile PASSED")
+
+        } catch (e: Exception) {
+            println("[DEBUG_LOG] Error during sensible mask test: ${e.message}")
+            e.printStackTrace()
+            fail("Sensible mask test failed: ${e.message}")
+        } finally {
+            // Clean up
+            processedImage?.originalMat?.release()
+            processedImage?.transformedMat?.release()
+            resultMask?.release()
+            tempFile?.delete()
+            //if (::yoloInference.isInitialized) {
+            //    yoloInference.close()
+            //}
+        }
+    }
+
+
+    @Test
     fun testMediaFilesCarDetection() {
         println("[DEBUG_LOG] Starting media files car detection test")
 
@@ -68,16 +190,16 @@ class MediaProcessingTest {
             val mediaFiles = listOf(
                 "example1.jpeg",      // Should contain cars
                 "example2.png",       // Should contain cars
-                "example2Other.png",  // Should NOT contain cars
-                "example2This.png"    // Should NOT contain cars
-                // Note: example1Result.jpeg is excluded as it's a processed result
+                "example1Result.jpeg",  // Should NOT contain cars
+                "example2Result.png"    // Should NOT contain cars
             )
 
             val expectedCarDetections = mapOf(
+                // These boolean values are set by human and should NEVER change.
                 "example1.jpeg" to true,      // funny, this value was previously wrong by AI :-)
                 "example2.png" to true,       // funny, this value was previously wrong by AI :-)
-                "example2Other.png" to false, // Should NOT contain cars
-                "example2This.png" to false   // Should NOT contain cars
+                "example1Result.jpeg" to false, // Should NOT contain cars
+                "example2Result.png" to false   // Should NOT contain cars
             )
 
             // Process each media file
