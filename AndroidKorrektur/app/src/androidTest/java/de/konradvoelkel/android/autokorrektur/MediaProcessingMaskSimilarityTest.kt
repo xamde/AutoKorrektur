@@ -171,10 +171,10 @@ class MediaProcessingMaskSimilarityTest { // Renamed for clarity
                 transformedMat = processedImage.transformedMat,
                 xRatio = processedImage.xRatio,
                 yRatio = processedImage.yRatio,
-                modelWidth = modelWidth,
-                modelHeight = modelHeight,
+                //modelWidth = modelWidth,
+                //modelHeight = modelHeight,
                 upscaleFactor = 1.2f,
-                scoreThreshold = scoreThreshold,
+                //scoreThreshold = scoreThreshold,
                 downshiftFactor = 0.0f
             )
             assertNotNull("YOLO result mask should not be null", yoloResultMask)

@@ -82,10 +82,10 @@ class MediaProcessingTest {
                 transformedMat = processedImage.transformedMat,
                 xRatio = processedImage.xRatio,
                 yRatio = processedImage.yRatio,
-                modelWidth = modelWidth,
-                modelHeight = modelHeight,
+                //modelWidth = modelWidth,
+                //modelHeight = modelHeight,
                 upscaleFactor = 1.2f,
-                scoreThreshold = 0.25f, // Use a reasonable threshold for actual detections
+                //scoreThreshold = 0.25f, // Use a reasonable threshold for actual detections
                 downshiftFactor = 0.0f
             )
 
@@ -262,10 +262,10 @@ class MediaProcessingTest {
                         transformedMat = processedImage.transformedMat,
                         xRatio = processedImage.xRatio,
                         yRatio = processedImage.yRatio,
-                        modelWidth = modelWidth,
-                        modelHeight = modelHeight,
+                        //modelWidth = modelWidth,
+                        //modelHeight = modelHeight,
                         upscaleFactor = 1.2f,
-                        scoreThreshold = 0.1f,  // Lower threshold for debugging
+                        //scoreThreshold = 0.1f,  // Lower threshold for debugging
                         downshiftFactor = 0.0f
                     )
                     println("[DEBUG_LOG] YOLO inference completed for $mediaFile")
