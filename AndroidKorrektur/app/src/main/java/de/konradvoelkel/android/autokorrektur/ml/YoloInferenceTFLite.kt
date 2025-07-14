@@ -48,10 +48,10 @@ class YoloInferenceTFLite(private val context: Context) {
 
     // Configuration parameters
     private val scoreThreshold = 0.2f // Confidence threshold after sigmoid for filtering detections
-    private val nmsThreshold = 0.4f   // IoU threshold for Non-Maximum Suppression
+    private val nmsThreshold = 0.9f   // IoU threshold for Non-Maximum Suppression
 
-    // Vehicle class indices (car, motorcycle, bus, truck) - COCO indices
-    private val vehicleClassIndices = intArrayOf(2, 3, 5, 7) // car, motorcycle, bus, truck
+    // Vehicle class indices (car, motorcycle, truck) - COCO indices
+    private val vehicleClassIndices = intArrayOf(2, 3, 7) // car, motorcycle, truck; bus=5,
 
 
     @Throws(IOException::class)
