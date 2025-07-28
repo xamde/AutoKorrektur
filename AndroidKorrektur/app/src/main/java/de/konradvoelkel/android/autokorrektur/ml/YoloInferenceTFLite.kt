@@ -387,20 +387,20 @@ class YoloInferenceTFLite(private val context: Context) {
         buffer.asFloatBuffer().get(floatArray)
 
         for (i in 0 until numProposals) {
-            val carConfidenceIndex = (4 + 2) * numProposals + i // 4 bbox + classId for car (2)
+            val carConfidenceIndex = i * featuresPerProposal + 4 + 2 // 4 bbox + classId for car (2)
             val carConfidence = (1.0f / (1.0f + exp(-floatArray[carConfidenceIndex].toDouble()))).toFloat()
             println("[DEBUG_LOG] RAW DETECTION - Proposal ${i+1}/${numProposals}, Car Confidence: ${String.format("%.4f", carConfidence)}")
-            // Simulate JS column-major access: output0Data[feature_index * numDetections + i]
-            val cx = floatArray[0 * numProposals + i]
-            val cy = floatArray[1 * numProposals + i]
-            val w = floatArray[2 * numProposals + i]
-            val h = floatArray[3 * numProposals + i]
+            // Correct row-major access: floatArray[i * featuresPerProposal + feature_index]
+            val cx = floatArray[i * featuresPerProposal + 0]
+            val cy = floatArray[i * featuresPerProposal + 1]
+            val w = floatArray[i * featuresPerProposal + 2]
+            val h = floatArray[i * featuresPerProposal + 3]
 
             // Read class scores and apply sigmoid
             var maxProbability = 0f
             var maxClassId = -1
             for (classId in 0 until numClasses) {
-                val rawScore = floatArray[(numBBoxCoords + classId) * numProposals + i]
+                val rawScore = floatArray[i * featuresPerProposal + (numBBoxCoords + classId)]
                 val probability = (1.0f / (1.0f + exp(-rawScore.toDouble()))).toFloat()
                 if (probability > maxProbability) {
                     maxProbability = probability
@@ -412,7 +412,7 @@ class YoloInferenceTFLite(private val context: Context) {
             val maskCoefficients = FloatArray(numMaskCoeffs)
             for (j in 0 until numMaskCoeffs) {
                 maskCoefficients[j] =
-                    floatArray[(numBBoxCoords + numClasses + j) * numProposals + i]
+                    floatArray[i * featuresPerProposal + (numBBoxCoords + numClasses + j)]
             }
 
             // Filter by score and class
