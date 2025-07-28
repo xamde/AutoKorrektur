@@ -16,3 +16,8 @@ local.properties
 /.tmp/
 /caches/
 */daemon/
+/gradle/
+/wrapper/
+/daemon/
+/native/
+/kotlin-profile/
