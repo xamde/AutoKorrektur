@@ -47,8 +47,8 @@ class YoloInferenceTFLite(private val context: Context) {
     )
 
     // Configuration parameters - aligned with JS reference
-    private val scoreThreshold = 0.2f // Confidence threshold after sigmoid for filtering detections
-    private val iouThreshold = 0.7f   // IoU threshold for Non-Maximum Suppression
+    private val scoreThreshold = 0.01f // Confidence threshold after sigmoid for filtering detections
+    private val iouThreshold = 0.1f   // IoU threshold for Non-Maximum Suppression
     private val topAmountPerClass = 100 // top amount of Instances per class
 
     // Vehicle class indices (car, motorcycle, truck) - COCO indices
@@ -297,6 +297,7 @@ class YoloInferenceTFLite(private val context: Context) {
                 featuresPerProposal,
                 labels.size // Pass actual number of classes
             )
+            println("[DEBUG_LOG] Detections after score threshold: ${detections.size}")
             val filteredDetections = applyNMS(detections, iouThreshold)
             println("[DEBUG_LOG] Filtered detections after NMS: ${filteredDetections.size}")
 
@@ -386,6 +387,9 @@ class YoloInferenceTFLite(private val context: Context) {
         buffer.asFloatBuffer().get(floatArray)
 
         for (i in 0 until numProposals) {
+            val carConfidenceIndex = (4 + 2) * numProposals + i // 4 bbox + classId for car (2)
+            val carConfidence = (1.0f / (1.0f + exp(-floatArray[carConfidenceIndex].toDouble()))).toFloat()
+            println("[DEBUG_LOG] RAW DETECTION - Proposal ${i+1}/${numProposals}, Car Confidence: ${String.format("%.4f", carConfidence)}")
             // Simulate JS column-major access: output0Data[feature_index * numDetections + i]
             val cx = floatArray[0 * numProposals + i]
             val cy = floatArray[1 * numProposals + i]
@@ -412,6 +416,9 @@ class YoloInferenceTFLite(private val context: Context) {
             }
 
             // Filter by score and class
+            if (maxProbability > 0.001f) { // Log raw detections with very low threshold
+                println("[DEBUG_LOG] Raw detection (class: ${labels.getOrNull(maxClassId)}, confidence: $maxProbability)")
+            }
             if (maxProbability > currentScoreThreshold && vehicleClassIndices.contains(maxClassId)) {
                 // Convert cx,cy,w,h to x_min,y_min,width,height (normalized 0-1)
                 val x_min = (cx - w / 2f).coerceIn(0f, 1f)
