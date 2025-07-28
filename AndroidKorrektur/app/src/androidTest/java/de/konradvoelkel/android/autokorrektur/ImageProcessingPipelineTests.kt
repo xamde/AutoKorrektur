@@ -60,7 +60,7 @@ class ImageProcessingPipelineTests {
 
     @Test
     fun testImageSelectionSimulation() {
-        val mockupImageUri = TestUtils.copyAssetToCache(appContext, "photo_with_car_1.png").let { Uri.fromFile(it) }
+        val mockupImageUri = TestUtils.copyAssetToCache(appContext, "image_1_with_car_640x640.png").let { Uri.fromFile(it) }
         assertNotNull("Mockup image URI should not be null", mockupImageUri)
 
         val processedImage = imageProcessor.processInputImage(
@@ -79,7 +79,7 @@ class ImageProcessingPipelineTests {
 
     @Test
     fun testCarDetectionOnExampleImage() {
-        val tempFile = copyAssetToCache("photo_with_car_1.png")
+        val tempFile = copyAssetToCache("example1.jpeg")
         val fileUri = Uri.fromFile(tempFile)
 
         val processedImage = imageProcessor.processInputImage(
@@ -97,13 +97,13 @@ class ImageProcessingPipelineTests {
             downshiftFactor = 0.0f
         )
 
-        assertTrue("Car should be detected in example 1", hasCarDetection(resultMask))
+        assertTrue("Car should be detected in image_1_with_car_640x640.png", hasCarDetection(resultMask))
         resultMask.release()
     }
 
     @Test
     fun testNoCarDetectionOnResultImage() {
-        val tempFile = copyAssetToCache("photo_without_car_1.png")
+        val tempFile = copyAssetToCache("image_1_without_car_640x640.png")
         val fileUri = Uri.fromFile(tempFile)
 
         val processedImage = imageProcessor.processInputImage(
@@ -121,13 +121,13 @@ class ImageProcessingPipelineTests {
             downshiftFactor = 0.0f
         )
 
-        assertFalse("Car should NOT be detected in photo_without_car_1.png", hasCarDetection(resultMask))
+        assertFalse("Car should NOT be detected in image_1_without_car_640x640.png", hasCarDetection(resultMask))
         resultMask.release()
     }
 
     @Test
     fun testYoloMaskCreationProperties() {
-        val tempFile = copyAssetToCache("photo_with_car_1.png")
+        val tempFile = copyAssetToCache("image_1_with_car_640x640.png")
         val fileUri = Uri.fromFile(tempFile)
 
         val processedImage = imageProcessor.processInputImage(
@@ -155,7 +155,7 @@ class ImageProcessingPipelineTests {
 
     @Test
     fun testCarDetectionMaskIsSensible() {
-        val tempFile = copyAssetToCache("photo_with_car_1.png")
+        val tempFile = copyAssetToCache("image_1_with_car_640x640.png")
         val fileUri = Uri.fromFile(tempFile)
 
         val processedImage = imageProcessor.processInputImage(
