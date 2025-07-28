@@ -387,11 +387,9 @@ class YoloInferenceTFLite(private val context: Context) {
         buffer.asFloatBuffer().get(floatArray)
 
         for (i in 0 until numProposals) {
-            val carConfidenceIndex = (4 + 2) * numProposals + i // 4 bbox + classId for car (2)
+            val carConfidenceIndex = (4 + 1 + 2) * numProposals + i // 4 bbox + 1 objectness + classId for car (2)
             val carConfidence = (1.0f / (1.0f + exp(-floatArray[carConfidenceIndex].toDouble()))).toFloat()
-            if (carConfidence > 0.001f) {
-                println("[DEBUG_LOG] RAW DETECTION - Proposal $i, Car Confidence: $carConfidence")
-            }
+            println("[DEBUG_LOG] RAW DETECTION - Proposal ${i+1}/${numProposals}, Car Confidence: ${String.format("%.4f", carConfidence)}")
             // Simulate JS column-major access: output0Data[feature_index * numDetections + i]
             val cx = floatArray[0 * numProposals + i]
             val cy = floatArray[1 * numProposals + i]
