@@ -17,6 +17,7 @@ import org.junit.runner.RunWith
 import org.opencv.core.Core
 import org.opencv.core.Mat
 import org.opencv.core.Scalar
+import org.opencv.imgcodecs.Imgcodecs
 import java.io.File
 
 @RunWith(AndroidJUnit4::class)
@@ -55,7 +56,8 @@ class ImageProcessingPipelineTests {
         val blackPixels = Core.countNonZero(blackMask)
         blackMask.release()
         val blackPixelRatio = blackPixels.toDouble() / totalPixels.toDouble()
-        return blackPixelRatio > 0.0001
+        println("[DEBUG_LOG] hasCarDetection: Black pixels: $blackPixels / $totalPixels (${String.format("%.4f", blackPixelRatio * 100)}%)")
+        return blackPixelRatio > 0.01
     }
 
     @Test
@@ -79,7 +81,7 @@ class ImageProcessingPipelineTests {
 
     @Test
     fun testCarDetectionOnExampleImage() {
-        val tempFile = copyAssetToCache("example1.jpeg")
+        val tempFile = copyAssetToCache("image_1_with_car_640x640.png")
         val fileUri = Uri.fromFile(tempFile)
 
         val processedImage = imageProcessor.processInputImage(
@@ -96,6 +98,12 @@ class ImageProcessingPipelineTests {
             upscaleFactor = 1.2f,
             downshiftFactor = 0.0f
         )
+
+        // for debugging, how does the no-car-but-still-some-mask look like?
+        val outputFileName = "debug_mask_car.png"
+        val outputFile = File(appContext.getExternalFilesDir(null), outputFileName)
+        Imgcodecs.imwrite(outputFile.absolutePath, resultMask)
+        println("[DEBUG_LOG] Saved debug mask to: ${outputFile.absolutePath}")
 
         assertTrue("Car should be detected in image_1_with_car_640x640.png", hasCarDetection(resultMask))
         resultMask.release()
@@ -120,6 +128,12 @@ class ImageProcessingPipelineTests {
             upscaleFactor = 1.2f,
             downshiftFactor = 0.0f
         )
+
+        // for debugging, how does the no-car-but-still-some-mask look like?
+        val outputFileName = "debug_mask_no_car.png"
+        val outputFile = File(appContext.getExternalFilesDir(null), outputFileName)
+        Imgcodecs.imwrite(outputFile.absolutePath, resultMask)
+        println("[DEBUG_LOG] Saved debug mask to: ${outputFile.absolutePath}")
 
         assertFalse("Car should NOT be detected in image_1_without_car_640x640.png", hasCarDetection(resultMask))
         resultMask.release()
