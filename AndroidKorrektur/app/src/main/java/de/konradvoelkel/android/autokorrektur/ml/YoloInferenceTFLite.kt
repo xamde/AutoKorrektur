@@ -382,7 +382,8 @@ class YoloInferenceTFLite(private val context: Context) {
 
         for (i in 0 until numProposals) {
             val carConfidenceIndex = i * featuresPerProposal + 4 + 2 // 4 bbox + classId for car (2)
-            val carConfidence = (1.0f / (1.0f + exp(-floatArray[carConfidenceIndex].toDouble()))).toFloat()
+            val carConfidence =
+                (1.0f / (1.0f + exp(-floatArray[carConfidenceIndex].toDouble()))).toFloat()
             //println("[DEBUG_LOG] RAW DETECTION - Proposal ${i+1}/${numProposals}, Car Confidence: ${String.format("%.4f", carConfidence)}")
             // Correct row-major access: floatArray[i * featuresPerProposal + feature_index]
             val cx = floatArray[i * featuresPerProposal + 0]
@@ -411,7 +412,7 @@ class YoloInferenceTFLite(private val context: Context) {
 
             // Filter by score and class
             //if (maxProbability > 0.001f) { // Log raw detections with very low threshold
-                //println("[DEBUG_LOG] Raw detection (class: ${labels.getOrNull(maxClassId)}, confidence: $maxProbability)")
+            //println("[DEBUG_LOG] Raw detection (class: ${labels.getOrNull(maxClassId)}, confidence: $maxProbability)")
             //}
             if (maxProbability > currentScoreThreshold && vehicleClassIndices.contains(maxClassId)) {
                 // Convert cx,cy,w,h to x_min,y_min,width,height (normalized 0-1)

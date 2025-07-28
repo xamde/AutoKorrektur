@@ -1,7 +1,6 @@
 package de.konradvoelkel.android.autokorrektur
 
 import android.content.Context
-import android.net.Uri
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.fail
 import org.opencv.android.OpenCVLoader
