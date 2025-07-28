@@ -10,7 +10,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -56,13 +55,21 @@ class ImageProcessingPipelineTests {
         val blackPixels = Core.countNonZero(blackMask)
         blackMask.release()
         val blackPixelRatio = blackPixels.toDouble() / totalPixels.toDouble()
-        println("[DEBUG_LOG] hasCarDetection: Black pixels: $blackPixels / $totalPixels (${String.format("%.4f", blackPixelRatio * 100)}%)")
+        println(
+            "[DEBUG_LOG] hasCarDetection: Black pixels: $blackPixels / $totalPixels (${
+                String.format(
+                    "%.4f",
+                    blackPixelRatio * 100
+                )
+            }%)"
+        )
         return blackPixelRatio > 0.01
     }
 
     @Test
     fun testImageSelectionSimulation() {
-        val mockupImageUri = TestUtils.copyAssetToCache(appContext, "image_1_with_car_640x640.png").let { Uri.fromFile(it) }
+        val mockupImageUri = TestUtils.copyAssetToCache(appContext, "image_1_with_car_640x640.png")
+            .let { Uri.fromFile(it) }
         assertNotNull("Mockup image URI should not be null", mockupImageUri)
 
         val processedImage = imageProcessor.processInputImage(
@@ -105,7 +112,10 @@ class ImageProcessingPipelineTests {
         Imgcodecs.imwrite(outputFile.absolutePath, resultMask)
         println("[DEBUG_LOG] Saved debug mask to: ${outputFile.absolutePath}")
 
-        assertTrue("Car should be detected in image_1_with_car_640x640.png", hasCarDetection(resultMask))
+        assertTrue(
+            "Car should be detected in image_1_with_car_640x640.png",
+            hasCarDetection(resultMask)
+        )
         resultMask.release()
     }
 
@@ -135,7 +145,10 @@ class ImageProcessingPipelineTests {
         Imgcodecs.imwrite(outputFile.absolutePath, resultMask)
         println("[DEBUG_LOG] Saved debug mask to: ${outputFile.absolutePath}")
 
-        assertFalse("Car should NOT be detected in image_1_without_car_640x640.png", hasCarDetection(resultMask))
+        assertFalse(
+            "Car should NOT be detected in image_1_without_car_640x640.png",
+            hasCarDetection(resultMask)
+        )
         resultMask.release()
     }
 
