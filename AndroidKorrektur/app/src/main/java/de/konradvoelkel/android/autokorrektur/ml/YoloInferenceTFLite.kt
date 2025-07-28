@@ -327,13 +327,13 @@ class YoloInferenceTFLite(private val context: Context) {
 
     private fun extractPrototypeMasks(buffer: ByteBuffer): FloatArray {
         val prototypeTensor = interpreter!!.getOutputTensor(1)
-        val prototypeTensorShape = prototypeTensor.shape() // e.g., [1, 32, 160, 160]
+        val prototypeTensorShape = prototypeTensor.shape() // e.g., [1, 160, 160, 32]
         println("[DEBUG_LOG] Prototype tensor shape: ${prototypeTensorShape.joinToString()}")
 
-        // Correctly extract dimensions: [batch, channels, height, width]
-        val numPrototypesChannels = prototypeTensorShape[1] // 32
-        val prototypeHeight = prototypeTensorShape[2]       // 160
-        val prototypeWidth = prototypeTensorShape[3]        // 160
+        // Correctly extract dimensions: [batch, height, width, channels]
+        val prototypeHeight = prototypeTensorShape[1]       // 160
+        val prototypeWidth = prototypeTensorShape[2]        // 160
+        val numPrototypesChannels = prototypeTensorShape[3] // 32
 
         val prototypeMaskSize = numPrototypesChannels * prototypeHeight * prototypeWidth
         val expectedBufferSize = prototypeMaskSize * 4 // 4 bytes per float
@@ -611,10 +611,10 @@ class YoloInferenceTFLite(private val context: Context) {
         boxX: Float, boxY: Float, boxW: Float, boxH: Float, // Normalized (0-1) bounding box
         upscaleFactor: Float
     ): Mat {
-        val protoTensorShape = interpreter!!.getOutputTensor(1).shape() // e.g. [1, 32, 160, 160]
-        val numPrototypesChannels = protoTensorShape[1] // 32
-        val prototypeHeight = protoTensorShape[2]       // 160
-        val prototypeWidth = protoTensorShape[3]        // 160
+        val protoTensorShape = interpreter!!.getOutputTensor(1).shape() // e.g. [1, 160, 160, 32]
+        val prototypeHeight = protoTensorShape[1]       // 160
+        val prototypeWidth = protoTensorShape[2]        // 160
+        val numPrototypesChannels = protoTensorShape[3] // 32
 
         if (maskCoefficients.size != numPrototypesChannels) {
             println("[DEBUG_LOG] assembleMask: Mask coeffs size mismatch. Expected $numPrototypesChannels, got ${maskCoefficients.size}")
