@@ -43,6 +43,8 @@ class ImageProcessor(private val context: Context) {
     ): ProcessedImage {
         // Load the image from URI
         val originalBitmap = loadBitmapFromUri(imageUri)
+        println("[DEBUG_LOG] ImageProcessor: originalBitmap loaded with dimensions ${originalBitmap.width}x${originalBitmap.height}")
+
 
         // Convert to OpenCV Mat
         val rgbMat = Mat()
@@ -81,6 +83,7 @@ class ImageProcessor(private val context: Context) {
             preprocessingResult.transformedMatForBitmap.rows()
         )
         Utils.matToBitmap(preprocessingResult.transformedMatForBitmap, transformedBitmap)
+        println("[DEBUG_LOG] ImageProcessor: transformedBitmap created with dimensions ${transformedBitmap.width}x${transformedBitmap.height}")
 
         return ProcessedImage(
             originalBitmap = originalBitmap,
