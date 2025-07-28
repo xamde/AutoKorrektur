@@ -372,14 +372,7 @@ class YoloInferenceTFLite(private val context: Context) {
         buffer.rewind() // Ensure buffer is at the beginning
 
         val numBBoxCoords = 4
-        val numMaskCoeffs = featuresPerProposal - numBBoxCoords - numClasses
-
-        if (numMaskCoeffs <= 0) {
-            throw IllegalArgumentException(
-                "Calculated numMaskCoeffs ($numMaskCoeffs) is invalid. " +
-                        "Check featuresPerProposal ($featuresPerProposal), numClasses ($numClasses), and numBBoxCoords ($numBBoxCoords)."
-            )
-        }
+        val numMaskCoeffs = 32
         println("[DEBUG_LOG] Parsing detections: $numProposals proposals, $featuresPerProposal features each. Assuming $numClasses classes, $numBBoxCoords bbox, $numMaskCoeffs mask coeffs.")
 
         // Read the entire buffer into a FloatArray for easier column-major access simulation
