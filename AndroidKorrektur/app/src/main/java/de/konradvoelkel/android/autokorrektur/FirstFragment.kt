@@ -732,7 +732,7 @@ class FirstFragment : Fragment() {
                                     return@runOnUiThread
                                 }
 
-                                AppLogger.debug("Creating mask bitmap")
+                                AppLogger.debug("Creating mask bitmap from rows="+maskMat.rows() + " x cols="+maskMat.cols()+" type="+maskMat.type()+" size="+maskMat.size());
                                 val maskBitmap = createBitmap(maskMat.cols(), maskMat.rows())
                                 Utils.matToBitmap(maskMat, maskBitmap)
 
