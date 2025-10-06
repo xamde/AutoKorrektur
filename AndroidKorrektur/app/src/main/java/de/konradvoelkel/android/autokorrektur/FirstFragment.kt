@@ -541,6 +541,31 @@ class FirstFragment : Fragment() {
         binding.imagesContainer.addView(container)
     }
 
+    private fun addImageToContainer(uri: Uri, label: String) {
+        val imageView = ImageView(context)
+        imageView.layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            400
+        )
+        imageView.scaleType = ImageView.ScaleType.FIT_CENTER
+        imageView.setImageURI(uri)
+
+        val textView = TextView(context)
+        textView.text = label
+        textView.textAlignment = View.TEXT_ALIGNMENT_CENTER
+
+        val container = LinearLayout(context)
+        container.orientation = LinearLayout.VERTICAL
+        container.layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        )
+        container.addView(imageView)
+        container.addView(textView)
+
+        binding.imagesContainer.addView(container)
+    }
+
     private fun clearImagesContainer() {
         binding.imagesContainer.removeAllViews()
     }
@@ -722,7 +747,7 @@ class FirstFragment : Fragment() {
                                     "${requireContext().packageName}.fileprovider",
                                     tempMaskFile
                                 )
-                                displayImage(maskUri, "Mask")
+                                displayImage(maskUri, "Mask Processed")
 
                                 // Create and display mask overlay on original image
                                 createMaskOverlay(processingUri, maskMat)
@@ -782,7 +807,7 @@ class FirstFragment : Fragment() {
 
                                 // Display the processed image
                                 resultImageUri?.let { resultUri ->
-                                    displayImage(resultUri, "Result (ONNX Processed)")
+                                    addImageToContainer(resultUri, "Result (ONNX Processed)")
                                 }
 
                                 binding.startInference.isEnabled = true
