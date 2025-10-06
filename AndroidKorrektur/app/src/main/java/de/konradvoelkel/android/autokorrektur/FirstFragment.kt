@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -222,26 +223,31 @@ class FirstFragment : Fragment() {
         return binding.root
     }
 
+    companion object {
+        private const val TAG = "FirstFragment"
+
+        init {
+            // This block is called only once when the class is first loaded.
+            // It's the recommended place to load native libraries.
+            try {
+                // The modern and correct way to load the OpenCV library.
+                System.loadLibrary("opencv_java4")
+                // You can use your AppLogger here if it's accessible statically.
+                Log.d(TAG, "OpenCV native library loaded successfully.")
+            } catch (e: UnsatisfiedLinkError) {
+                // This will catch errors if the .so file is missing.
+                Log.e(TAG, "Failed to load OpenCV native library!", e)
+                // Handle the error appropriately. Maybe show a dialog to the user.
+            }
+        }
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Check OpenCV initialization
-        try {
-            AppLogger.debug("Checking OpenCV initialization")
-            if (!org.opencv.android.OpenCVLoader.initDebug()) {
-                AppLogger.error("OpenCV initialization failed")
-                Snackbar.make(
-                    binding.root,
-                    "OpenCV initialization failed. Some features may not work.",
-                    Snackbar.LENGTH_LONG
-                ).show()
-            } else {
-                AppLogger.info("OpenCV initialized successfully")
-            }
-        } catch (e: Exception) {
-            AppLogger.error("OpenCV initialization check failed", e)
-            // Continue anyway, as OpenCV might be statically linked
-        }
+        // The OpenCV initialization is now handled in the companion object's init block.
+        // You can remove the old try-catch block for OpenCVLoader.initDebug().
+        AppLogger.debug("View created. OpenCV should be loaded.")
 
         // Initialize ML inference objects
         try {
