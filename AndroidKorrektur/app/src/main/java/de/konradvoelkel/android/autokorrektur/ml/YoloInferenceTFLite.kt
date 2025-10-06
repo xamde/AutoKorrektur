@@ -47,7 +47,7 @@ class YoloInferenceTFLite(private val context: Context) {
     )
 
     // Configuration parameters - aligned with JS reference
-    private val scoreThreshold = 0.5f // Confidence threshold after sigmoid for filtering detections
+    private val scoreThreshold = 0.1f // Lowered from 0.5f to allow more detections - confidence threshold after sigmoid for filtering detections
     private val iouThreshold = 0.2f   // IoU threshold for Non-Maximum Suppression
     private val topAmountPerClass = 100 // top amount of Instances per class
 
@@ -305,6 +305,11 @@ class YoloInferenceTFLite(private val context: Context) {
             if (filteredDetections.isNotEmpty()) {
                 val prototypeMasks = extractPrototypeMasks(prototypeMasksBuffer)
                 println("[DEBUG_LOG] Creating masks for ${filteredDetections.size} vehicle detections")
+                
+                // Check overlayGray state before processing detections
+                val beforeMinMax = Core.minMaxLoc(overlayGray)
+                println("[DEBUG_LOG] OverlayGray before mask creation: min=${beforeMinMax.minVal}, max=${beforeMinMax.maxVal}")
+                
                 for (detection in filteredDetections) {
                     println("[DEBUG_LOG] Processing detection: class=${if (detection.classId < labels.size && detection.classId >= 0) labels[detection.classId] else "Unknown"} (${detection.classId}), confidence=${detection.confidence}")
                     createDetectionMask(
@@ -314,6 +319,20 @@ class YoloInferenceTFLite(private val context: Context) {
                         prototypeMasks // Pass the flat array
                     )
                 }
+                
+                // Check overlayGray state after processing detections
+                val afterMinMax = Core.minMaxLoc(overlayGray)
+                println("[DEBUG_LOG] OverlayGray after mask creation: min=${afterMinMax.minVal}, max=${afterMinMax.maxVal}")
+                
+                // Count black pixels in final result
+                val blackMask = Mat()
+                Core.inRange(overlayGray, Scalar(0.0), Scalar(10.0), blackMask)
+                val blackPixels = Core.countNonZero(blackMask)
+                val totalPixels = overlayGray.rows() * overlayGray.cols()
+                val blackRatio = blackPixels.toDouble() / totalPixels.toDouble()
+                println("[DEBUG_LOG] Final result: Black pixels: $blackPixels / $totalPixels (${String.format("%.4f", blackRatio * 100)}%)")
+                blackMask.release()
+                
             } else {
                 println("[DEBUG_LOG] No detections after NMS to process for mask creation.")
             }
@@ -529,6 +548,14 @@ class YoloInferenceTFLite(private val context: Context) {
         val boxW = detection.width
         val boxH = detection.height
 
+        println("[DEBUG_LOG] === CREATING DETECTION MASK ===")
+        println("[DEBUG_LOG] Detection bbox (normalized): x=$boxX, y=$boxY, w=$boxW, h=$boxH")
+        println("[DEBUG_LOG] Detection class=${detection.classId}, confidence=${detection.confidence}")
+        println("[DEBUG_LOG] Upscale factor: $upscaleFactor")
+        println("[DEBUG_LOG] Prototype masks data size: ${prototypeMasksData.size}")
+        println("[DEBUG_LOG] Mask coefficients size: ${detection.maskCoefficients.size}")
+        println("[DEBUG_LOG] Mask coefficients: [${detection.maskCoefficients.take(5).joinToString(", ")}${if (detection.maskCoefficients.size > 5) "..." else ""}]")
+
         try {
             // This returns a CV_8UC1 mask of size (boxW*upscaleFactor) x (boxH*upscaleFactor)
             val mask_mat = assembleMaskFromPrototypes(
@@ -606,10 +633,16 @@ class YoloInferenceTFLite(private val context: Context) {
         boxX: Float, boxY: Float, boxW: Float, boxH: Float, // Normalized (0-1) bounding box
         upscaleFactor: Float
     ): Mat {
+        println("[DEBUG_LOG] === ASSEMBLING MASK FROM PROTOTYPES ===")
         val protoTensorShape = interpreter!!.getOutputTensor(1).shape() // e.g. [1, 160, 160, 32]
         val prototypeHeight = protoTensorShape[1]       // 160
         val prototypeWidth = protoTensorShape[2]        // 160
         val numPrototypesChannels = protoTensorShape[3] // 32
+
+        println("[DEBUG_LOG] Prototype tensor shape: [${protoTensorShape.joinToString(", ")}]")
+        println("[DEBUG_LOG] Prototype dims: ${numPrototypesChannels} channels, ${prototypeHeight}x${prototypeWidth}")
+        println("[DEBUG_LOG] Expected prototype data size: ${numPrototypesChannels * prototypeHeight * prototypeWidth}")
+        println("[DEBUG_LOG] Actual prototype data size: ${prototypeMasksData.size}")
 
         if (maskCoefficients.size != numPrototypesChannels) {
             println("[DEBUG_LOG] assembleMask: Mask coeffs size mismatch. Expected $numPrototypesChannels, got ${maskCoefficients.size}")
@@ -621,34 +654,57 @@ class YoloInferenceTFLite(private val context: Context) {
         }
 
         // 1. Combine prototype masks using coefficients into a single 160x160 mask
+        println("[DEBUG_LOG] Step 1: Combining ${numPrototypesChannels} prototype masks")
         val combinedProtoMask = Mat.zeros(prototypeHeight, prototypeWidth, CvType.CV_32FC1)
         val singleProtoMat = Mat(prototypeHeight, prototypeWidth, CvType.CV_32FC1) // Reusable
         val weightedProtoMat = Mat() // Reusable for multiplication result
 
+        var nonZeroCoeffs = 0
         for (i in 0 until numPrototypesChannels) {
             val coeff = maskCoefficients[i]
             if (coeff == 0f) continue // No contribution if coefficient is zero
+            nonZeroCoeffs++
 
             val offset = i * prototypeHeight * prototypeWidth
             val protoDataForOneMask =
                 prototypeMasksData.copyOfRange(offset, offset + prototypeHeight * prototypeWidth)
+            
+            // Sample a few values from prototype data for debugging
+            val sampleValues = protoDataForOneMask.take(5).joinToString(", ")
+            if (i < 3) { // Only log first few prototypes to avoid spam
+                println("[DEBUG_LOG] Prototype $i: coeff=$coeff, sample values=[$sampleValues...]")
+            }
+            
             singleProtoMat.put(0, 0, protoDataForOneMask)
-
             Core.multiply(singleProtoMat, Scalar(coeff.toDouble()), weightedProtoMat)
             Core.add(combinedProtoMask, weightedProtoMat, combinedProtoMask)
         }
+        println("[DEBUG_LOG] Used $nonZeroCoeffs non-zero coefficients out of $numPrototypesChannels")
         singleProtoMat.release()
         weightedProtoMat.release()
 
+        // Check combined mask statistics
+        val minMaxResult = Core.minMaxLoc(combinedProtoMask)
+        println("[DEBUG_LOG] Combined mask before sigmoid: min=${minMaxResult.minVal}, max=${minMaxResult.maxVal}")
+
         // 2. Apply sigmoid to the combined 160x160 mask (values become 0-1)
+        println("[DEBUG_LOG] Step 2: Applying sigmoid")
         applySigmoid(combinedProtoMask)
+        
+        val minMaxAfterSigmoid = Core.minMaxLoc(combinedProtoMask)
+        println("[DEBUG_LOG] Combined mask after sigmoid: min=${minMaxAfterSigmoid.minVal}, max=${minMaxAfterSigmoid.maxVal}")
 
         // 3. Threshold the mask (e.g., 0.5) to get binary values
+        println("[DEBUG_LOG] Step 3: Applying threshold (0.5)")
         Imgproc.threshold(combinedProtoMask, combinedProtoMask, 0.5, 1.0, Imgproc.THRESH_BINARY)
+        
+        val minMaxAfterThreshold = Core.minMaxLoc(combinedProtoMask)
+        println("[DEBUG_LOG] Combined mask after threshold: min=${minMaxAfterThreshold.minVal}, max=${minMaxAfterThreshold.maxVal}")
 
         // 4. Resize the mask to the bounding box dimensions (scaled by upscaleFactor)
         val targetWidth = (boxW * inputWidth * upscaleFactor).toInt().coerceAtLeast(1)
         val targetHeight = (boxH * inputHeight * upscaleFactor).toInt().coerceAtLeast(1)
+        println("[DEBUG_LOG] Step 4: Resizing mask from ${prototypeWidth}x${prototypeHeight} to ${targetWidth}x${targetHeight}")
 
         val resizedMask = Mat()
         Imgproc.resize(
@@ -661,7 +717,11 @@ class YoloInferenceTFLite(private val context: Context) {
         )
 
         // 5. Convert to 8UC1 (grayscale) for overlay
+        println("[DEBUG_LOG] Step 5: Converting to CV_8UC1")
         resizedMask.convertTo(resizedMask, CvType.CV_8UC1, 255.0)
+        
+        val finalMinMax = Core.minMaxLoc(resizedMask)
+        println("[DEBUG_LOG] Final mask: size=${resizedMask.cols()}x${resizedMask.rows()}, type=${CvType.typeToString(resizedMask.type())}, min=${finalMinMax.minVal}, max=${finalMinMax.maxVal}")
 
         combinedProtoMask.release()
 
