@@ -24,4 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "AndroidKorrektur"
 include(":app")
-include(":sdk")
+include(":opencv-sdk")
