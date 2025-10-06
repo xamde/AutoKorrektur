@@ -679,6 +679,7 @@ class FirstFragment : Fragment() {
                     // Get UI parameters
                     val downscaleMp = getDownscaleMpFromSpinner()
                     val maskUpscale = getMaskUpscaleFromSlider()
+                    // TODO use
                     val scoreThreshold = getScoreThresholdFromSlider()
                     val downshift = getDownshiftFromSlider()
 
