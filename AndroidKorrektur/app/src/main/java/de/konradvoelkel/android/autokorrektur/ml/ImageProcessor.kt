@@ -154,7 +154,14 @@ class ImageProcessor(private val context: Context) {
 
         // Create normalized version for ML inference
         val transformedMat = Mat()
-        transformedMatForBitmap.convertTo(transformedMat, CvType.CV_32FC3, 1.0 / 255.0)
+
+        // log first 10 bytes in first row of transformedMatForBitmap
+        println("[DEBUG_LOG] ImageProcessor: transformedMatForBitmap[0] = " + "${transformedMatForBitmap.get(0,0).contentToString()}")
+
+        transformedMatForBitmap.convertTo(transformedMat, CvType.CV_32FC3, 1.0 / 255.0);
+
+        println("[DEBUG_LOG] ImageProcessor: transformedMat[0] = " + "${transformedMat.get(0,0).contentToString()}");
+
 
         // Release intermediate Mats
         resizedMat.release()

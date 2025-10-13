@@ -281,7 +281,7 @@ class YoloInferenceTFLite(private val context: Context) {
             // Get detection tensor shape to correctly determine numProposals and featuresPerProposal
             val detectionTensor = interpreter!!.getOutputTensor(0)
             val detectionTensorShape =
-                detectionTensor.shape() // e.g. [1, 116, 8400] = 1 F N
+                detectionTensor.shape() // [1, 116, 8400] = 1 F N
             val numProposals: Int
             val featuresPerProposal: Int
 
@@ -304,6 +304,18 @@ class YoloInferenceTFLite(private val context: Context) {
                 labels.size // Pass actual number of classes
             )
             println("[DEBUG_LOG] Detections after score threshold: ${detections.size}")
+
+            val detection = detections.get(0)
+            println("[DEBUG_LOG] Detection[0].maskCoefficients: ${detection.maskCoefficients}")
+            println("[DEBUG_LOG] Detection[0].classId: ${detection.classId}")
+            println("[DEBUG_LOG] Detection[0].confidence: ${detection.confidence}")
+            println("[DEBUG_LOG] Detection[0].x: ${detection.x}")
+            println("[DEBUG_LOG] Detection[0].y: ${detection.y}")
+            println("[DEBUG_LOG] Detection[0].width: ${detection.width}")
+            println("[DEBUG_LOG] Detection[0].height: ${detection.height}")
+            println("[DEBUG_LOG] Detection[0].classId: ${detection.classId}")
+            println("[DEBUG_LOG] Detection[0].confidence: ${detection.confidence}")
+
             val filteredDetections = applyNMS(detections, iouThreshold)
             println("[DEBUG_LOG] Filtered detections after NMS: ${filteredDetections.size}")
 
