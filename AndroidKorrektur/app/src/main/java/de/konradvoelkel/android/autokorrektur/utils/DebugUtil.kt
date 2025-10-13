@@ -10,7 +10,7 @@ import org.opencv.core.Mat
  * Converts a floating-point OpenCV Mat (CV_32FC1) into a Bitmap for debugging.
  * It normalizes the Mat's values to the 0-255 range to make them visible.
  */
-public fun matToBitmapForDebug(mat: Mat): Bitmap {
+fun matToBitmapForDebug(mat: Mat): Bitmap {
     // The input mat is CV_32FC1. Its values can be anything (e.g., -5.0 to 10.0).
     // To visualize it, we need to normalize these values to a 0-255 range.
     val normalizedMat = Mat()

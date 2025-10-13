@@ -157,11 +157,22 @@ class ImageProcessor(private val context: Context) {
         val transformedMat = Mat()
 
         // log first 10 bytes in first row of transformedMatForBitmap
-        AppLogger.debug("ImageProcessor: transformedMatForBitmap[0] = " + "${transformedMatForBitmap.get(0,0).contentToString()}")
+        AppLogger.debug(
+            "ImageProcessor: transformedMatForBitmap[0] = " + "${
+                transformedMatForBitmap.get(
+                    0,
+                    0
+                ).contentToString()
+            }"
+        )
 
-        transformedMatForBitmap.convertTo(transformedMat, CvType.CV_32FC3, 1.0 / 255.0);
+        transformedMatForBitmap.convertTo(transformedMat, CvType.CV_32FC3, 1.0 / 255.0)
 
-        AppLogger.debug("ImageProcessor: transformedMat[0] = " + "${transformedMat.get(0,0).contentToString()}");
+        AppLogger.debug(
+            "ImageProcessor: transformedMat[0] = " + "${
+                transformedMat.get(0, 0).contentToString()
+            }"
+        )
 
 
         // Release intermediate Mats
