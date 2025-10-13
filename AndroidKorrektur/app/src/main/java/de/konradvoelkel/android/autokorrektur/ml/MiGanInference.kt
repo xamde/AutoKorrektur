@@ -5,6 +5,7 @@ import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import android.content.Context
+import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
@@ -31,30 +32,30 @@ class MiGanInference(private val context: Context) {
         if (miGanSession == null) {
             val modelFile = "mi-gan-512.onnx"
 
-            println("[DEBUG_LOG] MiGanInference.initialize() - Loading model file:")
-            println("[DEBUG_LOG] - Mi-GAN model: model/$modelFile")
+            AppLogger.debug("MiGanInference.initialize() - Loading model file:")
+            AppLogger.debug("- Mi-GAN model: model/$modelFile")
 
             // Load the model from assets with better error handling
             val modelBytes = try {
-                println("[DEBUG_LOG] Loading Mi-GAN model: model/$modelFile")
+                AppLogger.debug("Loading Mi-GAN model: model/$modelFile")
                 context.assets.open("model/$modelFile").readBytes()
             } catch (e: IOException) {
-                println("[DEBUG_LOG] Failed to load Mi-GAN model: ${e.message}")
+                AppLogger.debug("Failed to load Mi-GAN model: ${e.message}")
                 throw IOException("Failed to load Mi-GAN model 'model/$modelFile': ${e.message}", e)
             }
 
-            println("[DEBUG_LOG] Mi-GAN model file loaded successfully, creating ONNX session...")
+            AppLogger.debug("Mi-GAN model file loaded successfully, creating ONNX session...")
 
             // Create the session
             try {
                 miGanSession = ortEnvironment.createSession(modelBytes)
-                println("[DEBUG_LOG] Mi-GAN session created successfully")
+                AppLogger.debug("Mi-GAN session created successfully")
             } catch (e: Exception) {
-                println("[DEBUG_LOG] Failed to create Mi-GAN session: ${e.message}")
+                AppLogger.debug("Failed to create Mi-GAN session: ${e.message}")
                 throw IOException("Failed to create Mi-GAN session: ${e.message}", e)
             }
 
-            println("[DEBUG_LOG] MiGanInference.initialize() completed successfully")
+            AppLogger.debug("MiGanInference.initialize() completed successfully")
         }
     }
 
@@ -106,8 +107,8 @@ class MiGanInference(private val context: Context) {
         val outputTensor = outputs.get(0)
 
         // Log the actual output type for debugging
-        println("[DEBUG_LOG] Output tensor type: ${outputTensor.javaClass.name}")
-        println("[DEBUG_LOG] Output tensor info: ${outputTensor.info}")
+        AppLogger.debug("Output tensor type: ${outputTensor.javaClass.name}")
+        AppLogger.debug("Output tensor info: ${outputTensor.info}")
 
         // Get the tensor data directly (similar to JavaScript outputImageTensor.data)
         val outputData = when (outputTensor) {
@@ -116,27 +117,27 @@ class MiGanInference(private val context: Context) {
                 try {
                     val tensorData = outputTensor.byteBuffer
                     if (tensorData != null) {
-                        println("[DEBUG_LOG] Got ByteBuffer from tensor, size: ${tensorData.remaining()}")
+                        AppLogger.debug("Got ByteBuffer from tensor, size: ${tensorData.remaining()}")
                         val byteArray = ByteArray(tensorData.remaining())
                         tensorData.get(byteArray)
                         byteArray
                     } else {
-                        println("[DEBUG_LOG] ByteBuffer is null, trying value property")
+                        AppLogger.debug("ByteBuffer is null, trying value property")
                         outputTensor.value
                     }
                 } catch (e: Exception) {
-                    println("[DEBUG_LOG] Failed to get ByteBuffer, using value: ${e.message}")
+                    AppLogger.debug("Failed to get ByteBuffer, using value: ${e.message}")
                     outputTensor.value
                 }
             }
 
             else -> {
-                println("[DEBUG_LOG] Unexpected tensor type, using value")
+                AppLogger.debug("Unexpected tensor type, using value")
                 outputTensor.value
             }
         }
 
-        println("[DEBUG_LOG] Final output data type: ${outputData?.javaClass?.name}")
+        AppLogger.debug("Final output data type: ${outputData?.javaClass?.name}")
 
         // Convert output to HWC format
         val outputHWC = reorderToHWC(outputData, imageWidth, imageHeight)
@@ -160,8 +161,8 @@ class MiGanInference(private val context: Context) {
      */
     private fun orderInCHWAsBytes(mat: Mat): ByteArray {
         // Log Mat properties for debugging
-        println("[DEBUG_LOG] orderInCHWAsBytes - Mat type: ${mat.type()}, Depth: ${mat.depth()}, Channels: ${mat.channels()}")
-        println("[DEBUG_LOG] orderInCHWAsBytes - Mat rows: ${mat.rows()}, cols: ${mat.cols()}")
+        AppLogger.debug("orderInCHWAsBytes - Mat type: ${mat.type()}, Depth: ${mat.depth()}, Channels: ${mat.channels()}")
+        AppLogger.debug("orderInCHWAsBytes - Mat rows: ${mat.rows()}, cols: ${mat.cols()}")
 
         val channels = ArrayList<Mat>()
         Core.split(mat, channels)
@@ -174,7 +175,7 @@ class MiGanInference(private val context: Context) {
 
         for (i in 0 until c) {
             val channelMat = channels[i]
-            println("[DEBUG_LOG] orderInCHWAsBytes - Channel $i type: ${channelMat.type()}, depth: ${channelMat.depth()}")
+            AppLogger.debug("orderInCHWAsBytes - Channel $i type: ${channelMat.type()}, depth: ${channelMat.depth()}")
 
             // Check the data type and use appropriate array type
             if (channelMat.type() == CvType.CV_32F || channelMat.depth() == CvType.CV_32F) {
@@ -219,9 +220,9 @@ class MiGanInference(private val context: Context) {
      */
     private fun orderInCHW(mat: Mat): FloatArray {
         // Log Mat properties for debugging
-        println("[DEBUG_LOG] orderInCHW - Mat type: ${mat.type()}, Depth: ${mat.depth()}, Channels: ${mat.channels()}")
-        println("[DEBUG_LOG] orderInCHW - Mat rows: ${mat.rows()}, cols: ${mat.cols()}")
-        println("[DEBUG_LOG] orderInCHW - CV_32F constant: ${CvType.CV_32F}")
+        AppLogger.debug("orderInCHW - Mat type: ${mat.type()}, Depth: ${mat.depth()}, Channels: ${mat.channels()}")
+        AppLogger.debug("orderInCHW - Mat rows: ${mat.rows()}, cols: ${mat.cols()}")
+        AppLogger.debug("orderInCHW - CV_32F constant: ${CvType.CV_32F}")
 
         val channels = ArrayList<Mat>()
         Core.split(mat, channels)
@@ -234,7 +235,7 @@ class MiGanInference(private val context: Context) {
 
         for (i in 0 until c) {
             val channelMat = channels[i]
-            println("[DEBUG_LOG] orderInCHW - Channel $i type: ${channelMat.type()}, depth: ${channelMat.depth()}")
+            AppLogger.debug("orderInCHW - Channel $i type: ${channelMat.type()}, depth: ${channelMat.depth()}")
 
             // Check the data type and use appropriate array type
             if (channelMat.type() == CvType.CV_32F || channelMat.depth() == CvType.CV_32F) {
@@ -282,23 +283,23 @@ class MiGanInference(private val context: Context) {
         // Handle different output data types - prioritize direct ByteArray handling like JavaScript
         when (outputData) {
             is ByteArray -> {
-                println("[DEBUG_LOG] Processing ByteArray directly, size: ${outputData.size}")
+                AppLogger.debug("Processing ByteArray directly, size: ${outputData.size}")
                 // Treat as uint8 data (like JavaScript uint8Data)
                 reorderCHWToHWCFromBytes(outputData, width, height, hwcData)
             }
 
             is FloatArray -> {
-                println("[DEBUG_LOG] Processing FloatArray, size: ${outputData.size}")
+                AppLogger.debug("Processing FloatArray, size: ${outputData.size}")
                 reorderCHWToHWCFromFloats(outputData, width, height, hwcData)
             }
 
             is Array<*> -> {
-                println("[DEBUG_LOG] Output is nested Array, attempting to extract data")
+                AppLogger.debug("Output is nested Array, attempting to extract data")
                 try {
                     val floatArray = extractFloatArrayFromNestedArray(outputData, width, height)
                     reorderCHWToHWCFromFloats(floatArray, width, height, hwcData)
                 } catch (e: Exception) {
-                    println("[DEBUG_LOG] Failed to extract from nested array, trying direct access")
+                    AppLogger.debug("Failed to extract from nested array, trying direct access")
                     // Try to access the data more directly
                     val flatData = tryExtractFlatData(outputData)
                     if (flatData != null) {
@@ -326,7 +327,7 @@ class MiGanInference(private val context: Context) {
             }
 
             else -> {
-                println("[DEBUG_LOG] Unexpected output type: ${outputData?.javaClass?.name}")
+                AppLogger.debug("Unexpected output type: ${outputData?.javaClass?.name}")
                 throw IllegalArgumentException("Unexpected model output type: ${outputData?.javaClass?.name}")
             }
         }
@@ -410,22 +411,22 @@ class MiGanInference(private val context: Context) {
             // Try different ways to access the flat data
             when {
                 outputData.isNotEmpty() && outputData[0] is ByteArray -> {
-                    println("[DEBUG_LOG] Found ByteArray at index 0")
+                    AppLogger.debug("Found ByteArray at index 0")
                     outputData[0] as ByteArray
                 }
 
                 outputData.isNotEmpty() && outputData[0] is FloatArray -> {
-                    println("[DEBUG_LOG] Found FloatArray at index 0")
+                    AppLogger.debug("Found FloatArray at index 0")
                     outputData[0] as FloatArray
                 }
 
                 else -> {
-                    println("[DEBUG_LOG] Could not find flat data in nested structure")
+                    AppLogger.debug("Could not find flat data in nested structure")
                     null
                 }
             }
         } catch (e: Exception) {
-            println("[DEBUG_LOG] Error extracting flat data: ${e.message}")
+            AppLogger.debug("Error extracting flat data: ${e.message}")
             null
         }
     }
@@ -435,7 +436,7 @@ class MiGanInference(private val context: Context) {
      */
     private fun convertByteArrayToFloatArray(byteArray: ByteArray): FloatArray {
         if (byteArray.size % 4 != 0) {
-            println("[DEBUG_LOG] ByteArray size is not a multiple of 4, treating as uint8 values")
+            AppLogger.debug("ByteArray size is not a multiple of 4, treating as uint8 values")
             // If not divisible by 4, treat as uint8 values and convert to 0.0-1.0 range
             return FloatArray(byteArray.size) { i ->
                 (byteArray[i].toInt() and 0xFF) / 255.0f
@@ -474,7 +475,7 @@ class MiGanInference(private val context: Context) {
             }
             floatArray
         } catch (e: Exception) {
-            println("[DEBUG_LOG] Failed to extract from nested array: ${e.message}")
+            AppLogger.debug("Failed to extract from nested array: ${e.message}")
             throw IllegalArgumentException(
                 "Failed to extract FloatArray from nested Array structure",
                 e

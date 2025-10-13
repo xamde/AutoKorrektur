@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.core.graphics.createBitmap
+import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import org.opencv.android.Utils
 import org.opencv.core.Core
 import org.opencv.core.CvType
@@ -43,7 +44,7 @@ class ImageProcessor(private val context: Context) {
     ): ProcessedImage {
         // Load the image from URI
         val originalBitmap = loadBitmapFromUri(imageUri)
-        println("[DEBUG_LOG] ImageProcessor: originalBitmap loaded with dimensions ${originalBitmap.width}x${originalBitmap.height}")
+        AppLogger.debug("ImageProcessor: originalBitmap loaded with dimensions ${originalBitmap.width}x${originalBitmap.height}")
 
 
         // Convert to OpenCV Mat
@@ -83,7 +84,7 @@ class ImageProcessor(private val context: Context) {
             preprocessingResult.transformedMatForBitmap.rows()
         )
         Utils.matToBitmap(preprocessingResult.transformedMatForBitmap, transformedBitmap)
-        println("[DEBUG_LOG] ImageProcessor: transformedBitmap created with dimensions ${transformedBitmap.width}x${transformedBitmap.height}")
+        AppLogger.debug("ImageProcessor: transformedBitmap created with dimensions ${transformedBitmap.width}x${transformedBitmap.height}")
 
         return ProcessedImage(
             originalBitmap = originalBitmap,
@@ -156,11 +157,11 @@ class ImageProcessor(private val context: Context) {
         val transformedMat = Mat()
 
         // log first 10 bytes in first row of transformedMatForBitmap
-        println("[DEBUG_LOG] ImageProcessor: transformedMatForBitmap[0] = " + "${transformedMatForBitmap.get(0,0).contentToString()}")
+        AppLogger.debug("ImageProcessor: transformedMatForBitmap[0] = " + "${transformedMatForBitmap.get(0,0).contentToString()}")
 
         transformedMatForBitmap.convertTo(transformedMat, CvType.CV_32FC3, 1.0 / 255.0);
 
-        println("[DEBUG_LOG] ImageProcessor: transformedMat[0] = " + "${transformedMat.get(0,0).contentToString()}");
+        AppLogger.debug("ImageProcessor: transformedMat[0] = " + "${transformedMat.get(0,0).contentToString()}");
 
 
         // Release intermediate Mats
