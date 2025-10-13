@@ -1,6 +1,8 @@
 package de.konradvoelkel.android.autokorrektur.ml
 
 import android.content.Context
+import de.konradvoelkel.android.autokorrektur.utils.AppLogger
+import de.konradvoelkel.android.autokorrektur.utils.matToBitmapForDebug
 import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
@@ -55,12 +57,12 @@ class YoloInferenceTFLite(private val context: Context) {
     private val vehicleClassIndices = intArrayOf(2, 3, 7) // car, motorcycle, truck; bus=5,
 
     // Standard number of mask coefficients for YOLO segmentation models
-    private val numMaskCoefficients = 32
+    private val numMaskCoefficients = 32 // is this ever used?
 
     @Throws(IOException::class)
     fun initialize(modelName: String = "yolo11s", useFP16: Boolean = false) {
         if (isInitialized) {
-            println("[DEBUG_LOG] TFLite YoloInference already initialized")
+            AppLogger.debug("TFLite YoloInference already initialized")
             return
         }
 
@@ -70,7 +72,7 @@ class YoloInferenceTFLite(private val context: Context) {
             "model/${modelName}-seg_saved_model/${modelName}-seg_float32.tflite"
         }
 
-        println("[DEBUG_LOG] TFLite YoloInference.initialize() - Loading model: $modelFile")
+        AppLogger.debug("TFLite YoloInference.initialize() - Loading model: $modelFile")
 
         try {
             val assetFileDescriptor = context.assets.openFd(modelFile)
@@ -79,7 +81,7 @@ class YoloInferenceTFLite(private val context: Context) {
             inputStream.close()
             assetFileDescriptor.close()
 
-            println("[DEBUG_LOG] TFLite model loaded: ${modelBytes.size} bytes")
+            AppLogger.debug("TFLite model loaded: ${modelBytes.size} bytes")
 
             val modelBuffer = ByteBuffer.allocateDirect(modelBytes.size)
             modelBuffer.order(ByteOrder.nativeOrder())
@@ -102,19 +104,18 @@ class YoloInferenceTFLite(private val context: Context) {
                 throw IOException("Unexpected model input shape: ${inputShape.joinToString(",")}")
             }
 
-            println("[DEBUG_LOG] Model input shape: [${inputShape.joinToString(", ")}]")
-            println("[DEBUG_LOG] Input dimensions: ${inputWidth}x${inputHeight}x${inputChannels}")
-            println("[DEBUG_LOG] Detection threshold: $scoreThreshold")
+            AppLogger.debug("Model input shape: [${inputShape.joinToString(", ")}]")
+            AppLogger.debug("Input dimensions: ${inputWidth}x${inputHeight}x${inputChannels}")
+            AppLogger.debug("Detection threshold: $scoreThreshold")
 
             isInitialized = true
-            println("[DEBUG_LOG] TFLite YoloInference initialized successfully")
+            AppLogger.debug("TFLite YoloInference initialized successfully")
 
         } catch (e: Exception) {
-            println("[DEBUG_LOG] ========== TFLITE INITIALIZATION FAILED ==========")
-            println("[DEBUG_LOG] Exception type: ${e.javaClass.simpleName}")
-            println("[DEBUG_LOG] Exception message: ${e.message}")
-            e.printStackTrace()
-            println("[DEBUG_LOG] ================================================")
+            AppLogger.error("========== TFLITE INITIALIZATION FAILED ==========")
+            AppLogger.error("Exception type: ${e.javaClass.simpleName}")
+            AppLogger.error("Exception message: ${e.message}", e)
+            AppLogger.error("================================================")
             throw IOException("Failed to initialize TFLite YOLO model: ${e.message}", e)
         }
     }
@@ -128,7 +129,7 @@ class YoloInferenceTFLite(private val context: Context) {
         @Suppress("UNUSED_PARAMETER") downshiftFactor: Float = 0.0f // Re-added for compatibility, but ignored
     ): Mat {
         if (!isInitialized || interpreter == null) {
-            println("[DEBUG_LOG] Interpreter not initialized. Initializing now...")
+            AppLogger.debug("Interpreter not initialized. Initializing now...")
             initialize() // This might throw IOException
         }
 
@@ -147,12 +148,12 @@ class YoloInferenceTFLite(private val context: Context) {
             // Prepare output buffers map
             val outputMap = mutableMapOf<Int, Any>()
             val numOutputs = interpreter!!.outputTensorCount
-            println("[DEBUG_LOG] Model has $numOutputs outputs")
+            AppLogger.debug("Model has $numOutputs outputs")
 
             for (i in 0 until numOutputs) {
                 val outputTensor = interpreter!!.getOutputTensor(i)
                 val outputShape = outputTensor.shape()
-                println("[DEBUG_LOG] Output $i shape: [${outputShape.joinToString(", ")}]")
+                AppLogger.debug("Output $i shape: [${outputShape.joinToString(", ")}]")
                 // Calculate size needed for the buffer based on tensor shape (product of dimensions) * bytes_per_element
                 val outputSize = outputShape.fold(1L) { acc, dim -> acc * dim }
                     .toInt() // Use Long for intermediate to avoid overflow
@@ -175,7 +176,7 @@ class YoloInferenceTFLite(private val context: Context) {
             return overlayGray
 
         } catch (e: Exception) {
-            println("[DEBUG_LOG] TFLite inference failed: ${e.message}")
+            AppLogger.debug("TFLite inference failed: ${e.message}")
             e.printStackTrace()
             // Return current state of overlayGray even on error
             return overlayGray
@@ -196,8 +197,8 @@ class YoloInferenceTFLite(private val context: Context) {
 
         // --- Precondition Checks (Optional but good for debugging) ---
         if (mat.width() != this.inputWidth || mat.height() != this.inputHeight) {
-            println(
-                "[DEBUG_LOG] WARNING: matToByteBuffer input Mat dimensions (${mat.width()}x${mat.height()}) " +
+            AppLogger.debug(
+                "WARNING: matToByteBuffer input Mat dimensions (${mat.width()}x${mat.height()}) " +
                         "do not match model input dimensions (${this.inputWidth}x${this.inputHeight}). Resizing."
             )
             val tempResizedMat = Mat()
@@ -215,8 +216,8 @@ class YoloInferenceTFLite(private val context: Context) {
             return
         }
         if (mat.type() != CvType.CV_32FC3) {
-            println(
-                "[DEBUG_LOG] CRITICAL WARNING: matToByteBuffer input Mat type is not CV_32FC3. Type: ${
+            AppLogger.warn(
+                "CRITICAL WARNING: matToByteBuffer input Mat type is not CV_32FC3. Type: ${
                     CvType.typeToString(
                         mat.type()
                     )
@@ -235,8 +236,8 @@ class YoloInferenceTFLite(private val context: Context) {
             return
         }
         if (mat.channels() != this.inputChannels) {
-            println(
-                "[DEBUG_LOG] CRITICAL WARNING: matToByteBuffer input Mat channels (${mat.channels()}) " +
+            AppLogger.warn(
+                "CRITICAL WARNING: matToByteBuffer input Mat channels (${mat.channels()}) " +
                         "do not match model input channels (${this.inputChannels}). Expected RGB."
             )
             throw IllegalArgumentException("Input Mat channels mismatch model expectation (expected ${this.inputChannels} for RGB).")
@@ -259,7 +260,7 @@ class YoloInferenceTFLite(private val context: Context) {
         upscaleFactor: Float
     ) {
         try {
-            println("[DEBUG_LOG] Processing model outputs for mask creation")
+            AppLogger.debug("Processing model outputs for mask creation")
             val detectionsBuffer = outputs[0] as? ByteBuffer
                 ?: throw IllegalStateException("Model output 0 (detections) not found or not a ByteBuffer.")
             val prototypeMasksBuffer = outputs[1] as? ByteBuffer
@@ -272,11 +273,11 @@ class YoloInferenceTFLite(private val context: Context) {
             val floatBuffer = detectionsBuffer.asFloatBuffer()
             val sampleData = FloatArray(20)
             floatBuffer.get(sampleData)
-            println("[DEBUG_DUMP] Detections Buffer (first 20 floats): ${sampleData.joinToString()}")
+            AppLogger.debug("[DEBUG_DUMP] Detections Buffer (first 20 floats): ${sampleData.joinToString()}")
             detectionsBuffer.rewind() // Rewind again for the actual processing
 
-            println("[DEBUG_LOG] Detections buffer capacity: ${detectionsBuffer.capacity()} bytes")
-            println("[DEBUG_LOG] Prototype masks buffer capacity: ${prototypeMasksBuffer.capacity()} bytes")
+            AppLogger.debug("Detections buffer capacity: ${detectionsBuffer.capacity()} bytes")
+            AppLogger.debug("Prototype masks buffer capacity: ${prototypeMasksBuffer.capacity()} bytes")
 
             // Get detection tensor shape to correctly determine numProposals and featuresPerProposal
             val detectionTensor = interpreter!!.getOutputTensor(0)
@@ -294,7 +295,7 @@ class YoloInferenceTFLite(private val context: Context) {
                 throw IllegalStateException("Unexpected detection tensor shape: ${detectionTensorShape.joinToString()}")
             }
 
-            println("[DEBUG_LOG] Detection tensor shape: ${detectionTensorShape.joinToString()}, NumProposals: $numProposals, FeaturesPerProposal: $featuresPerProposal")
+            AppLogger.debug("Detection tensor shape: ${detectionTensorShape.joinToString()}, NumProposals: $numProposals, FeaturesPerProposal: $featuresPerProposal")
 
             val detections = parseDetections(
                 detectionsBuffer,
@@ -303,32 +304,32 @@ class YoloInferenceTFLite(private val context: Context) {
                 featuresPerProposal,
                 labels.size // Pass actual number of classes
             )
-            println("[DEBUG_LOG] Detections after score threshold: ${detections.size}")
+            AppLogger.debug("Detections after score threshold: ${detections.size}")
 
             val detection = detections.get(0)
-            println("[DEBUG_LOG] Detection[0].maskCoefficients: ${detection.maskCoefficients}")
-            println("[DEBUG_LOG] Detection[0].classId: ${detection.classId}")
-            println("[DEBUG_LOG] Detection[0].confidence: ${detection.confidence}")
-            println("[DEBUG_LOG] Detection[0].x: ${detection.x}")
-            println("[DEBUG_LOG] Detection[0].y: ${detection.y}")
-            println("[DEBUG_LOG] Detection[0].width: ${detection.width}")
-            println("[DEBUG_LOG] Detection[0].height: ${detection.height}")
-            println("[DEBUG_LOG] Detection[0].classId: ${detection.classId}")
-            println("[DEBUG_LOG] Detection[0].confidence: ${detection.confidence}")
+            AppLogger.debug("Detection[0].maskCoefficients: ${detection.maskCoefficients}")
+            AppLogger.debug("Detection[0].classId: ${detection.classId}")
+            AppLogger.debug("Detection[0].confidence: ${detection.confidence}")
+            AppLogger.debug("Detection[0].x: ${detection.x}")
+            AppLogger.debug("Detection[0].y: ${detection.y}")
+            AppLogger.debug("Detection[0].width: ${detection.width}")
+            AppLogger.debug("Detection[0].height: ${detection.height}")
+            AppLogger.debug("Detection[0].classId: ${detection.classId}")
+            AppLogger.debug("Detection[0].confidence: ${detection.confidence}")
 
             val filteredDetections = applyNMS(detections, iouThreshold)
-            println("[DEBUG_LOG] Filtered detections after NMS: ${filteredDetections.size}")
+            AppLogger.debug("Filtered detections after NMS: ${filteredDetections.size}")
 
             if (filteredDetections.isNotEmpty()) {
                 val prototypeMasks = extractPrototypeMasks(prototypeMasksBuffer)
-                println("[DEBUG_LOG] Creating masks for ${filteredDetections.size} vehicle detections")
+                AppLogger.debug("Creating masks for ${filteredDetections.size} vehicle detections")
                 
                 // Check overlayGray state before processing detections
                 val beforeMinMax = Core.minMaxLoc(overlayGray)
-                println("[DEBUG_LOG] OverlayGray before mask creation: min=${beforeMinMax.minVal}, max=${beforeMinMax.maxVal}")
+                AppLogger.debug("OverlayGray before mask creation: min=${beforeMinMax.minVal}, max=${beforeMinMax.maxVal}")
                 
                 for (detection in filteredDetections) {
-                    println("[DEBUG_LOG] Processing detection: class=${if (detection.classId < labels.size && detection.classId >= 0) labels[detection.classId] else "Unknown"} (${detection.classId}), confidence=${detection.confidence}")
+                    AppLogger.debug("Processing detection: class=${if (detection.classId < labels.size && detection.classId >= 0) labels[detection.classId] else "Unknown"} (${detection.classId}), confidence=${detection.confidence}")
                     createDetectionMask(
                         detection,
                         overlayGray,
@@ -339,7 +340,7 @@ class YoloInferenceTFLite(private val context: Context) {
                 
                 // Check overlayGray state after processing detections
                 val afterMinMax = Core.minMaxLoc(overlayGray)
-                println("[DEBUG_LOG] OverlayGray after mask creation: min=${afterMinMax.minVal}, max=${afterMinMax.maxVal}")
+                AppLogger.debug("OverlayGray after mask creation: min=${afterMinMax.minVal}, max=${afterMinMax.maxVal}")
                 
                 // Count black pixels in final result
                 val blackMask = Mat()
@@ -347,16 +348,16 @@ class YoloInferenceTFLite(private val context: Context) {
                 val blackPixels = Core.countNonZero(blackMask)
                 val totalPixels = overlayGray.rows() * overlayGray.cols()
                 val blackRatio = blackPixels.toDouble() / totalPixels.toDouble()
-                println("[DEBUG_LOG] Final result: Black pixels: $blackPixels / $totalPixels (${String.format("%.4f", blackRatio * 100)}%)")
+                AppLogger.debug("Final result: Black pixels: $blackPixels / $totalPixels (${String.format("%.4f", blackRatio * 100)}%)")
                 blackMask.release()
                 
             } else {
-                println("[DEBUG_LOG] No detections after NMS to process for mask creation.")
+                AppLogger.debug("No detections after NMS to process for mask creation.")
             }
-            println("[DEBUG_LOG] Completed mask creation for all detections")
+            AppLogger.debug("Completed mask creation for all detections")
 
         } catch (e: Exception) {
-            println("[DEBUG_LOG] CRITICAL: Error processing model outputs: ${e.message}")
+            AppLogger.debug("CRITICAL: Error processing model outputs: ${e.message}")
             e.printStackTrace()
             throw e // Rethrow to signal failure to the caller
         }
@@ -365,7 +366,7 @@ class YoloInferenceTFLite(private val context: Context) {
     private fun extractPrototypeMasks(buffer: ByteBuffer): FloatArray {
         val prototypeTensor = interpreter!!.getOutputTensor(1)
         val prototypeTensorShape = prototypeTensor.shape() // e.g., [1, 160, 160, 32]
-        println("[DEBUG_LOG] Prototype tensor shape: ${prototypeTensorShape.joinToString()}")
+        AppLogger.debug("Prototype tensor shape: ${prototypeTensorShape.joinToString()}")
 
         // Correctly extract dimensions: [batch, height, width, channels]
         val prototypeHeight = prototypeTensorShape[1]       // 160
@@ -375,7 +376,7 @@ class YoloInferenceTFLite(private val context: Context) {
         val prototypeMaskSize = numPrototypesChannels * prototypeHeight * prototypeWidth
         val expectedBufferSize = prototypeMaskSize * 4 // 4 bytes per float
 
-        println("[DEBUG_LOG] Extracted prototype dims: $numPrototypesChannels channels, ${prototypeHeight}x${prototypeWidth}. Expected total floats: $prototypeMaskSize")
+        AppLogger.debug("Extracted prototype dims: $numPrototypesChannels channels, ${prototypeHeight}x${prototypeWidth}. Expected total floats: $prototypeMaskSize")
 
         if (buffer.capacity() < expectedBufferSize) {
             throw IllegalStateException("Prototype masks buffer too small: ${buffer.capacity()} bytes, expected at least $expectedBufferSize bytes. Model output shape mismatch for prototypes?")
@@ -383,7 +384,7 @@ class YoloInferenceTFLite(private val context: Context) {
 
         val prototypeMasks = FloatArray(prototypeMaskSize)
         buffer.asFloatBuffer().get(prototypeMasks) // More efficient bulk read
-        println("[DEBUG_LOG] Successfully extracted prototype masks: ${prototypeMasks.size} values")
+        AppLogger.debug("Successfully extracted prototype masks: ${prototypeMasks.size} values")
         return prototypeMasks
     }
 
@@ -410,7 +411,7 @@ class YoloInferenceTFLite(private val context: Context) {
 
         val numBBoxCoords = 4
         val numMaskCoeffs = 32
-        println("[DEBUG_LOG] Parsing detections: $numProposals proposals, $featuresPerProposal features each. Assuming $numClasses classes, $numBBoxCoords bbox, $numMaskCoeffs mask coeffs.")
+        AppLogger.debug("Parsing detections: $numProposals proposals, $featuresPerProposal features each. Assuming $numClasses classes, $numBBoxCoords bbox, $numMaskCoeffs mask coeffs.")
 
         // Read the entire buffer into a FloatArray for easier column-major access simulation
         val floatArray = FloatArray(buffer.capacity() / 4)
@@ -420,7 +421,8 @@ class YoloInferenceTFLite(private val context: Context) {
             val carConfidenceIndex = i * featuresPerProposal + 4 + 2 // 4 bbox + classId for car (2)
             val carConfidence =
                 (1.0f / (1.0f + exp(-floatArray[carConfidenceIndex].toDouble()))).toFloat()
-            //println("[DEBUG_LOG] RAW DETECTION - Proposal ${i+1}/${numProposals}, Car Confidence: ${String.format("%.4f", carConfidence)}")
+            //XXX apparently carConfidence is never used?
+            //AppLogger.debug("RAW DETECTION - Proposal ${i+1}/${numProposals}, Car Confidence: ${String.format("%.4f", carConfidence)}")
             // Correct row-major access: floatArray[i * featuresPerProposal + feature_index]
             val cx = floatArray[i * featuresPerProposal + 0]
             val cy = floatArray[i * featuresPerProposal + 1]
@@ -448,7 +450,7 @@ class YoloInferenceTFLite(private val context: Context) {
 
             // Filter by score and class
             //if (maxProbability > 0.001f) { // Log raw detections with very low threshold
-            //println("[DEBUG_LOG] Raw detection (class: ${labels.getOrNull(maxClassId)}, confidence: $maxProbability)")
+            //AppLogger.debug("Raw detection (class: ${labels.getOrNull(maxClassId)}, confidence: $maxProbability)")
             //}
             if (maxProbability > currentScoreThreshold && vehicleClassIndices.contains(maxClassId)) {
                 // Convert cx,cy,w,h to x_min,y_min,width,height (normalized 0-1)
@@ -472,7 +474,7 @@ class YoloInferenceTFLite(private val context: Context) {
                 }
             }
         }
-        println("[DEBUG_LOG] Total vehicle detections after score threshold: ${detections.size}")
+        AppLogger.debug("Total vehicle detections after score threshold: ${detections.size}")
         return detections
     }
 
@@ -565,13 +567,13 @@ class YoloInferenceTFLite(private val context: Context) {
         val boxW = detection.width
         val boxH = detection.height
 
-        println("[DEBUG_LOG] === CREATING DETECTION MASK ===")
-        println("[DEBUG_LOG] Detection bbox (normalized): x=$boxX, y=$boxY, w=$boxW, h=$boxH")
-        println("[DEBUG_LOG] Detection class=${detection.classId}, confidence=${detection.confidence}")
-        println("[DEBUG_LOG] Upscale factor: $upscaleFactor")
-        println("[DEBUG_LOG] Prototype masks data size: ${prototypeMasksData.size}")
-        println("[DEBUG_LOG] Mask coefficients size: ${detection.maskCoefficients.size}")
-        println("[DEBUG_LOG] Mask coefficients: [${detection.maskCoefficients.take(5).joinToString(", ")}${if (detection.maskCoefficients.size > 5) "..." else ""}]")
+        AppLogger.debug("=== CREATING DETECTION MASK ===")
+        AppLogger.debug("Detection bbox (normalized): x=$boxX, y=$boxY, w=$boxW, h=$boxH")
+        AppLogger.debug("Detection class=${detection.classId}, confidence=${detection.confidence}")
+        AppLogger.debug("Upscale factor: $upscaleFactor")
+        AppLogger.debug("Prototype masks data size: ${prototypeMasksData.size}")
+        AppLogger.debug("Mask coefficients size: ${detection.maskCoefficients.size}")
+        AppLogger.debug("Mask coefficients: [${detection.maskCoefficients.take(5).joinToString(", ")}${if (detection.maskCoefficients.size > 5) "..." else ""}]")
 
         try {
             // This returns a CV_8UC1 mask of size (boxW*upscaleFactor) x (boxH*upscaleFactor)
@@ -623,15 +625,15 @@ class YoloInferenceTFLite(private val context: Context) {
                     dstRoi.release() // Release the ROI Mat
                     srcMaskRoi.release() // Release the ROI Mat
                 } else {
-                    println("[DEBUG_LOG] Warning: ROI for mask placement is invalid or out of bounds. Skipping mask application for this detection.")
+                    AppLogger.debug("Warning: ROI for mask placement is invalid or out of bounds. Skipping mask application for this detection.")
                 }
                 mask_mat.release() // Release the mask Mat
             } else {
-                println("[DEBUG_LOG] assembleMaskFromPrototypes returned empty mask. Skipping application.")
+                AppLogger.debug("assembleMaskFromPrototypes returned empty mask. Skipping application.")
             }
 
         } catch (e: Exception) {
-            println("[DEBUG_LOG] CRITICAL ERROR in mask assembly/application for one detection: ${e.message}")
+            AppLogger.debug("CRITICAL ERROR in mask assembly/application for one detection: ${e.message}")
             e.printStackTrace()
             // Do not rethrow here, to allow other detections to be processed if one fails
         }
@@ -647,82 +649,112 @@ class YoloInferenceTFLite(private val context: Context) {
     private fun assembleMaskFromPrototypes(
         maskCoefficients: FloatArray,
         prototypeMasksData: FloatArray, // Flat array: num_prototypes_channels * proto_height * proto_width
-        boxX: Float, boxY: Float, boxW: Float, boxH: Float, // Normalized (0-1) bounding box
+        boxX: Float, boxY: Float, boxW: Float, boxH: Float, //XXX Normalized (0-1) bounding box UNUSED?
         upscaleFactor: Float
     ): Mat {
-        println("[DEBUG_LOG] === ASSEMBLING MASK FROM PROTOTYPES ===")
+        AppLogger.debug("=== ASSEMBLING MASK FROM PROTOTYPES ===")
         val protoTensorShape = interpreter!!.getOutputTensor(1).shape() // e.g. [1, 160, 160, 32]
         val prototypeHeight = protoTensorShape[1]       // 160
         val prototypeWidth = protoTensorShape[2]        // 160
         val numPrototypesChannels = protoTensorShape[3] // 32
 
-        println("[DEBUG_LOG] Prototype tensor shape: [${protoTensorShape.joinToString(", ")}]")
-        println("[DEBUG_LOG] Prototype dims: ${numPrototypesChannels} channels, ${prototypeHeight}x${prototypeWidth}")
-        println("[DEBUG_LOG] Expected prototype data size: ${numPrototypesChannels * prototypeHeight * prototypeWidth}")
-        println("[DEBUG_LOG] Actual prototype data size: ${prototypeMasksData.size}")
+        AppLogger.debug("Prototype tensor shape: [${protoTensorShape.joinToString(", ")}]")
+        AppLogger.debug("Prototype dims: ${numPrototypesChannels} channels, ${prototypeHeight}x${prototypeWidth}")
+        AppLogger.debug("Expected prototype data size: ${numPrototypesChannels * prototypeHeight * prototypeWidth}")
+        AppLogger.debug("Actual prototype data size: ${prototypeMasksData.size}")
 
         if (maskCoefficients.size != numPrototypesChannels) {
-            println("[DEBUG_LOG] assembleMask: Mask coeffs size mismatch. Expected $numPrototypesChannels, got ${maskCoefficients.size}")
+            AppLogger.debug("assembleMask: Mask coeffs size mismatch. Expected $numPrototypesChannels, got ${maskCoefficients.size}")
             return Mat() // Return empty Mat on error
         }
         if (prototypeMasksData.size != numPrototypesChannels * prototypeHeight * prototypeWidth) {
-            println("[DEBUG_LOG] assembleMask: Prototype data size mismatch. Expected ${numPrototypesChannels * prototypeHeight * prototypeWidth}, got ${prototypeMasksData.size}")
+            AppLogger.debug("assembleMask: Prototype data size mismatch. Expected ${numPrototypesChannels * prototypeHeight * prototypeWidth}, got ${prototypeMasksData.size}")
             return Mat()
         }
+// 1. De-interleave the flat data and combine the prototypes
+        AppLogger.debug("Step 1: De-interleaving and combining ${numPrototypesChannels} prototype masks")
 
-        // 1. Combine prototype masks using coefficients into a single 160x160 mask
-        println("[DEBUG_LOG] Step 1: Combining ${numPrototypesChannels} prototype masks")
+// Create a list to hold the 32 correctly-structured prototype Mats
+        val prototypeMats = List(numPrototypesChannels) {
+            Mat(prototypeHeight, prototypeWidth, CvType.CV_32FC1)
+        }
+
+// === DE-INTERLEAVING LOGIC ===
+// Iterate over each pixel's location (y, x)
+        for (y in 0 until prototypeHeight) {
+            for (x in 0 until prototypeWidth) {
+                // For each pixel, iterate through all the channels (prototypes)
+                for (channel in 0 until numPrototypesChannels) {
+                    // Calculate the index in the flat, interleaved source array
+                    val sourceIndex = (y * prototypeWidth * numPrototypesChannels) + (x * numPrototypesChannels) + channel
+
+                    // Get the value and put it in the correct Mat at the correct (y, x) location
+                    val value = prototypeMasksData[sourceIndex]
+                    prototypeMats[channel].put(y, x, value.toDouble())
+                }
+            }
+        }
+        AppLogger.debug("Successfully de-interleaved data into ${prototypeMats.size} Mats.")
+
+
+// === COMBINATION LOGIC (Corrected) ===
         val combinedProtoMask = Mat.zeros(prototypeHeight, prototypeWidth, CvType.CV_32FC1)
-        val singleProtoMat = Mat(prototypeHeight, prototypeWidth, CvType.CV_32FC1) // Reusable
-        val weightedProtoMat = Mat() // Reusable for multiplication result
-
+        val weightedProtoMat = Mat() // Reusable Mat for the multiplication result
         var nonZeroCoeffs = 0
+
         for (i in 0 until numPrototypesChannels) {
             val coeff = maskCoefficients[i]
-            if (coeff == 0f) continue // No contribution if coefficient is zero
+            if (coeff == 0f) continue
             nonZeroCoeffs++
 
-            val offset = i * prototypeHeight * prototypeWidth
-            val protoDataForOneMask =
-                prototypeMasksData.copyOfRange(offset, offset + prototypeHeight * prototypeWidth)
-            
-            // Sample a few values from prototype data for debugging
-            val sampleValues = protoDataForOneMask.take(5).joinToString(", ")
-            if (i < 3) { // Only log first few prototypes to avoid spam
-                println("[DEBUG_LOG] Prototype $i: coeff=$coeff, sample values=[$sampleValues...]")
-            }
-            
-            singleProtoMat.put(0, 0, protoDataForOneMask)
+            // Get the correctly structured prototype Mat
+            val singleProtoMat = prototypeMats[i]
+
+            // Step 1: Multiply the prototype by its coefficient using Core.multiply
             Core.multiply(singleProtoMat, Scalar(coeff.toDouble()), weightedProtoMat)
+
+            // Step 2: Add the weighted result to the combined mask
             Core.add(combinedProtoMask, weightedProtoMat, combinedProtoMask)
         }
-        println("[DEBUG_LOG] Used $nonZeroCoeffs non-zero coefficients out of $numPrototypesChannels")
-        singleProtoMat.release()
+
+// Clean up memory
         weightedProtoMat.release()
+        prototypeMats.forEach { it.release() }
+
+        AppLogger.debug("Used $nonZeroCoeffs non-zero coefficients out of $numPrototypesChannels")
+
+// === DEBUG VIEW 1: After combining all prototypes ===
+// This bitmap should now look like a coherent, meaningful mask shape.
+        val debugBitmap1 = matToBitmapForDebug(combinedProtoMask)
+        // during testing, debugBitmap1 at least contains useful information, doesn't seem too wrong.
 
         // Check combined mask statistics
         val minMaxResult = Core.minMaxLoc(combinedProtoMask)
-        println("[DEBUG_LOG] Combined mask before sigmoid: min=${minMaxResult.minVal}, max=${minMaxResult.maxVal}")
+        AppLogger.debug("Combined mask before sigmoid: min=${minMaxResult.minVal}, max=${minMaxResult.maxVal}")
 
         // 2. Apply sigmoid to the combined 160x160 mask (values become 0-1)
-        println("[DEBUG_LOG] Step 2: Applying sigmoid")
+        AppLogger.debug("Step 2: Applying sigmoid")
         applySigmoid(combinedProtoMask)
-        
-        val minMaxAfterSigmoid = Core.minMaxLoc(combinedProtoMask)
-        println("[DEBUG_LOG] Combined mask after sigmoid: min=${minMaxAfterSigmoid.minVal}, max=${minMaxAfterSigmoid.maxVal}")
+        val debugBitmap2 = matToBitmapForDebug(combinedProtoMask)
+        // during testing, already debugBitmap2 is suspicious, as there is so little black pixels left ...
 
-        // 3. Threshold the mask (e.g., 0.5) to get binary values
-        println("[DEBUG_LOG] Step 3: Applying threshold (0.5)")
-        Imgproc.threshold(combinedProtoMask, combinedProtoMask, 0.5, 1.0, Imgproc.THRESH_BINARY)
-        
+        val minMaxAfterSigmoid = Core.minMaxLoc(combinedProtoMask)
+        AppLogger.debug("Combined mask after sigmoid: min=${minMaxAfterSigmoid.minVal}, max=${minMaxAfterSigmoid.maxVal}")
+
+        // 3. Threshold the mask (e.g., 0.4) to get binary values
+        AppLogger.debug("Step 3: Applying threshold (0.4)")
+        Imgproc.threshold(combinedProtoMask, combinedProtoMask, 0.4, 1.0, Imgproc.THRESH_BINARY)
+        val debugBitmap3 = matToBitmapForDebug(combinedProtoMask)
+
         val minMaxAfterThreshold = Core.minMaxLoc(combinedProtoMask)
-        println("[DEBUG_LOG] Combined mask after threshold: min=${minMaxAfterThreshold.minVal}, max=${minMaxAfterThreshold.maxVal}")
+        AppLogger.debug("Combined mask after threshold: min=${minMaxAfterThreshold.minVal}, max=${minMaxAfterThreshold.maxVal}")
 
         // 4. Resize the mask to the bounding box dimensions (scaled by upscaleFactor)
         val targetWidth = (boxW * inputWidth * upscaleFactor).toInt().coerceAtLeast(1)
         val targetHeight = (boxH * inputHeight * upscaleFactor).toInt().coerceAtLeast(1)
-        println("[DEBUG_LOG] Step 4: Resizing mask from ${prototypeWidth}x${prototypeHeight} to ${targetWidth}x${targetHeight}")
-
+        AppLogger.debug("Step 4: Resizing mask from ${prototypeWidth}x${prototypeHeight} to ${targetWidth}x${targetHeight}")
+        if( (targetWidth == 1) and (targetHeight == 1) ) {
+            AppLogger.debug("Ahrg in Step 4: target size is 1x1 pixel.") }
         val resizedMask = Mat()
         Imgproc.resize(
             combinedProtoMask,
@@ -732,13 +764,15 @@ class YoloInferenceTFLite(private val context: Context) {
             0.0,
             Imgproc.INTER_LINEAR
         )
+        val debugBitmap4 = matToBitmapForDebug(combinedProtoMask)
 
         // 5. Convert to 8UC1 (grayscale) for overlay
-        println("[DEBUG_LOG] Step 5: Converting to CV_8UC1")
+        AppLogger.debug("Step 5: Converting to CV_8UC1")
         resizedMask.convertTo(resizedMask, CvType.CV_8UC1, 255.0)
-        
+        val debugBitmap5 = matToBitmapForDebug(resizedMask)
+
         val finalMinMax = Core.minMaxLoc(resizedMask)
-        println("[DEBUG_LOG] Final mask: size=${resizedMask.cols()}x${resizedMask.rows()}, type=${CvType.typeToString(resizedMask.type())}, min=${finalMinMax.minVal}, max=${finalMinMax.maxVal}")
+        AppLogger.debug("Final mask: size=${resizedMask.cols()}x${resizedMask.rows()}, type=${CvType.typeToString(resizedMask.type())}, min=${finalMinMax.minVal}, max=${finalMinMax.maxVal}")
 
         combinedProtoMask.release()
 
@@ -750,8 +784,8 @@ class YoloInferenceTFLite(private val context: Context) {
      */
     private fun applySigmoid(mat: Mat) { // Input/Output Mat is CV_32FC1
         if (mat.type() != CvType.CV_32FC1) {
-            println(
-                "[DEBUG_LOG] applySigmoid: Mat type is not CV_32FC1. Type: ${
+            AppLogger.warn(
+                "applySigmoid: Mat type is not CV_32FC1. Type: ${
                     CvType.typeToString(
                         mat.type()
                     )
@@ -820,7 +854,7 @@ class YoloInferenceTFLite(private val context: Context) {
     fun close() {
         interpreter?.close()
         isInitialized = false
-        println("[DEBUG_LOG] TFLite YoloInference closed.")
+        AppLogger.debug("TFLite YoloInference closed.")
     }
 }
 
@@ -837,7 +871,7 @@ data class Detection(
     val classId: Int,
     val maskCoefficients: FloatArray // Typically 32 coefficients for YOLOv8-seg
 ) {
-    // Convenience getters for x1, y1, x2, y2 (normalized 0-1 range)
+    //XXX UNUSED Convenience getters for x1, y1, x2, y2 (normalized 0-1 range)
     val x1: Float get() = x
     val y1: Float get() = y
     val x2: Float get() = x + width
