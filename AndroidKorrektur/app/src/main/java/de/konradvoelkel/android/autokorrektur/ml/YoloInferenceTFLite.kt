@@ -664,7 +664,7 @@ class YoloInferenceTFLite(private val context: Context) {
         boxX: Float,
         boxY: Float,
         boxW: Float,
-        boxH: Float, //XXX Normalized (0-1) bounding box UNUSED?
+        boxH: Float, // Normalized (0-1) bounding box
         upscaleFactor: Float
     ): Mat {
         AppLogger.debug("=== ASSEMBLING MASK FROM PROTOTYPES ===")
@@ -713,8 +713,21 @@ class YoloInferenceTFLite(private val context: Context) {
         AppLogger.debug("Successfully de-interleaved data into ${prototypeMats.size} Mats.")
 
 
-        // === COMBINATION LOGIC (Corrected) ===
-        val combinedProtoMask = Mat.zeros(prototypeHeight, prototypeWidth, CvType.CV_32FC1)
+        // === CROP PROTOTYPE MASKS TO BOUNDING BOX ===
+        // Convert normalized box coordinates to prototype mask coordinates
+        val cropX = (boxX * prototypeWidth).toInt().coerceIn(0, prototypeWidth - 1)
+        val cropY = (boxY * prototypeHeight).toInt().coerceIn(0, prototypeHeight - 1)
+        val cropW =
+            (boxW * prototypeWidth).toInt().coerceAtLeast(1).coerceAtMost(prototypeWidth - cropX)
+        val cropH =
+            (boxH * prototypeHeight).toInt().coerceAtLeast(1).coerceAtMost(prototypeHeight - cropY)
+
+        AppLogger.debug("Cropping prototypes: x=$cropX, y=$cropY, w=$cropW, h=$cropH (from ${prototypeWidth}x${prototypeHeight})")
+
+        val cropRect = Rect(cropX, cropY, cropW, cropH)
+
+        // === COMBINATION LOGIC (Corrected with cropping) ===
+        val combinedProtoMask = Mat.zeros(cropH, cropW, CvType.CV_32FC1)
         val weightedProtoMat = Mat() // Reusable Mat for the multiplication result
         var nonZeroCoeffs = 0
 
@@ -723,14 +736,17 @@ class YoloInferenceTFLite(private val context: Context) {
             if (coeff == 0f) continue
             nonZeroCoeffs++
 
-            // Get the correctly structured prototype Mat
+            // Get the correctly structured prototype Mat and crop it to bounding box
             val singleProtoMat = prototypeMats[i]
+            val croppedProtoMat = Mat(singleProtoMat, cropRect)
 
-            // Step 1: Multiply the prototype by its coefficient using Core.multiply
-            Core.multiply(singleProtoMat, Scalar(coeff.toDouble()), weightedProtoMat)
+            // Step 1: Multiply the cropped prototype by its coefficient using Core.multiply
+            Core.multiply(croppedProtoMat, Scalar(coeff.toDouble()), weightedProtoMat)
 
             // Step 2: Add the weighted result to the combined mask
             Core.add(combinedProtoMask, weightedProtoMat, combinedProtoMask)
+
+            croppedProtoMat.release()
         }
 
         // Clean up memory
@@ -776,7 +792,7 @@ class YoloInferenceTFLite(private val context: Context) {
         // 4. Resize the mask to the bounding box dimensions (scaled by upscaleFactor)
         val targetWidth = (boxW * inputWidth * upscaleFactor).toInt().coerceAtLeast(1)
         val targetHeight = (boxH * inputHeight * upscaleFactor).toInt().coerceAtLeast(1)
-        AppLogger.debug("Step 4: Resizing mask from ${prototypeWidth}x${prototypeHeight} to ${targetWidth}x${targetHeight}")
+        AppLogger.debug("Step 4: Resizing mask from ${cropW}x${cropH} to ${targetWidth}x${targetHeight}")
         if ((targetWidth == 1) and (targetHeight == 1)) {
             AppLogger.debug("Ahrg in Step 4: target size is 1x1 pixel.")
         }
@@ -836,55 +852,6 @@ class YoloInferenceTFLite(private val context: Context) {
         mat.put(0, 0, data)
     }
 
-    /**
-     * Handle overflow boxes based on maxSize (normalized 0-1 range).
-     * Box format: [x_min, y_min, width, height]
-     * @param box box in [x_min, y_min, width, height] format
-     * @param maxSize Max value for normalized coordinates, typically 1.0f.
-     * @returns non overflow boxes
-     */
-    private fun overflowBoxes(box: FloatArray, maxSize: Float): FloatArray {
-        val x_min = box[0].coerceIn(0f, maxSize)
-        val y_min = box[1].coerceIn(0f, maxSize)
-        val width = (box[2] + x_min).coerceAtMost(maxSize) - x_min
-        val height = (box[3] + y_min).coerceAtMost(maxSize) - y_min
-        return floatArrayOf(x_min, y_min, width, height)
-    }
-
-    /**
-     * Shifts the mask content downwards by a factor of its height.
-     * The top part created by the shift is filled with white.
-     * This function is re-added for compatibility with CarDetectionDebugTest.kt,
-     * but its logic is not part of the core segmentation flow in inferYolo.
-     * @param originalMask The CV_8UC1 mask to shift.
-     * @param downshiftFactor Percentage of height to shift down (0.0 to 1.0).
-     * @return A new Mat with the shifted content. The originalMat is NOT released by this function.
-     */
-    private fun shiftDown(originalMask: Mat, downshiftFactor: Float): Mat {
-        if (downshiftFactor <= 0.0f) return originalMask.clone() // No shift or invalid factor
-
-        val height = originalMask.rows()
-        val width = originalMask.cols()
-        val shiftPixels = (height * downshiftFactor.coerceIn(0f, 1f)).toInt()
-
-        if (shiftPixels == 0) return originalMask.clone()
-        if (shiftPixels >= height) { // If shift is entire height or more, return all white
-            val allWhite = Mat(height, width, originalMask.type(), Scalar(255.0))
-            return allWhite
-        }
-
-        val shiftedMask =
-            Mat(height, width, originalMask.type(), Scalar(255.0)) // Initialize with white
-
-        // Define region of interest (ROI) for the part of the original mask to keep
-        val sourceRoi = Rect(0, 0, width, height - shiftPixels)
-        // Define where this ROI will be placed in the new mask
-        val targetRoi = Rect(0, shiftPixels, width, height - shiftPixels)
-
-        originalMask.submat(sourceRoi).copyTo(shiftedMask.submat(targetRoi))
-
-        return shiftedMask
-    }
 
     fun close() {
         interpreter?.close()
@@ -906,11 +873,6 @@ data class Detection(
     val classId: Int,
     val maskCoefficients: FloatArray // Typically 32 coefficients for YOLOv8-seg
 ) {
-    //XXX UNUSED Convenience getters for x1, y1, x2, y2 (normalized 0-1 range)
-    val x1: Float get() = x
-    val y1: Float get() = y
-    val x2: Float get() = x + width
-    val y2: Float get() = y + height
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
