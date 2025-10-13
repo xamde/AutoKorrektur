@@ -733,6 +733,7 @@ class FirstFragment : Fragment() {
                                     return@runOnUiThread
                                 }
 
+                                // TODO we seem to decode the mask from YOLO wrongly
                                 AppLogger.debug("Creating mask bitmap from rows="+maskMat.rows() + " x cols="+maskMat.cols()+" type="+maskMat.type()+" size="+maskMat.size());
                                 val maskBitmap = createBitmap(maskMat.cols(), maskMat.rows())
                                 Utils.matToBitmap(maskMat, maskBitmap)
