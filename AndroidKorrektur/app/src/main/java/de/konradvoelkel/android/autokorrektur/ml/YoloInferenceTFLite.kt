@@ -268,23 +268,28 @@ class YoloInferenceTFLite(private val context: Context) {
             detectionsBuffer.rewind()
             prototypeMasksBuffer.rewind()
 
+            // Example for detectionsBuffer
+            val floatBuffer = detectionsBuffer.asFloatBuffer()
+            val sampleData = FloatArray(20)
+            floatBuffer.get(sampleData)
+            println("[DEBUG_DUMP] Detections Buffer (first 20 floats): ${sampleData.joinToString()}")
+            detectionsBuffer.rewind() // Rewind again for the actual processing
+
             println("[DEBUG_LOG] Detections buffer capacity: ${detectionsBuffer.capacity()} bytes")
             println("[DEBUG_LOG] Prototype masks buffer capacity: ${prototypeMasksBuffer.capacity()} bytes")
 
             // Get detection tensor shape to correctly determine numProposals and featuresPerProposal
             val detectionTensor = interpreter!!.getOutputTensor(0)
             val detectionTensorShape =
-                detectionTensor.shape() // e.g., [1, 8400, 116] or [1, 116, 8400]
+                detectionTensor.shape() // e.g. [1, 116, 8400] = 1 F N
             val numProposals: Int
             val featuresPerProposal: Int
 
             // Determine actual shape based on common YOLOv8/v11 TFLite outputs
-            // If shape is [1, N, F] -> N=numProposals, F=featuresPerProposal
-            // If shape is [1, F, N] -> F=featuresPerProposal, N=numProposals
             if (detectionTensorShape.size == 3) {
-                // Assuming [1, num_proposals, features_per_proposal] (row-major)
-                numProposals = detectionTensorShape[1]
-                featuresPerProposal = detectionTensorShape[2]
+                // Assuming [1, features_per_proposal, num_proposals] (column-major)
+                featuresPerProposal = detectionTensorShape[1]
+                numProposals = detectionTensorShape[2]
             } else {
                 throw IllegalStateException("Unexpected detection tensor shape: ${detectionTensorShape.joinToString()}")
             }
