@@ -679,7 +679,6 @@ class FirstFragment : Fragment() {
                     // Get UI parameters
                     val downscaleMp = getDownscaleMpFromSpinner()
                     val maskUpscale = getMaskUpscaleFromSlider()
-                    // TODO use
                     val scoreThreshold = getScoreThresholdFromSlider()
                     val downshift = getDownshiftFromSlider()
 
@@ -715,7 +714,10 @@ class FirstFragment : Fragment() {
                             transformedMat = processedImage.transformedMat,
                             xRatio = processedImage.xRatio,
                             yRatio = processedImage.yRatio,
+                            //modelWidth = 640,
+                            //modelHeight = 640,
                             upscaleFactor = maskUpscale,
+                            //scoreThreshold = scoreThreshold,
                             downshiftFactor = downshift
                         )
                     } catch (e: Exception) {
@@ -733,8 +735,7 @@ class FirstFragment : Fragment() {
                                     return@runOnUiThread
                                 }
 
-                                // TODO we seem to decode the mask from YOLO wrongly
-                                AppLogger.debug("Creating mask bitmap from rows="+maskMat.rows() + " x cols="+maskMat.cols()+" type="+maskMat.type()+" size="+maskMat.size());
+                                AppLogger.debug("Creating mask bitmap")
                                 val maskBitmap = createBitmap(maskMat.cols(), maskMat.rows())
                                 Utils.matToBitmap(maskMat, maskBitmap)
 
