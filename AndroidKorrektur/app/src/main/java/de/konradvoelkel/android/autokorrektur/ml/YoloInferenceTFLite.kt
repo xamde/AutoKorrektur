@@ -51,7 +51,7 @@ class YoloInferenceTFLite(private val context: Context) {
 
     // Configuration parameters - aligned with JS reference
     private val scoreThreshold =
-        0.5f // Lowered from 0.5f to allow more detections - confidence threshold after sigmoid for filtering detections
+        0.6f // Lowered from 0.5f to allow more detections - confidence threshold after sigmoid for filtering detections
     private val iouThreshold = 0.9f   // IoU threshold for Non-Maximum Suppression
     private val topAmountPerClass = 100 // top amount of Instances per class
 
