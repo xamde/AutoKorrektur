@@ -1,6 +1,7 @@
 package de.konradvoelkel.android.autokorrektur.ml
 
 import android.content.Context
+import android.graphics.Bitmap
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import de.konradvoelkel.android.autokorrektur.utils.matToBitmapForDebug
 import org.opencv.BuildConfig
@@ -51,7 +52,7 @@ class YoloInferenceTFLite(private val context: Context) {
 
     // Configuration parameters - aligned with JS reference
     private val scoreThreshold =
-        0.6f // Lowered from 0.5f to allow more detections - confidence threshold after sigmoid for filtering detections
+        0.7f // Lowered from 0.5f to allow more detections - confidence threshold after sigmoid for filtering detections
     private val iouThreshold = 0.9f   // IoU threshold for Non-Maximum Suppression
     private val topAmountPerClass = 100 // top amount of Instances per class
 
@@ -59,7 +60,7 @@ class YoloInferenceTFLite(private val context: Context) {
     private val vehicleClassIndices = intArrayOf(2, 3, 7) // car, motorcycle, truck; bus=5,
 
     // Standard number of mask coefficients for YOLO segmentation models
-    private val numMaskCoefficients = 32 // is this ever used?
+    //private val numMaskCoefficients = 32
 
     @Throws(IOException::class)
     fun initialize(modelName: String = "yolo11s", useFP16: Boolean = false) {
@@ -308,16 +309,18 @@ class YoloInferenceTFLite(private val context: Context) {
             )
             AppLogger.debug("Detections after score threshold: ${detections.size}")
 
-            val detection = detections.get(0)
-            AppLogger.debug("Detection[0].maskCoefficients: ${detection.maskCoefficients}")
-            AppLogger.debug("Detection[0].classId: ${detection.classId}")
-            AppLogger.debug("Detection[0].confidence: ${detection.confidence}")
-            AppLogger.debug("Detection[0].x: ${detection.x}")
-            AppLogger.debug("Detection[0].y: ${detection.y}")
-            AppLogger.debug("Detection[0].width: ${detection.width}")
-            AppLogger.debug("Detection[0].height: ${detection.height}")
-            AppLogger.debug("Detection[0].classId: ${detection.classId}")
-            AppLogger.debug("Detection[0].confidence: ${detection.confidence}")
+            // loop over all detections:
+            var i = 0
+            for (detection in detections) {
+                i += 1
+                AppLogger.debug("Detection[${i}].maskCoefficients: ${detection.maskCoefficients}")
+                AppLogger.debug("Detection[${i}].classId: ${detection.classId}")
+                AppLogger.debug("Detection[${i}].confidence: ${detection.confidence}")
+                AppLogger.debug("Detection[${i}].x: ${detection.x}")
+                AppLogger.debug("Detection[${i}].y: ${detection.y}")
+                AppLogger.debug("Detection[${i}].width: ${detection.width}")
+                AppLogger.debug("Detection[${i}].height: ${detection.height}")
+            }
 
             val filteredDetections = applyNMS(detections, iouThreshold)
             AppLogger.debug("Filtered detections after NMS: ${filteredDetections.size}")
@@ -420,15 +423,16 @@ class YoloInferenceTFLite(private val context: Context) {
 
         val numBBoxCoords = 4
         val numMaskCoeffs = 32
-        AppLogger.debug("Parsing detections: $numProposals proposals, $featuresPerProposal features each. Assuming $numClasses classes, $numBBoxCoords bbox, $numMaskCoeffs mask coeffs.")
+        AppLogger.debug("Parsing detections: $numProposals proposals, $featuresPerProposal features each."
+                +"Assuming $numClasses classes, $numBBoxCoords bbox, $numMaskCoeffs mask coeffs.")
 
         // Read the entire buffer into a FloatArray for easier column-major access simulation
         val floatArray = FloatArray(buffer.capacity() / 4)
         buffer.asFloatBuffer().get(floatArray)
 
         for (i in 0 until numProposals) {
-            val carConfidenceIndex = i * featuresPerProposal + 4 + 2 // 4 bbox + classId for car (2)
-            (1.0f / (1.0f + exp(-floatArray[carConfidenceIndex].toDouble()))).toFloat()
+            //val carConfidenceIndex = i * featuresPerProposal + 4 + 2 // 4 bbox + classId for car (2)
+            //(1.0f / (1.0f + exp(-floatArray[carConfidenceIndex].toDouble()))).toFloat()
             //XXX apparently carConfidence is never used?
             //AppLogger.debug("RAW DETECTION - Proposal ${i+1}/${numProposals}, Car Confidence: ${String.format("%.4f", carConfidence)}")
             // Correct row-major access: floatArray[i * featuresPerProposal + feature_index]
@@ -462,10 +466,22 @@ class YoloInferenceTFLite(private val context: Context) {
             //}
             if (maxProbability > currentScoreThreshold && vehicleClassIndices.contains(maxClassId)) {
                 // Convert cx,cy,w,h to x_min,y_min,width,height (normalized 0-1)
-                val x_min = (cx - w / 2f).coerceIn(0f, 1f)
-                val y_min = (cy - h / 2f).coerceIn(0f, 1f)
-                val width = w.coerceIn(0f, 1f - x_min) // Clamp width so x_max doesn't exceed 1
-                val height = h.coerceIn(0f, 1f - y_min) // Clamp height so y_max doesn't exceed 1
+                val x_min = (cx - (w / 2f))
+                if(x_min < 0f || x_min > 1f) {
+                    AppLogger.error("WARNING: x_min out of bounds: $x_min")
+                }
+                val y_min = (cy - (h / 2f))
+                if(y_min < 0f || y_min > 1f) {
+                    AppLogger.error("WARNING: y_min out of bounds: $y_min")
+                }
+                val width = w
+                if(w < 0f || w > 1f) {
+                    AppLogger.error("WARNING: width out of bounds: $width")
+                }
+                val height = h
+                if(h < 0f || h > 1f) {
+                    AppLogger.error("WARNING: height out of bounds: $height")
+                }
 
                 if (width > 0f && height > 0f) { // Basic sanity check for bbox
                     detections.add(
@@ -738,14 +754,17 @@ class YoloInferenceTFLite(private val context: Context) {
 
             // Get the correctly structured prototype Mat and crop it to bounding box
             val singleProtoMat = prototypeMats[i]
+            var debugProtoMat : Bitmap = matToBitmapForDebug(singleProtoMat)
             val croppedProtoMat = Mat(singleProtoMat, cropRect)
+            var debugCroppedProtoMat : Bitmap = matToBitmapForDebug(croppedProtoMat)
+
 
             // Step 1: Multiply the cropped prototype by its coefficient using Core.multiply
             Core.multiply(croppedProtoMat, Scalar(coeff.toDouble()), weightedProtoMat)
 
             // Step 2: Add the weighted result to the combined mask
             Core.add(combinedProtoMask, weightedProtoMat, combinedProtoMask)
-
+            var debugCombinedProtoMat : Bitmap = matToBitmapForDebug(combinedProtoMask)
             croppedProtoMat.release()
         }
 
@@ -756,10 +775,15 @@ class YoloInferenceTFLite(private val context: Context) {
         AppLogger.debug("Used $nonZeroCoeffs non-zero coefficients out of $numPrototypesChannels")
 
         // === DEBUG VIEW 1: After combining all prototypes ===
-        if (BuildConfig.DEBUG) {
+        var debugBitmap1 : Bitmap? = null
+        var debugBitmap2 : Bitmap? = null
+        var debugBitmap3 : Bitmap? = null
+        var debugBitmap4 : Bitmap? = null
+        var debugBitmap5 : Bitmap? = null
 
+        if (BuildConfig.DEBUG) {
             // This bitmap should now look like a coherent, meaningful mask shape.
-            matToBitmapForDebug(combinedProtoMask)
+            debugBitmap1 = matToBitmapForDebug(combinedProtoMask)
             // during testing, debugBitmap1 at least contains useful information, doesn't seem too wrong.
         }
         // Check combined mask statistics
@@ -770,7 +794,7 @@ class YoloInferenceTFLite(private val context: Context) {
         AppLogger.debug("Step 2: Applying sigmoid")
         applySigmoid(combinedProtoMask)
         if (BuildConfig.DEBUG) {
-            matToBitmapForDebug(combinedProtoMask)
+            debugBitmap2 = matToBitmapForDebug(combinedProtoMask)
             // during testing, already debugBitmap2 is suspicious, as there is so little black pixels left ...
         }
 
@@ -783,7 +807,7 @@ class YoloInferenceTFLite(private val context: Context) {
 
 
         if (BuildConfig.DEBUG) {
-            matToBitmapForDebug(combinedProtoMask)
+            debugBitmap3 = matToBitmapForDebug(combinedProtoMask)
         }
 
         val minMaxAfterThreshold = Core.minMaxLoc(combinedProtoMask)
@@ -806,14 +830,14 @@ class YoloInferenceTFLite(private val context: Context) {
             Imgproc.INTER_LINEAR
         )
         if (BuildConfig.DEBUG) {
-            matToBitmapForDebug(combinedProtoMask)
+            debugBitmap4 = matToBitmapForDebug(combinedProtoMask)
         }
 
         // 5. Convert to 8UC1 (grayscale) for overlay
         AppLogger.debug("Step 5: Converting to CV_8UC1")
         resizedMask.convertTo(resizedMask, CvType.CV_8UC1, 255.0)
         if (BuildConfig.DEBUG) {
-            matToBitmapForDebug(resizedMask)
+            debugBitmap5 = matToBitmapForDebug(resizedMask)
         }
 
         val finalMinMax = Core.minMaxLoc(resizedMask)
