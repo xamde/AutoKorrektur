@@ -434,10 +434,10 @@ class YoloInferenceTFLite(private val context: Context) {
 
         for (i in 0 until numProposals) {
             // --- Corrected indexing for feature-major layout ---
-            val cx = floatArray[0 * numProposals + i]
+            val cx = floatArray[i] // i = 0 * numProposals + i
             val cy = floatArray[1 * numProposals + i]
-            val w  = floatArray[2 * numProposals + i]
-            val h  = floatArray[3 * numProposals + i]
+            val w = floatArray[2 * numProposals + i]
+            val h = floatArray[3 * numProposals + i]
 
             // Read class scores and apply sigmoid
             var maxProbability = 0f
@@ -479,22 +479,21 @@ class YoloInferenceTFLite(private val context: Context) {
                 }
 
                 detections.add(
-                        Detection(
-                            x_min,
-                            y_min,
-                            width,
-                            height,
-                            maxProbability,
-                            maxClassId,
-                            maskCoefficients
-                        )
+                    Detection(
+                        x_min,
+                        y_min,
+                        width,
+                        height,
+                        maxProbability,
+                        maxClassId,
+                        maskCoefficients
+                    )
                 )
             }
         }
         AppLogger.debug("Total vehicle detections after score threshold: ${detections.size}")
         return detections
     }
-
 
 
     /**
@@ -684,7 +683,7 @@ class YoloInferenceTFLite(private val context: Context) {
         val numPrototypesChannels = protoTensorShape[3] // 32
 
         AppLogger.debug("Prototype tensor shape: [${protoTensorShape.joinToString(", ")}]")
-        AppLogger.debug("Prototype dims: ${numPrototypesChannels} channels, ${prototypeHeight}x${prototypeWidth}")
+        AppLogger.debug("Prototype dims: $numPrototypesChannels channels, ${prototypeHeight}x${prototypeWidth}")
         AppLogger.debug("Expected prototype data size: ${numPrototypesChannels * prototypeHeight * prototypeWidth}")
         AppLogger.debug("Actual prototype data size: ${prototypeMasksData.size}")
 
@@ -697,7 +696,7 @@ class YoloInferenceTFLite(private val context: Context) {
             return Mat()
         }
         // 1. De-interleave the flat data and combine the prototypes
-        AppLogger.debug("Step 1: De-interleaving and combining ${numPrototypesChannels} prototype masks")
+        AppLogger.debug("Step 1: De-interleaving and combining $numPrototypesChannels prototype masks")
 
         // Create a list to hold the 32 correctly-structured prototype Mats
         val prototypeMats = List(numPrototypesChannels) {
@@ -748,9 +747,9 @@ class YoloInferenceTFLite(private val context: Context) {
 
             // Get the correctly structured prototype Mat and crop it to bounding box
             val singleProtoMat = prototypeMats[i]
-            var debugProtoMat : Bitmap = matToBitmapForDebug(singleProtoMat)
+            matToBitmapForDebug(singleProtoMat)
             val croppedProtoMat = Mat(singleProtoMat, cropRect)
-            var debugCroppedProtoMat : Bitmap = matToBitmapForDebug(croppedProtoMat)
+            matToBitmapForDebug(croppedProtoMat)
 
 
             // Step 1: Multiply the cropped prototype by its coefficient using Core.multiply
@@ -758,7 +757,7 @@ class YoloInferenceTFLite(private val context: Context) {
 
             // Step 2: Add the weighted result to the combined mask
             Core.add(combinedProtoMask, weightedProtoMat, combinedProtoMask)
-            var debugCombinedProtoMat : Bitmap = matToBitmapForDebug(combinedProtoMask)
+            matToBitmapForDebug(combinedProtoMask)
             croppedProtoMat.release()
         }
 
@@ -769,16 +768,14 @@ class YoloInferenceTFLite(private val context: Context) {
         AppLogger.debug("Used $nonZeroCoeffs non-zero coefficients out of $numPrototypesChannels")
 
         // === DEBUG VIEW 1: After combining all prototypes ===
-        var debugBitmap1 : Bitmap? = null
-        var debugBitmap2 : Bitmap? = null
-        var debugBitmap3 : Bitmap? = null
-        var debugBitmap4 : Bitmap? = null
-        var debugBitmap5 : Bitmap? = null
+        var debugBitmap1: Bitmap? = null
+        var debugBitmap2: Bitmap? = null
+        var debugBitmap3: Bitmap? = null
+        var debugBitmap4: Bitmap? = null
+        var debugBitmap5: Bitmap? = null
 
         if (BuildConfig.DEBUG) {
-            // This bitmap should now look like a coherent, meaningful mask shape.
             debugBitmap1 = matToBitmapForDebug(combinedProtoMask)
-            // during testing, debugBitmap1 at least contains useful information, doesn't seem too wrong.
         }
         // Check combined mask statistics
         val minMaxResult = Core.minMaxLoc(combinedProtoMask)
@@ -789,7 +786,6 @@ class YoloInferenceTFLite(private val context: Context) {
         applySigmoid(combinedProtoMask)
         if (BuildConfig.DEBUG) {
             debugBitmap2 = matToBitmapForDebug(combinedProtoMask)
-            // during testing, already debugBitmap2 is suspicious, as there is so little black pixels left ...
         }
 
         val minMaxAfterSigmoid = Core.minMaxLoc(combinedProtoMask)
