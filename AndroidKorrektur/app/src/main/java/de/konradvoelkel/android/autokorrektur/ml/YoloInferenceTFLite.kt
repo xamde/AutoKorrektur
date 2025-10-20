@@ -402,7 +402,7 @@ class YoloInferenceTFLite(private val context: Context) {
 
     /**
      * Parses detection results from TensorFlow Lite output buffer.
-     * Aligned with JS reference's column-major data access logic.
+     * Corrected for YOLOv11 feature-major (channel-first) layout: [1, features, proposals].
      *
      * @param buffer The ByteBuffer containing the flattened detection output.
      * @param currentScoreThreshold The confidence threshold for filtering.
@@ -423,29 +423,27 @@ class YoloInferenceTFLite(private val context: Context) {
 
         val numBBoxCoords = 4
         val numMaskCoeffs = 32
-        AppLogger.debug("Parsing detections: $numProposals proposals, $featuresPerProposal features each."
-                +"Assuming $numClasses classes, $numBBoxCoords bbox, $numMaskCoeffs mask coeffs.")
+        AppLogger.debug(
+            "Parsing detections: $numProposals proposals, $featuresPerProposal features each." +
+                    " Assuming $numClasses classes, $numBBoxCoords bbox, $numMaskCoeffs mask coeffs."
+        )
 
-        // Read the entire buffer into a FloatArray for easier column-major access simulation
+        // Read the entire buffer into a FloatArray for easier access
         val floatArray = FloatArray(buffer.capacity() / 4)
         buffer.asFloatBuffer().get(floatArray)
 
         for (i in 0 until numProposals) {
-            //val carConfidenceIndex = i * featuresPerProposal + 4 + 2 // 4 bbox + classId for car (2)
-            //(1.0f / (1.0f + exp(-floatArray[carConfidenceIndex].toDouble()))).toFloat()
-            //XXX apparently carConfidence is never used?
-            //AppLogger.debug("RAW DETECTION - Proposal ${i+1}/${numProposals}, Car Confidence: ${String.format("%.4f", carConfidence)}")
-            // Correct row-major access: floatArray[i * featuresPerProposal + feature_index]
-            val cx = floatArray[i * featuresPerProposal + 0]
-            val cy = floatArray[i * featuresPerProposal + 1]
-            val w = floatArray[i * featuresPerProposal + 2]
-            val h = floatArray[i * featuresPerProposal + 3]
+            // --- Corrected indexing for feature-major layout ---
+            val cx = floatArray[0 * numProposals + i]
+            val cy = floatArray[1 * numProposals + i]
+            val w  = floatArray[2 * numProposals + i]
+            val h  = floatArray[3 * numProposals + i]
 
             // Read class scores and apply sigmoid
             var maxProbability = 0f
             var maxClassId = -1
             for (classId in 0 until numClasses) {
-                val rawScore = floatArray[i * featuresPerProposal + (numBBoxCoords + classId)]
+                val rawScore = floatArray[(numBBoxCoords + classId) * numProposals + i]
                 val probability = (1.0f / (1.0f + exp(-rawScore.toDouble()))).toFloat()
                 if (probability > maxProbability) {
                     maxProbability = probability
@@ -457,34 +455,30 @@ class YoloInferenceTFLite(private val context: Context) {
             val maskCoefficients = FloatArray(numMaskCoeffs)
             for (j in 0 until numMaskCoeffs) {
                 maskCoefficients[j] =
-                    floatArray[i * featuresPerProposal + (numBBoxCoords + numClasses + j)]
+                    floatArray[(numBBoxCoords + numClasses + j) * numProposals + i]
             }
 
             // Filter by score and class
-            //if (maxProbability > 0.001f) { // Log raw detections with very low threshold
-            //AppLogger.debug("Raw detection (class: ${labels.getOrNull(maxClassId)}, confidence: $maxProbability)")
-            //}
             if (maxProbability > currentScoreThreshold && vehicleClassIndices.contains(maxClassId)) {
                 // Convert cx,cy,w,h to x_min,y_min,width,height (normalized 0-1)
                 val x_min = (cx - (w / 2f))
-                if(x_min < 0f || x_min > 1f) {
+                if (x_min < 0f || x_min > 1f) {
                     AppLogger.error("WARNING: x_min out of bounds: $x_min")
                 }
                 val y_min = (cy - (h / 2f))
-                if(y_min < 0f || y_min > 1f) {
+                if (y_min < 0f || y_min > 1f) {
                     AppLogger.error("WARNING: y_min out of bounds: $y_min")
                 }
                 val width = w
-                if(w < 0f || w > 1f) {
+                if (w < 0f || w > 1f) {
                     AppLogger.error("WARNING: width out of bounds: $width")
                 }
                 val height = h
-                if(h < 0f || h > 1f) {
+                if (h < 0f || h > 1f) {
                     AppLogger.error("WARNING: height out of bounds: $height")
                 }
 
-                if (width > 0f && height > 0f) { // Basic sanity check for bbox
-                    detections.add(
+                detections.add(
                         Detection(
                             x_min,
                             y_min,
@@ -494,13 +488,13 @@ class YoloInferenceTFLite(private val context: Context) {
                             maxClassId,
                             maskCoefficients
                         )
-                    )
-                }
+                )
             }
         }
         AppLogger.debug("Total vehicle detections after score threshold: ${detections.size}")
         return detections
     }
+
 
 
     /**
