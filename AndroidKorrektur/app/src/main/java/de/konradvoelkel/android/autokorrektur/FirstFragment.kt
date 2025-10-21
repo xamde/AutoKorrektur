@@ -1,6 +1,7 @@
 package de.konradvoelkel.android.autokorrektur
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ContentValues
 import android.content.Intent
@@ -61,6 +62,7 @@ data class BatchProcessingResult(
 /**
  * Main fragment for the AutoKorrektur app, mimicking the web app functionality.
  */
+@SuppressLint("DefaultLocale,SetTextI18n")
 class FirstFragment : Fragment() {
 
     private var _binding: FragmentFirstBinding? = null
@@ -354,6 +356,7 @@ class FirstFragment : Fragment() {
     private fun setupSliders() {
         // Mask Upscale slider
         binding.maskUpscale.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 val value = (1 + progress * 0.01).toFloat()
                 binding.maskUpscaleVal.text = String.format("%.2f", value)
@@ -951,6 +954,7 @@ class FirstFragment : Fragment() {
             }
         }.start()
     }
+
 
     private fun performBatchProcessing() {
         AppLogger.info("Starting batch processing for ${selectedImageUris.size} images")
