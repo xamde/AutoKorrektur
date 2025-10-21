@@ -527,6 +527,26 @@ class FirstFragment : Fragment() {
         )
     }
 
+    // Decode a downscaled bitmap for preview display to avoid Canvas too-large issues
+    private fun decodePreviewBitmap(uri: Uri, targetW: Int, targetH: Int): Bitmap {
+        val source = ImageDecoder.createSource(requireContext().contentResolver, uri)
+        return ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+            val srcW = info.size.width
+            val srcH = info.size.height
+            // Compute scale to fit into target box while preserving aspect ratio
+            val scale = kotlin.math.min(
+                targetW.toFloat() / srcW.toFloat(),
+                targetH.toFloat() / srcH.toFloat()
+            ).coerceAtMost(1f)
+            val outW = kotlin.math.max(1, (srcW * scale).toInt())
+            val outH = kotlin.math.max(1, (srcH * scale).toInt())
+            // Prefer software allocation to reduce GPU memory pressure for previews
+            decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+            decoder.isMutableRequired = false
+            decoder.setTargetSize(outW, outH)
+        }
+    }
+
     private fun displayImage(uri: Uri, label: String) {
         clearImagesContainer()
 
@@ -536,7 +556,13 @@ class FirstFragment : Fragment() {
             400
         )
         imageView.scaleType = ImageView.ScaleType.FIT_CENTER
-        imageView.setImageURI(uri)
+
+        // Decode a downscaled preview to avoid Canvas too-large crashes
+        val metrics = resources.displayMetrics
+        val targetW = metrics.widthPixels
+        val targetH = 400 // matches the fixed layout height in px
+        val preview = decodePreviewBitmap(uri, targetW, targetH)
+        imageView.setImageBitmap(preview)
 
         val textView = TextView(context)
         textView.text = label
@@ -561,7 +587,12 @@ class FirstFragment : Fragment() {
             400
         )
         imageView.scaleType = ImageView.ScaleType.FIT_CENTER
-        imageView.setImageURI(uri)
+
+        val metrics = resources.displayMetrics
+        val targetW = metrics.widthPixels
+        val targetH = 400
+        val preview = decodePreviewBitmap(uri, targetW, targetH)
+        imageView.setImageBitmap(preview)
 
         val textView = TextView(context)
         textView.text = label
