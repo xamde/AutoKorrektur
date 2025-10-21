@@ -53,12 +53,12 @@ class YoloInferenceTFLite(private val context: Context) {
 
     // Configuration parameters - aligned with JS reference
     private val scoreThreshold =
-        0.7f // Lowered from 0.5f to allow more detections - confidence threshold after sigmoid for filtering detections
+        0.6f // Slightly raised to reduce false positives while retaining recall for vehicle classes
     private val iouThreshold = 0.9f   // IoU threshold for Non-Maximum Suppression
     private val topAmountPerClass = 100 // top amount of Instances per class
 
-    // Vehicle class indices (car, motorcycle, truck) - COCO indices
-    private val vehicleClassIndices = intArrayOf(2, 3, 7) // car, motorcycle, truck; bus=5,
+    // Vehicle class indices (car=2, motorcycle=3, bus=5, truck=7) - COCO indices
+    private val vehicleClassIndices = intArrayOf(2, 3, 5, 7)
 
     // Standard number of mask coefficients for YOLO segmentation models
     //private val numMaskCoefficients = 32
