@@ -38,31 +38,28 @@ object MaskOverlayUtils {
         // Prepare output ARGB bitmap
         val overlay = createBitmap(outWidth, outHeight)
 
-        // Extract pixels from scaled mask
-        val count = outWidth * outHeight
-        val maskPixels = IntArray(count)
-        scaledMask.getPixels(maskPixels, 0, outWidth, 0, 0, outWidth, outHeight)
-
-        val outPixels = IntArray(count)
+        // Process row-by-row to avoid large temporary arrays that can cause OOM on big images
         val redColor = Color.red(Color.RED) // 255
         val greenColor = Color.green(Color.RED) // 0
         val blueColor = Color.blue(Color.RED) // 0
+        val clampedAlpha = alpha.coerceIn(0, 255)
 
-        for (i in 0 until count) {
-            // Grayscale mask -> any channel is fine
-            val p = maskPixels[i]
-            val intensity = p and 0xFF // blue channel, but grayscale means R=G=B
-            if (intensity < threshold) {
-                // Masked area -> semi-transparent red
-                outPixels[i] = (alpha.coerceIn(0, 255) shl 24) or
-                        (redColor shl 16) or (greenColor shl 8) or blueColor
-            } else {
-                // Fully transparent elsewhere
-                outPixels[i] = 0x00000000
+        val maskRow = IntArray(outWidth)
+        val outRow = IntArray(outWidth)
+        for (y in 0 until outHeight) {
+            // Read one row from the mask
+            scaledMask.getPixels(maskRow, 0, outWidth, 0, y, outWidth, 1)
+            // Convert to overlay row
+            for (x in 0 until outWidth) {
+                val p = maskRow[x]
+                val intensity = p and 0xFF // grayscale -> any channel
+                outRow[x] = if (intensity < threshold) {
+                    (clampedAlpha shl 24) or (redColor shl 16) or (greenColor shl 8) or blueColor
+                } else 0x00000000
             }
+            // Write the row into the overlay
+            overlay.setPixels(outRow, 0, outWidth, 0, y, outWidth, 1)
         }
-
-        overlay.setPixels(outPixels, 0, outWidth, 0, 0, outWidth, outHeight)
 
         // If we created a temporary scaled mask, recycle it to free memory
         if (scaledMask !== maskBitmap) {
