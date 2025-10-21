@@ -103,7 +103,9 @@ class ImageProcessingPipelineTests {
             xRatio = processedImage.xRatio,
             yRatio = processedImage.yRatio,
             upscaleFactor = 1.2f,
-            downshiftFactor = 0.0f
+            downshiftFactor = 0.0f,
+            originalWidth = processedImage.originalMat.cols(),
+            originalHeight = processedImage.originalMat.rows()
         )
 
         // for debugging, how does the no-car-but-still-some-mask look like?
@@ -136,7 +138,9 @@ class ImageProcessingPipelineTests {
             xRatio = processedImage.xRatio,
             yRatio = processedImage.yRatio,
             upscaleFactor = 1.2f,
-            downshiftFactor = 0.0f
+            downshiftFactor = 0.0f,
+            originalWidth = processedImage.originalMat.cols(),
+            originalHeight = processedImage.originalMat.rows()
         )
 
         // for debugging, how does the no-car-but-still-some-mask look like?
@@ -169,7 +173,9 @@ class ImageProcessingPipelineTests {
             xRatio = processedImage.xRatio,
             yRatio = processedImage.yRatio,
             upscaleFactor = 1.2f,
-            downshiftFactor = 0.0f
+            downshiftFactor = 0.0f,
+            originalWidth = processedImage.originalMat.cols(),
+            originalHeight = processedImage.originalMat.rows()
         )
 
         assertNotNull("Result mask should not be null", resultMask)
@@ -197,7 +203,9 @@ class ImageProcessingPipelineTests {
             xRatio = processedImage.xRatio,
             yRatio = processedImage.yRatio,
             upscaleFactor = 1.2f,
-            downshiftFactor = 0.0f
+            downshiftFactor = 0.0f,
+            originalWidth = processedImage.originalMat.cols(),
+            originalHeight = processedImage.originalMat.rows()
         )
 
         val totalPixelsInMask = resultMask.rows() * resultMask.cols()
@@ -212,6 +220,93 @@ class ImageProcessingPipelineTests {
         assertTrue("Detected mask should be smaller than the whole image", detectedRatio < 0.95)
         assertTrue("Detected mask should be of a sensible size", detectedRatio > 0.001)
 
+        resultMask.release()
+    }
+
+    @Test
+    fun testCarMaskMatchesReference() {
+        val photoFile = copyAssetToCache("photo_with_car_1.png")
+        val photoUri = Uri.fromFile(photoFile)
+
+        val processedImage = imageProcessor.processInputImage(
+            imageUri = photoUri,
+            modelWidth = 640,
+            modelHeight = 640,
+            downscaleMp = null
+        )
+
+        val resultMask = yoloInference.inferYolo(
+            transformedMat = processedImage.transformedMat,
+            xRatio = processedImage.xRatio,
+            yRatio = processedImage.yRatio,
+            upscaleFactor = 1.2f,
+            downshiftFactor = 0.0f,
+            originalWidth = processedImage.originalMat.cols(),
+            originalHeight = processedImage.originalMat.rows()
+        )
+
+        val refMaskFile = copyAssetToCache("photo_with_car_1_mask.png")
+        val referenceMask = Imgcodecs.imread(refMaskFile.absolutePath, Imgcodecs.IMREAD_GRAYSCALE)
+
+        assertNotNull("Reference mask should load", referenceMask)
+        assertTrue("Reference mask should not be empty", !referenceMask.empty())
+
+        assertEquals(
+            "Mask height must match original image height",
+            processedImage.originalMat.rows(), resultMask.rows()
+        )
+        assertEquals(
+            "Mask width must match original image width",
+            processedImage.originalMat.cols(), resultMask.cols()
+        )
+        assertEquals(
+            "Reference mask height must match result height",
+            resultMask.rows(), referenceMask.rows()
+        )
+        assertEquals(
+            "Reference mask width must match result width",
+            resultMask.cols(), referenceMask.cols()
+        )
+
+        // Binarize: treat near-black as car (255), others 0
+        val binResult = Mat()
+        val binReference = Mat()
+        Core.inRange(resultMask, Scalar(0.0), Scalar(10.0), binResult)
+        Core.inRange(referenceMask, Scalar(0.0), Scalar(10.0), binReference)
+
+        // Compute XOR to find mismatches
+        val diff = Mat()
+        Core.bitwise_xor(binResult, binReference, diff)
+        val mismatches = Core.countNonZero(diff)
+        val totalPixels = diff.rows() * diff.cols()
+        val agreement = 1.0 - (mismatches.toDouble() / totalPixels.toDouble())
+
+        println(
+            "[DEBUG_LOG] Mask agreement: ${String.format("%.4f", agreement * 100)}% (mismatches=$mismatches / total=$totalPixels)"
+        )
+
+        // Optionally save debug images
+        val outDebugDir = appContext.getExternalFilesDir(null)
+        if (outDebugDir != null) {
+            val resultPath = File(outDebugDir, "debug_mask_result.png").absolutePath
+            val referencePath = File(outDebugDir, "debug_mask_reference.png").absolutePath
+            val diffPath = File(outDebugDir, "debug_mask_diff.png").absolutePath
+            Imgcodecs.imwrite(resultPath, resultMask)
+            Imgcodecs.imwrite(referencePath, referenceMask)
+            Imgcodecs.imwrite(diffPath, diff)
+            println("[DEBUG_LOG] Saved debug images to: ${outDebugDir.absolutePath}")
+            println("[DEBUG_LOG] - result: $resultPath")
+            println("[DEBUG_LOG] - reference: $referencePath")
+            println("[DEBUG_LOG] - diff: $diffPath")
+        }
+
+        assertTrue("Generated mask should agree with reference mask >= 80%", agreement >= 0.80)
+
+        // Cleanup
+        diff.release()
+        binResult.release()
+        binReference.release()
+        referenceMask.release()
         resultMask.release()
     }
 }
