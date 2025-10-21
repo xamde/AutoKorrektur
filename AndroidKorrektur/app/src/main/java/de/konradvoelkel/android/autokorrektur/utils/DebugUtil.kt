@@ -1,6 +1,7 @@
 package de.konradvoelkel.android.autokorrektur.utils
 
 import android.graphics.Bitmap
+import androidx.core.graphics.createBitmap
 import org.opencv.android.Utils
 import org.opencv.core.Core
 import org.opencv.core.CvType
@@ -21,7 +22,7 @@ fun matToBitmapForDebug(mat: Mat): Bitmap {
     normalizedMat.convertTo(displayMat, CvType.CV_8UC1)
 
     // Create a Bitmap with the same dimensions as the Mat.
-    val bitmap = Bitmap.createBitmap(displayMat.cols(), displayMat.rows(), Bitmap.Config.ARGB_8888)
+    val bitmap = createBitmap(displayMat.cols(), displayMat.rows())
 
     // Copy the Mat data to the Bitmap.
     Utils.matToBitmap(displayMat, bitmap)
