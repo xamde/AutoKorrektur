@@ -73,12 +73,61 @@ class MiGanInference(private val context: Context) {
             initialize()
         }
 
-        val imageHeight = imageMat.rows()
-        val imageWidth = imageMat.cols()
+        // Ensure image is 8UC3 RGB and mask is 8UC1 with same spatial size as image
+        val processedImage = Mat()
+        when (imageMat.type()) {
+            CvType.CV_8UC3 -> imageMat.copyTo(processedImage)
+            CvType.CV_8UC4 -> {
+                // Convert RGBA to RGB
+                org.opencv.imgproc.Imgproc.cvtColor(imageMat, processedImage, org.opencv.imgproc.Imgproc.COLOR_RGBA2RGB)
+            }
+            else -> {
+                val tmp = Mat()
+                imageMat.convertTo(tmp, CvType.CV_8UC3)
+                tmp.copyTo(processedImage)
+                tmp.release()
+            }
+        }
+
+        val processedMask = Mat()
+        // Convert mask to single channel 8-bit
+        if (maskMat.channels() == 1 && maskMat.type() == CvType.CV_8UC1) {
+            maskMat.copyTo(processedMask)
+        } else {
+            val gray = Mat()
+            if (maskMat.channels() == 3) {
+                org.opencv.imgproc.Imgproc.cvtColor(maskMat, gray, org.opencv.imgproc.Imgproc.COLOR_RGB2GRAY)
+            } else if (maskMat.channels() == 4) {
+                org.opencv.imgproc.Imgproc.cvtColor(maskMat, gray, org.opencv.imgproc.Imgproc.COLOR_RGBA2GRAY)
+            } else {
+                maskMat.convertTo(gray, CvType.CV_8UC1)
+            }
+            gray.convertTo(processedMask, CvType.CV_8UC1)
+            gray.release()
+        }
+
+        // Resize mask to match image spatial dimensions if needed (use nearest for binary/label masks)
+        if (processedMask.rows() != processedImage.rows() || processedMask.cols() != processedImage.cols()) {
+            val resizedMask = Mat()
+            org.opencv.imgproc.Imgproc.resize(
+                processedMask,
+                resizedMask,
+                org.opencv.core.Size(processedImage.cols().toDouble(), processedImage.rows().toDouble()),
+                0.0,
+                0.0,
+                org.opencv.imgproc.Imgproc.INTER_NEAREST
+            )
+            processedMask.release()
+            resizedMask.copyTo(processedMask)
+            resizedMask.release()
+        }
+
+        val imageHeight = processedImage.rows()
+        val imageWidth = processedImage.cols()
 
         // Convert image and mask to CHW format for ONNX Runtime (uint8)
-        val imageArray = orderInCHWAsBytes(imageMat)
-        val maskArray = orderInCHWAsBytes(maskMat)
+        val imageArray = orderInCHWAsBytes(processedImage)
+        val maskArray = orderInCHWAsBytes(processedMask)
 
         // Create input tensors (uint8)
         val imageTensor = OnnxTensor.createTensor(
