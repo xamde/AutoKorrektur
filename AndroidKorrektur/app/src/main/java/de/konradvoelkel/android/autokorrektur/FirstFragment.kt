@@ -718,7 +718,9 @@ class FirstFragment : Fragment() {
                             //modelHeight = 640,
                             upscaleFactor = maskUpscale,
                             //scoreThreshold = scoreThreshold,
-                            downshiftFactor = downshift
+                            downshiftFactor = downshift,
+                            originalWidth = processedImage.originalMat.cols(),
+                            originalHeight = processedImage.originalMat.rows()
                         )
                     } catch (e: Exception) {
                         AppLogger.error("Error during YOLO inference", e)
@@ -1027,7 +1029,9 @@ class FirstFragment : Fragment() {
                             //modelHeight = 640,
                             upscaleFactor = maskUpscale,
                             //scoreThreshold = scoreThreshold,
-                            downshiftFactor = downshift
+                            downshiftFactor = downshift,
+                            originalWidth = processedImage.originalMat.cols(),
+                            originalHeight = processedImage.originalMat.rows()
                         )
 
                         // Step 3: Run Mi-GAN inference

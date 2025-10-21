@@ -19,6 +19,7 @@ import java.nio.ByteOrder
 import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 /**
  * TensorFlow Lite implementation of YOLO model inference for car segmentation.
@@ -126,10 +127,12 @@ class YoloInferenceTFLite(private val context: Context) {
     @Throws(IOException::class)
     fun inferYolo(
         transformedMat: Mat, // Expected: CV_32FC3, RGB, Normalized, this.inputWidth x this.inputHeight
-        @Suppress("UNUSED_PARAMETER") xRatio: Float, // Letterbox ratio, potentially useful for drawing results on original image
-        @Suppress("UNUSED_PARAMETER") yRatio: Float, // Letterbox ratio
+        xRatio: Float, // Letterbox ratio, used to map back to original size
+        yRatio: Float, // Letterbox ratio
         upscaleFactor: Float = 1.0f, // Default to 1.0f as in JS reference
-        @Suppress("UNUSED_PARAMETER") downshiftFactor: Float = 0.0f // Re-added for compatibility, but ignored
+        @Suppress("UNUSED_PARAMETER") downshiftFactor: Float = 0.0f, // Re-added for compatibility, but ignored
+        originalWidth: Int? = null,
+        originalHeight: Int? = null
     ): Mat {
         if (!isInitialized || interpreter == null) {
             AppLogger.debug("Interpreter not initialized. Initializing now...")
@@ -176,7 +179,38 @@ class YoloInferenceTFLite(private val context: Context) {
                 upscaleFactor
             )
 
-            return overlayGray
+            var resultMask = overlayGray
+
+            // If target original size provided, remove letterbox padding and resize back to original
+            if (originalWidth != null && originalHeight != null && originalWidth > 0 && originalHeight > 0) {
+                try {
+                    // Compute content region size in model space using ratios from preprocessing
+                    val contentW = kotlin.math.max(1, kotlin.math.min(this.inputWidth, (this.inputWidth / xRatio).toInt()))
+                    val contentH = kotlin.math.max(1, kotlin.math.min(this.inputHeight, (this.inputHeight / yRatio).toInt()))
+
+                    val roi = Rect(0, 0, contentW, contentH)
+                    val cropped = Mat(resultMask, roi).clone()
+                    val resized = Mat()
+                    Imgproc.resize(
+                        cropped,
+                        resized,
+                        Size(originalWidth.toDouble(), originalHeight.toDouble()),
+                        0.0,
+                        0.0,
+                        Imgproc.INTER_NEAREST // preserve mask edges
+                    )
+                    cropped.release()
+                    // Release original overlay only if it's not the same as resized
+                    if (resultMask !== resized) {
+                        resultMask.release()
+                    }
+                    resultMask = resized
+                } catch (e: Exception) {
+                    AppLogger.warn("Failed to resize mask back to original size: ${e.message}")
+                }
+            }
+
+            return resultMask
 
         } catch (e: Exception) {
             AppLogger.debug("TFLite inference failed: ${e.message}")
