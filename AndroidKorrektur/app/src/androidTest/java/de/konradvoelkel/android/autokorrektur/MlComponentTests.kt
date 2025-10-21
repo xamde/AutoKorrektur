@@ -53,7 +53,7 @@ class MlComponentTests {
             miGanInference = MiGanInference(appContext)
             assertNotNull("MiGanInference should not be null", miGanInference)
             miGanInference.initialize()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Mi-GAN may fail due to missing model files in test environment, but should not crash
             assertNotNull("MiGanInference object should still be valid", miGanInference)
         } finally {
@@ -70,7 +70,7 @@ class MlComponentTests {
             try {
                 yoloTFLite.initialize("yolo11s", useFP16 = true)
                 yoloTFLite.close()
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // ignore if FP16 model is not available
             }
 
