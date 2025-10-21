@@ -12,7 +12,7 @@ object TestUtils {
 
     fun initOpenCV() {
         try {
-            if (!OpenCVLoader.initDebug()) {
+            if (!OpenCVLoader.initLocal()) {
                 fail("OpenCV initialization failed")
             }
         } catch (e: Exception) {

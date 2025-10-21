@@ -1,10 +1,11 @@
 package de.konradvoelkel.android.autokorrektur.ml
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import de.konradvoelkel.android.autokorrektur.utils.matToBitmapForDebug
-import android.content.pm.ApplicationInfo
 import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
@@ -19,12 +20,12 @@ import java.nio.ByteOrder
 import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.roundToInt
 
 /**
  * TensorFlow Lite implementation of YOLO model inference for car segmentation.
  * Uses TensorFlow Lite Interpreter directly.
  */
+@SuppressLint("DefaultLocale")
 class YoloInferenceTFLite(private val context: Context) {
 
     // Avoid direct dependency on generated BuildConfig to prevent IDE sync/import issues.
@@ -34,7 +35,7 @@ class YoloInferenceTFLite(private val context: Context) {
             val clazz = Class.forName("${'$'}{context.packageName}.BuildConfig")
             val field = clazz.getField("DEBUG")
             field.getBoolean(null)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
         }
     }
@@ -172,12 +173,17 @@ class YoloInferenceTFLite(private val context: Context) {
 
         try {
             // Prepare or reuse input buffer
-            val inputBufferCapacity = 4 * this.inputWidth * this.inputHeight * this.inputChannels // 4 bytes per float
+            val inputBufferCapacity =
+                4 * this.inputWidth * this.inputHeight * this.inputChannels // 4 bytes per float
             if (inputBuffer == null || inputBuffer!!.capacity() < inputBufferCapacity) {
-                inputBuffer = ByteBuffer.allocateDirect(inputBufferCapacity).apply { order(ByteOrder.nativeOrder()) }
+                inputBuffer = ByteBuffer.allocateDirect(inputBufferCapacity)
+                    .apply { order(ByteOrder.nativeOrder()) }
             }
             inputBuffer!!.rewind()
-            matToByteBuffer(transformedMat, inputBuffer!!) // Populate inputBuffer from transformedMat
+            matToByteBuffer(
+                transformedMat,
+                inputBuffer!!
+            ) // Populate inputBuffer from transformedMat
 
             // Prepare output buffers map (reusing when possible)
             val outputMap = mutableMapOf<Int, Any>()
@@ -196,7 +202,8 @@ class YoloInferenceTFLite(private val context: Context) {
                 val neededBytes = 4 * outputSize // Float32
                 val buf = outputBuffers[i]
                 if (buf == null || buf.capacity() < neededBytes) {
-                    val newBuf = ByteBuffer.allocateDirect(neededBytes).apply { order(ByteOrder.nativeOrder()) }
+                    val newBuf = ByteBuffer.allocateDirect(neededBytes)
+                        .apply { order(ByteOrder.nativeOrder()) }
                     outputBuffers[i] = newBuf
                 }
                 val reuse = outputBuffers[i]!!
@@ -220,8 +227,11 @@ class YoloInferenceTFLite(private val context: Context) {
             if (originalWidth != null && originalHeight != null && originalWidth > 0 && originalHeight > 0) {
                 try {
                     // Compute content region size in model space using ratios from preprocessing
-                    val contentW = kotlin.math.max(1, kotlin.math.min(this.inputWidth, (this.inputWidth / xRatio).toInt()))
-                    val contentH = kotlin.math.max(1, kotlin.math.min(this.inputHeight, (this.inputHeight / yRatio).toInt()))
+                    val contentW = max(1, min(this.inputWidth, (this.inputWidth / xRatio).toInt()))
+                    val contentH = max(
+                        1,
+                        min(this.inputHeight, (this.inputHeight / yRatio).toInt())
+                    )
 
                     val roi = Rect(0, 0, contentW, contentH)
                     val cropped = Mat(resultMask, roi).clone()
@@ -381,8 +391,8 @@ class YoloInferenceTFLite(private val context: Context) {
             AppLogger.debug("Detections after score threshold: ${detections.size}")
 
             // loop over all detections:
-            var i = 0
             if (isDebugBuild) {
+                var i = 0
                 for (detection in detections) {
                     i += 1
                     AppLogger.debug("Detection[${i}].maskCoefficients: ${detection.maskCoefficients}")
@@ -393,8 +403,6 @@ class YoloInferenceTFLite(private val context: Context) {
                     AppLogger.debug("Detection[${i}].width: ${detection.width}")
                     AppLogger.debug("Detection[${i}].height: ${detection.height}")
                 }
-            } else {
-                i = detections.size
             }
 
             val filteredDetections = applyNMS(detections, iouThreshold)
@@ -607,7 +615,7 @@ class YoloInferenceTFLite(private val context: Context) {
 
         // Apply topAmountPerClass filtering (per class)
         val finalSelectedDetections = mutableListOf<Detection>()
-        val classCounts = IntArray(labels.size) { 0 } // Use labels.size for numClasses
+        val classCounts = IntArray(labels.size) // Use labels.size for numClasses
 
         for (idx in keepIndices) {
             val detection = sortedDetections[idx]
@@ -822,9 +830,13 @@ class YoloInferenceTFLite(private val context: Context) {
 
             // Get the correctly structured prototype Mat and crop it to bounding box
             val singleProtoMat = prototypeMats[i]
-            if (isDebugBuild) { matToBitmapForDebug(singleProtoMat) }
+            if (isDebugBuild) {
+                matToBitmapForDebug(singleProtoMat)
+            }
             val croppedProtoMat = Mat(singleProtoMat, cropRect)
-            if (isDebugBuild) { matToBitmapForDebug(croppedProtoMat) }
+            if (isDebugBuild) {
+                matToBitmapForDebug(croppedProtoMat)
+            }
 
 
             // Step 1: Multiply the cropped prototype by its coefficient using Core.multiply
@@ -832,7 +844,9 @@ class YoloInferenceTFLite(private val context: Context) {
 
             // Step 2: Add the weighted result to the combined mask
             Core.add(combinedProtoMask, weightedProtoMat, combinedProtoMask)
-            if (isDebugBuild) { matToBitmapForDebug(combinedProtoMask) }
+            if (isDebugBuild) {
+                matToBitmapForDebug(combinedProtoMask)
+            }
             croppedProtoMat.release()
         }
 
