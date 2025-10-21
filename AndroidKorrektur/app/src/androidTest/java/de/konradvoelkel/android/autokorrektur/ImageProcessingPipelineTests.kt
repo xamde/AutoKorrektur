@@ -26,6 +26,59 @@ import java.io.File
 @RunWith(AndroidJUnit4::class)
 class ImageProcessingPipelineTests {
 
+    // --- Helpers to avoid code duplication in tests ---
+    private fun saveDebugRgbMatAsPngBgr(matRgb: Mat, file: File) {
+        val bgr = Mat()
+        Imgproc.cvtColor(matRgb, bgr, Imgproc.COLOR_RGB2BGR)
+        Imgcodecs.imwrite(file.absolutePath, bgr)
+        bgr.release()
+    }
+
+    private fun meanAbsDiffPerChannelOnWhiteMask(
+        maskGray: Mat,
+        aRgb8u3: Mat,
+        bRgb8u3: Mat
+    ): Double {
+        require(maskGray.type() == org.opencv.core.CvType.CV_8UC1) { "maskGray must be CV_8UC1" }
+        require(aRgb8u3.type() == org.opencv.core.CvType.CV_8UC3) { "aRgb8u3 must be CV_8UC3" }
+        require(bRgb8u3.type() == org.opencv.core.CvType.CV_8UC3) { "bRgb8u3 must be CV_8UC3" }
+        require(aRgb8u3.rows() == bRgb8u3.rows() && aRgb8u3.cols() == bRgb8u3.cols()) { "Image sizes must match" }
+        require(maskGray.rows() == aRgb8u3.rows() && maskGray.cols() == aRgb8u3.cols()) { "Mask size must match image size" }
+
+        val aData = ByteArray(aRgb8u3.rows() * aRgb8u3.cols() * aRgb8u3.channels())
+        val bData = ByteArray(bRgb8u3.rows() * bRgb8u3.cols() * bRgb8u3.channels())
+        val mData = ByteArray(maskGray.rows() * maskGray.cols())
+        aRgb8u3.get(0, 0, aData)
+        bRgb8u3.get(0, 0, bData)
+        maskGray.get(0, 0, mData)
+
+        var sumAbs: Long = 0
+        var count: Long = 0
+        val ch = 3
+        for (i in mData.indices) {
+            val mv = mData[i].toInt() and 0xFF
+            if (mv >= 245) {
+                val base = i * ch
+                val d0 =
+                    kotlin.math.abs((aData[base].toInt() and 0xFF) - (bData[base].toInt() and 0xFF))
+                val d1 =
+                    kotlin.math.abs((aData[base + 1].toInt() and 0xFF) - (bData[base + 1].toInt() and 0xFF))
+                val d2 =
+                    kotlin.math.abs((aData[base + 2].toInt() and 0xFF) - (bData[base + 2].toInt() and 0xFF))
+                sumAbs += (d0 + d1 + d2).toLong()
+                count += 3
+            }
+        }
+        assertTrue("Reference mask must contain white pixels", count > 0)
+        return sumAbs.toDouble() / count.toDouble()
+    }
+
+    private fun matLoadedFromFileBgrToRgb(matBgr: Mat): Mat {
+        val rgb = Mat()
+        Imgproc.cvtColor(matBgr, rgb, Imgproc.COLOR_BGR2RGB)
+        return rgb
+    }
+
     companion object {
         private lateinit var sharedYolo: YoloInferenceTFLite
         private lateinit var sharedImageProcessor: ImageProcessor
@@ -500,5 +553,115 @@ class ImageProcessingPipelineTests {
         yoloMaskOnOutput.release()
         inpainted.release()
         referenceMask.release()
+    }
+
+    @Test
+    fun testEndToEndMiGanOnExample2MatchesReferenceOutsideMask() {
+        // 1) Load input and process
+        val inputFile = copyAssetToCache("example2.png")
+        val inputUri = Uri.fromFile(inputFile)
+        val processedIn = imageProcessor.processInputImage(
+            imageUri = inputUri,
+            modelWidth = 640,
+            modelHeight = 640,
+            downscaleMp = null
+        )
+
+        // 2) Build YOLO mask at original size (black = car), will serve as "allowed difference" mask
+        val mask = yoloInference.inferYolo(
+            transformedMat = processedIn.transformedMat,
+            xRatio = processedIn.xRatio,
+            yRatio = processedIn.yRatio,
+            upscaleFactor = 1.2f,
+            downshiftFactor = 0.0f,
+            originalWidth = processedIn.originalMat.cols(),
+            originalHeight = processedIn.originalMat.rows()
+        )
+
+        // 3) Inpaint with Mi-GAN using that mask
+        val inpainted = miGanInference.inferMiGan(processedIn.originalMat, mask)
+
+        // 4) Load reference result and convert BGR->RGB for fair comparison
+        val refFile = copyAssetToCache("example2Result.png")
+        val refBgr = Imgcodecs.imread(refFile.absolutePath, Imgcodecs.IMREAD_COLOR)
+        assertTrue("Reference image should load", !refBgr.empty())
+        val refRgb = matLoadedFromFileBgrToRgb(refBgr)
+        refBgr.release()
+
+        // 5) Ensure sizes match
+        assertEquals(processedIn.originalMat.rows(), inpainted.rows())
+        assertEquals(processedIn.originalMat.cols(), inpainted.cols())
+        assertEquals(processedIn.originalMat.rows(), refRgb.rows())
+        assertEquals(processedIn.originalMat.cols(), refRgb.cols())
+
+        // 6) Compute similarity over white regions of mask (non-car)
+        val inRgb8 = Mat()
+        val refRgb8 = Mat()
+        inpainted.convertTo(inRgb8, org.opencv.core.CvType.CV_8UC3)
+        refRgb.convertTo(refRgb8, org.opencv.core.CvType.CV_8UC3)
+        val meanAbs = meanAbsDiffPerChannelOnWhiteMask(mask, inRgb8, refRgb8)
+
+        println(
+            "[DEBUG_LOG] example2 mean abs diff over white mask: ${
+                String.format(
+                    "%.2f",
+                    meanAbs
+                )
+            }"
+        )
+
+        val tolerancePerChannel = 12.0
+        assertTrue(
+            "Inpainted output should match reference outside masked regions (<= $tolerancePerChannel per-channel)",
+            meanAbs <= tolerancePerChannel
+        )
+
+        // 7) Optionally check that no car remains after inpainting
+        val tempOutFile = File(appContext.cacheDir, "example2_migan_out.png")
+        saveDebugRgbMatAsPngBgr(inpainted, tempOutFile) // write via RGB->BGR
+        tempFiles.add(tempOutFile)
+        val outUri = Uri.fromFile(tempOutFile)
+        val processedOut = imageProcessor.processInputImage(
+            imageUri = outUri,
+            modelWidth = 640,
+            modelHeight = 640,
+            downscaleMp = null
+        )
+        val maskAfter = yoloInference.inferYolo(
+            transformedMat = processedOut.transformedMat,
+            xRatio = processedOut.xRatio,
+            yRatio = processedOut.yRatio,
+            upscaleFactor = 1.2f,
+            downshiftFactor = 0.0f,
+            originalWidth = processedOut.originalMat.cols(),
+            originalHeight = processedOut.originalMat.rows()
+        )
+        assertFalse(
+            "After Mi-GAN, there should be no car detected (example2)",
+            hasCarDetection(maskAfter)
+        )
+
+        if (isDebug()) {
+            val outDir = appContext.getExternalFilesDir(null)
+            if (outDir != null) {
+                saveDebugRgbMatAsPngBgr(
+                    inpainted,
+                    File(outDir, "debug_example2_migan_inpainted.png")
+                )
+                Imgcodecs.imwrite(File(outDir, "debug_example2_mask.png").absolutePath, mask)
+                Imgcodecs.imwrite(
+                    File(outDir, "debug_example2_mask_after.png").absolutePath,
+                    maskAfter
+                )
+            }
+        }
+
+        // Cleanup
+        inRgb8.release()
+        refRgb8.release()
+        refRgb.release()
+        maskAfter.release()
+        mask.release()
+        inpainted.release()
     }
 }
