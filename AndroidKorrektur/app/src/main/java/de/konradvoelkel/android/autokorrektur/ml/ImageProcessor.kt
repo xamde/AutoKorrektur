@@ -14,6 +14,7 @@ import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
 import java.io.IOException
 import kotlin.math.max
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /**
@@ -61,8 +62,8 @@ class ImageProcessor(private val context: Context) {
             if (currentMegapixels > downscaleMp) {
                 val scaleFactor = sqrt(downscaleMp.toDouble() / currentMegapixels.toDouble())
 
-                val newWidth = Math.round(rgbMat.cols() * scaleFactor)
-                val newHeight = Math.round(rgbMat.rows() * scaleFactor)
+                val newWidth = (rgbMat.cols() * scaleFactor).roundToInt()
+                val newHeight = (rgbMat.rows() * scaleFactor).roundToInt()
 
                 Imgproc.resize(
                     rgbMat,
@@ -158,7 +159,7 @@ class ImageProcessor(private val context: Context) {
 
         // log first 10 bytes in first row of transformedMatForBitmap
         AppLogger.debug(
-            "ImageProcessor: transformedMatForBitmap[0] = " + "${
+            "ImageProcessor: transformedMatForBitmap[0] = ${
                 transformedMatForBitmap.get(
                     0,
                     0
@@ -169,7 +170,7 @@ class ImageProcessor(private val context: Context) {
         transformedMatForBitmap.convertTo(transformedMat, CvType.CV_32FC3, 1.0 / 255.0)
 
         AppLogger.debug(
-            "ImageProcessor: transformedMat[0] = " + "${
+            "ImageProcessor: transformedMat[0] = ${
                 transformedMat.get(0, 0).contentToString()
             }"
         )
