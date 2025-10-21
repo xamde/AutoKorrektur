@@ -300,7 +300,7 @@ class ImageProcessingPipelineTests {
             println("[DEBUG_LOG] - diff: $diffPath")
         }
 
-        assertTrue("Generated mask should agree with reference mask >= 80%", agreement >= 0.80)
+        assertTrue("Generated mask should agree with reference mask >= 95%", agreement >= 0.95)
 
         // Cleanup
         diff.release()
