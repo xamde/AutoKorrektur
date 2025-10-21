@@ -3,10 +3,14 @@ package de.konradvoelkel.android.autokorrektur
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.ImageDecoder
+import android.graphics.Paint
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -25,7 +29,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.graphics.createBitmap
-import androidx.core.graphics.scale
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import com.google.android.material.snackbar.Snackbar
@@ -34,6 +37,7 @@ import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
 import de.konradvoelkel.android.autokorrektur.ml.MiGanInference
 import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
+import de.konradvoelkel.android.autokorrektur.utils.MaskOverlayUtils
 import org.opencv.android.Utils
 import org.opencv.core.Mat
 import java.io.File
@@ -425,7 +429,7 @@ class FirstFragment : Fragment() {
             getString(R.string.cancel)
         )
 
-        android.app.AlertDialog.Builder(requireContext())
+        AlertDialog.Builder(requireContext())
             .setTitle(R.string.photo_selection_title)
             .setItems(options) { _, which ->
                 when (which) {
@@ -499,8 +503,8 @@ class FirstFragment : Fragment() {
     private fun launchGallery() {
         try {
             AppLogger.debug("Launching gallery picker")
-            val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-            intent.type = "image/*"
+            val intent = Intent(Intent.ACTION_GET_CONTENT)
+            intent.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/*")
             selectImageLauncher.launch(intent)
             AppLogger.debug("Gallery picker launched successfully")
         } catch (e: Exception) {
@@ -550,7 +554,7 @@ class FirstFragment : Fragment() {
         binding.imagesContainer.addView(container)
     }
 
-    private fun addImageToContainer(uri: Uri, label: String) {
+    private fun addImageToContainer(uri: Uri, @Suppress("SameParameterValue") label: String) {
         val imageView = ImageView(context)
         imageView.layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
@@ -1203,9 +1207,9 @@ class FirstFragment : Fragment() {
         try {
             AppLogger.debug("Creating mask overlay visualization")
 
-            // Load original image as bitmap
-            val originalBitmap =
-                MediaStore.Images.Media.getBitmap(requireContext().contentResolver, originalUri)
+            // Load original image as bitmap using the recommended ImageDecoder
+            val source = ImageDecoder.createSource(requireContext().contentResolver, originalUri)
+            val originalBitmap = ImageDecoder.decodeBitmap(source)
 
             // Create a mutable copy of the original bitmap
             val overlayBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true)
@@ -1214,21 +1218,24 @@ class FirstFragment : Fragment() {
             val maskBitmap = createBitmap(maskMatrix.cols(), maskMatrix.rows())
             Utils.matToBitmap(maskMatrix, maskBitmap)
 
-            // Scale mask bitmap to match original image size
-            val scaledMaskBitmap = maskBitmap.scale(overlayBitmap.width, overlayBitmap.height)
-
-            // Create overlay by applying red tint to mask areas
-            val overlayCanvas = android.graphics.Canvas(overlayBitmap)
-            val paint = android.graphics.Paint().apply {
-                alpha = 128 // 50% transparency
-                colorFilter = android.graphics.PorterDuffColorFilter(
-                    android.graphics.Color.RED,
-                    android.graphics.PorterDuff.Mode.SRC_ATOP
+            // Build an overlay that is transparent everywhere except masked area (car)
+            val overlayMaskBitmap = MaskOverlayUtils
+                .createRedOverlayBitmap(
+                    maskBitmap,
+                    overlayBitmap.width,
+                    overlayBitmap.height,
+                    threshold = 128,
+                    alpha = 128
                 )
-            }
 
-            // Draw the scaled mask with red tint
-            overlayCanvas.drawBitmap(scaledMaskBitmap, 0f, 0f, paint)
+            // Draw the overlay onto the original image
+            val overlayCanvas = Canvas(overlayBitmap)
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+            overlayCanvas.drawBitmap(overlayMaskBitmap, 0f, 0f, paint)
+
+            // Recycle temporary bitmaps
+            overlayMaskBitmap.recycle()
+            maskBitmap.recycle()
 
             // Save overlay image to temporary file
             val tempOverlayFile = File(requireContext().cacheDir, "mask_overlay.jpg")
@@ -1303,31 +1310,22 @@ class FirstFragment : Fragment() {
     private fun saveImageToGallery(bitmap: Bitmap): Uri? {
         try {
             val filename = "AutoKorrektur_${System.currentTimeMillis()}.jpg"
-            var fos: OutputStream? = null
-            var imageUri: Uri? = null
+            var fos: OutputStream?
+            var imageUri: Uri?
 
             // For Android 10 (Q) and above
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val contentValues = ContentValues().apply {
-                    put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
-                    put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
-                }
-
-                val contentResolver = requireContext().contentResolver
-                imageUri = contentResolver.insert(
-                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                    contentValues
-                )
-                fos = imageUri?.let { contentResolver.openOutputStream(it) }
-            } else {
-                // For older Android versions
-                val imagesDir =
-                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-                val image = File(imagesDir, filename)
-                fos = FileOutputStream(image)
-                imageUri = Uri.fromFile(image)
+            val contentValues = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
             }
+
+            val contentResolver = requireContext().contentResolver
+            imageUri = contentResolver.insert(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                contentValues
+            )
+            fos = imageUri?.let { contentResolver.openOutputStream(it) }
 
             fos?.use {
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)
