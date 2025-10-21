@@ -1,5 +1,6 @@
 package de.konradvoelkel.android.autokorrektur
 
+import android.content.pm.ApplicationInfo
 import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -15,11 +16,11 @@ import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
-import android.content.pm.ApplicationInfo
 import org.opencv.core.Core
 import org.opencv.core.Mat
 import org.opencv.core.Scalar
 import org.opencv.imgcodecs.Imgcodecs
+import org.opencv.imgproc.Imgproc
 import java.io.File
 
 @RunWith(AndroidJUnit4::class)
@@ -28,20 +29,28 @@ class ImageProcessingPipelineTests {
     companion object {
         private lateinit var sharedYolo: YoloInferenceTFLite
         private lateinit var sharedImageProcessor: ImageProcessor
+        private lateinit var sharedMiGan: de.konradvoelkel.android.autokorrektur.ml.MiGanInference
 
-        @BeforeClass @JvmStatic
+        @BeforeClass
+        @JvmStatic
         fun beforeAll() {
             TestUtils.initOpenCV()
             val ctx = InstrumentationRegistry.getInstrumentation().targetContext
             sharedYolo = YoloInferenceTFLite(ctx)
             sharedYolo.initialize("yolo11s")
             sharedImageProcessor = ImageProcessor(ctx)
+            sharedMiGan = de.konradvoelkel.android.autokorrektur.ml.MiGanInference(ctx)
+            sharedMiGan.initialize()
         }
 
-        @AfterClass @JvmStatic
+        @AfterClass
+        @JvmStatic
         fun afterAll() {
             if (this::sharedYolo.isInitialized) {
                 sharedYolo.close()
+            }
+            if (this::sharedMiGan.isInitialized) {
+                sharedMiGan.close()
             }
         }
     }
@@ -49,6 +58,7 @@ class ImageProcessingPipelineTests {
     private val appContext = InstrumentationRegistry.getInstrumentation().targetContext
     private lateinit var yoloInference: YoloInferenceTFLite
     private lateinit var imageProcessor: ImageProcessor
+    private lateinit var miGanInference: de.konradvoelkel.android.autokorrektur.ml.MiGanInference
     private val tempFiles = mutableListOf<File>()
 
     private fun isDebug(): Boolean {
@@ -60,6 +70,7 @@ class ImageProcessingPipelineTests {
         // Reuse shared instances to avoid per-test initialization cost
         yoloInference = sharedYolo
         imageProcessor = sharedImageProcessor
+        miGanInference = sharedMiGan
     }
 
     @After
@@ -313,7 +324,12 @@ class ImageProcessingPipelineTests {
         val agreement = 1.0 - (mismatches.toDouble() / totalPixels.toDouble())
 
         println(
-            "[DEBUG_LOG] Mask agreement: ${String.format("%.4f", agreement * 100)}% (mismatches=$mismatches / total=$totalPixels)"
+            "[DEBUG_LOG] Mask agreement: ${
+                String.format(
+                    "%.4f",
+                    agreement * 100
+                )
+            }% (mismatches=$mismatches / total=$totalPixels)"
         )
 
         // Optionally save debug images
@@ -341,5 +357,148 @@ class ImageProcessingPipelineTests {
         binReference.release()
         referenceMask.release()
         resultMask.release()
+    }
+
+    @Test
+    fun testMiGanRemovesCarAndKeepsBackground() {
+        // Load input photo and reference mask
+        val photoFile = copyAssetToCache("photo_with_car_1.png")
+        val photoUri = Uri.fromFile(photoFile)
+        val refMaskFile = copyAssetToCache("photo_with_car_1_mask.png")
+        val referenceMask = Imgcodecs.imread(refMaskFile.absolutePath, Imgcodecs.IMREAD_GRAYSCALE)
+        assertNotNull("Reference mask should load", referenceMask)
+        assertTrue("Reference mask should not be empty", !referenceMask.empty())
+
+        // Prepare original image as Mat via ImageProcessor (to reuse decoding logic)
+        val processed = imageProcessor.processInputImage(
+            imageUri = photoUri,
+            modelWidth = 640,
+            modelHeight = 640,
+            downscaleMp = null
+        )
+
+        // Run Mi-GAN inference using original image size and the reference mask
+        val inpainted = miGanInference.inferMiGan(processed.originalMat, referenceMask)
+
+        // Optionally save debug outputs (convert RGB->BGR before OpenCV imwrite to avoid swapped colors)
+        if (isDebug()) {
+            val outDir = appContext.getExternalFilesDir(null)
+            if (outDir != null) {
+                val inpaintedPath = File(outDir, "debug_migan_inpainted.png").absolutePath
+                val bgrDebug = Mat()
+                Imgproc.cvtColor(inpainted, bgrDebug, Imgproc.COLOR_RGB2BGR)
+                Imgcodecs.imwrite(inpaintedPath, bgrDebug)
+                bgrDebug.release()
+                println("[DEBUG_LOG] Saved Mi-GAN output to: $inpaintedPath (saved with RGB->BGR conversion)")
+            }
+        }
+
+        // 1) Verify no car remains in the inpainted image via YOLO mask
+        // Save inpainted image temporarily to pass through ImageProcessor
+        val tempOutFile = File(appContext.cacheDir, "migan_inpainted_tmp.png")
+        // Save with RGB->BGR conversion to ensure correct colors when read back by Android Bitmap pipeline
+        val bgrTmp = Mat()
+        Imgproc.cvtColor(inpainted, bgrTmp, Imgproc.COLOR_RGB2BGR)
+        Imgcodecs.imwrite(tempOutFile.absolutePath, bgrTmp)
+        bgrTmp.release()
+        tempFiles.add(tempOutFile)
+        val outUri = Uri.fromFile(tempOutFile)
+
+        val processedOut = imageProcessor.processInputImage(
+            imageUri = outUri,
+            modelWidth = 640,
+            modelHeight = 640,
+            downscaleMp = null
+        )
+
+        val yoloMaskOnOutput = yoloInference.inferYolo(
+            transformedMat = processedOut.transformedMat,
+            xRatio = processedOut.xRatio,
+            yRatio = processedOut.yRatio,
+            upscaleFactor = 1.2f,
+            downshiftFactor = 0.0f,
+            originalWidth = processedOut.originalMat.cols(),
+            originalHeight = processedOut.originalMat.rows()
+        )
+
+        if (isDebug()) {
+            val outputFileName = "debug_mask_after_migan.png"
+            val outputFile = File(appContext.getExternalFilesDir(null), outputFileName)
+            Imgcodecs.imwrite(outputFile.absolutePath, yoloMaskOnOutput)
+            println("[DEBUG_LOG] Saved YOLO mask (after Mi-GAN) to: ${outputFile.absolutePath}")
+        }
+
+        assertFalse(
+            "After Mi-GAN, there should be no car detected",
+            hasCarDetection(yoloMaskOnOutput)
+        )
+
+        // 2) Verify in non-car (white) regions, output agrees with input roughly
+        // Ensure sizes match
+        assertEquals(processed.originalMat.rows(), inpainted.rows())
+        assertEquals(processed.originalMat.cols(), inpainted.cols())
+        assertEquals(referenceMask.rows(), inpainted.rows())
+        assertEquals(referenceMask.cols(), inpainted.cols())
+
+        // Compute mean absolute difference over white mask (>= 245)
+        val inputBGR = Mat()
+        val outputBGR = Mat()
+        // Ensure type is 8UC3
+        processed.originalMat.convertTo(inputBGR, org.opencv.core.CvType.CV_8UC3)
+        inpainted.convertTo(outputBGR, org.opencv.core.CvType.CV_8UC3)
+
+        val inputData = ByteArray(inputBGR.rows() * inputBGR.cols() * inputBGR.channels())
+        val outputData = ByteArray(outputBGR.rows() * outputBGR.cols() * outputBGR.channels())
+        val maskData = ByteArray(referenceMask.rows() * referenceMask.cols())
+        inputBGR.get(0, 0, inputData)
+        outputBGR.get(0, 0, outputData)
+        referenceMask.get(0, 0, maskData)
+
+        var sumAbsDiff: Long = 0
+        var count: Long = 0
+        //val width = inputBGR.cols()
+        val channels = inputBGR.channels()
+        for (i in maskData.indices) {
+            val m = maskData[i].toInt() and 0xFF
+            if (m >= 245) { // white region (non-car)
+                val base = i * channels
+                // B, G, R channels
+                val d0 =
+                    kotlin.math.abs((inputData[base].toInt() and 0xFF) - (outputData[base].toInt() and 0xFF))
+                val d1 =
+                    kotlin.math.abs((inputData[base + 1].toInt() and 0xFF) - (outputData[base + 1].toInt() and 0xFF))
+                val d2 =
+                    kotlin.math.abs((inputData[base + 2].toInt() and 0xFF) - (outputData[base + 2].toInt() and 0xFF))
+                sumAbsDiff += (d0 + d1 + d2).toLong()
+                count += 3
+            }
+        }
+
+        // To avoid divide-by-zero if mask is wrong
+        assertTrue("Reference mask must contain white pixels", count > 0)
+        val meanAbsDiff = sumAbsDiff.toDouble() / count.toDouble()
+
+        println(
+            "[DEBUG_LOG] Mean absolute difference on white mask pixels: ${
+                String.format(
+                    "%.2f",
+                    meanAbsDiff
+                )
+            }"
+        )
+
+        // Allow small differences due to model/inference; threshold in 0..255 scale per channel
+        val tolerancePerChannel = 10.0
+        assertTrue(
+            "Background should be preserved (mean abs diff per channel <= $tolerancePerChannel)",
+            meanAbsDiff <= tolerancePerChannel
+        )
+
+        // Cleanup mats
+        inputBGR.release()
+        outputBGR.release()
+        yoloMaskOnOutput.release()
+        inpainted.release()
+        referenceMask.release()
     }
 }
