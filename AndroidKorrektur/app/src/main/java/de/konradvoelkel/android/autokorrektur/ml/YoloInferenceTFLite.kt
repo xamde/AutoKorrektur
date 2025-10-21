@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import de.konradvoelkel.android.autokorrektur.utils.matToBitmapForDebug
-import org.opencv.BuildConfig // TODO: Replace with app BuildConfig when available in generated sources
+import android.content.pm.ApplicationInfo
 import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
@@ -26,6 +26,18 @@ import kotlin.math.roundToInt
  * Uses TensorFlow Lite Interpreter directly.
  */
 class YoloInferenceTFLite(private val context: Context) {
+
+    // Avoid direct dependency on generated BuildConfig to prevent IDE sync/import issues.
+    // Determines debuggability via reflection first, then falls back to ApplicationInfo flag.
+    private val isDebugBuild: Boolean by lazy {
+        try {
+            val clazz = Class.forName("${'$'}{context.packageName}.BuildConfig")
+            val field = clazz.getField("DEBUG")
+            field.getBoolean(null)
+        } catch (e: Exception) {
+            (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        }
+    }
 
     private var interpreter: Interpreter? = null
     private var isInitialized = false
@@ -100,7 +112,7 @@ class YoloInferenceTFLite(private val context: Context) {
 
             val options = Interpreter.Options()
             // Use conservative threads in DEBUG to avoid oversubscription on emulators/CI
-            val threads = if (BuildConfig.DEBUG) 2 else Runtime.getRuntime().availableProcessors()
+            val threads = if (isDebugBuild) 2 else Runtime.getRuntime().availableProcessors()
             options.setNumThreads(threads)
             interpreter = Interpreter(modelBuffer, options)
 
@@ -170,14 +182,14 @@ class YoloInferenceTFLite(private val context: Context) {
             // Prepare output buffers map (reusing when possible)
             val outputMap = mutableMapOf<Int, Any>()
             val numOutputs = interpreter!!.outputTensorCount
-            if (BuildConfig.DEBUG) {
+            if (isDebugBuild) {
                 AppLogger.debug("Model has $numOutputs outputs")
             }
 
             for (i in 0 until numOutputs) {
                 val outputTensor = interpreter!!.getOutputTensor(i)
                 val outputShape = outputTensor.shape()
-                if (BuildConfig.DEBUG) {
+                if (isDebugBuild) {
                     AppLogger.debug("Output $i shape: [${outputShape.joinToString(", ")}]")
                 }
                 val outputSize = outputShape.fold(1L) { acc, dim -> acc * dim }.toInt()
@@ -330,7 +342,7 @@ class YoloInferenceTFLite(private val context: Context) {
             prototypeMasksBuffer.rewind()
 
             // Example for detectionsBuffer (only when debugging)
-            if (BuildConfig.DEBUG) {
+            if (isDebugBuild) {
                 val floatBuffer = detectionsBuffer.asFloatBuffer()
                 val sampleData = FloatArray(20)
                 floatBuffer.get(sampleData)
@@ -370,7 +382,7 @@ class YoloInferenceTFLite(private val context: Context) {
 
             // loop over all detections:
             var i = 0
-            if (BuildConfig.DEBUG) {
+            if (isDebugBuild) {
                 for (detection in detections) {
                     i += 1
                     AppLogger.debug("Detection[${i}].maskCoefficients: ${detection.maskCoefficients}")
@@ -810,9 +822,9 @@ class YoloInferenceTFLite(private val context: Context) {
 
             // Get the correctly structured prototype Mat and crop it to bounding box
             val singleProtoMat = prototypeMats[i]
-            if (BuildConfig.DEBUG) { matToBitmapForDebug(singleProtoMat) }
+            if (isDebugBuild) { matToBitmapForDebug(singleProtoMat) }
             val croppedProtoMat = Mat(singleProtoMat, cropRect)
-            if (BuildConfig.DEBUG) { matToBitmapForDebug(croppedProtoMat) }
+            if (isDebugBuild) { matToBitmapForDebug(croppedProtoMat) }
 
 
             // Step 1: Multiply the cropped prototype by its coefficient using Core.multiply
@@ -820,7 +832,7 @@ class YoloInferenceTFLite(private val context: Context) {
 
             // Step 2: Add the weighted result to the combined mask
             Core.add(combinedProtoMask, weightedProtoMat, combinedProtoMask)
-            if (BuildConfig.DEBUG) { matToBitmapForDebug(combinedProtoMask) }
+            if (isDebugBuild) { matToBitmapForDebug(combinedProtoMask) }
             croppedProtoMat.release()
         }
 
@@ -837,7 +849,7 @@ class YoloInferenceTFLite(private val context: Context) {
         var debugBitmap4: Bitmap? = null
         var debugBitmap5: Bitmap? = null
 
-        if (BuildConfig.DEBUG) {
+        if (isDebugBuild) {
             debugBitmap1 = matToBitmapForDebug(combinedProtoMask)
         }
         // Check combined mask statistics
@@ -847,7 +859,7 @@ class YoloInferenceTFLite(private val context: Context) {
         // 2. Apply sigmoid to the combined 160x160 mask (values become 0-1)
         AppLogger.debug("Step 2: Applying sigmoid")
         applySigmoid(combinedProtoMask)
-        if (BuildConfig.DEBUG) {
+        if (isDebugBuild) {
             debugBitmap2 = matToBitmapForDebug(combinedProtoMask)
         }
 
@@ -859,7 +871,7 @@ class YoloInferenceTFLite(private val context: Context) {
         Imgproc.threshold(combinedProtoMask, combinedProtoMask, 0.4, 1.0, Imgproc.THRESH_BINARY)
 
 
-        if (BuildConfig.DEBUG) {
+        if (isDebugBuild) {
             debugBitmap3 = matToBitmapForDebug(combinedProtoMask)
         }
 
@@ -882,14 +894,14 @@ class YoloInferenceTFLite(private val context: Context) {
             0.0,
             Imgproc.INTER_LINEAR
         )
-        if (BuildConfig.DEBUG) {
+        if (isDebugBuild) {
             debugBitmap4 = matToBitmapForDebug(combinedProtoMask)
         }
 
         // 5. Convert to 8UC1 (grayscale) for overlay
         AppLogger.debug("Step 5: Converting to CV_8UC1")
         resizedMask.convertTo(resizedMask, CvType.CV_8UC1, 255.0)
-        if (BuildConfig.DEBUG) {
+        if (isDebugBuild) {
             debugBitmap5 = matToBitmapForDebug(resizedMask)
         }
 

@@ -15,7 +15,7 @@ import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.opencv.BuildConfig
+import android.content.pm.ApplicationInfo
 import org.opencv.core.Core
 import org.opencv.core.Mat
 import org.opencv.core.Scalar
@@ -50,6 +50,10 @@ class ImageProcessingPipelineTests {
     private lateinit var yoloInference: YoloInferenceTFLite
     private lateinit var imageProcessor: ImageProcessor
     private val tempFiles = mutableListOf<File>()
+
+    private fun isDebug(): Boolean {
+        return (appContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+    }
 
     @Before
     fun setUp() {
@@ -132,7 +136,7 @@ class ImageProcessingPipelineTests {
         )
 
         // for debugging, how does the no-car-but-still-some-mask look like?
-        if (BuildConfig.DEBUG) {
+        if (isDebug()) {
             val outputFileName = "debug_mask_car.png"
             val outputFile = File(appContext.getExternalFilesDir(null), outputFileName)
             Imgcodecs.imwrite(outputFile.absolutePath, resultMask)
@@ -169,7 +173,7 @@ class ImageProcessingPipelineTests {
         )
 
         // for debugging, how does the no-car-but-still-some-mask look like?
-        if (BuildConfig.DEBUG) {
+        if (isDebug()) {
             val outputFileName = "debug_mask_no_car.png"
             val outputFile = File(appContext.getExternalFilesDir(null), outputFileName)
             Imgcodecs.imwrite(outputFile.absolutePath, resultMask)
@@ -313,7 +317,7 @@ class ImageProcessingPipelineTests {
         )
 
         // Optionally save debug images
-        if (BuildConfig.DEBUG) {
+        if (isDebug()) {
             val outDebugDir = appContext.getExternalFilesDir(null)
             if (outDebugDir != null) {
                 val resultPath = File(outDebugDir, "debug_mask_result.png").absolutePath
