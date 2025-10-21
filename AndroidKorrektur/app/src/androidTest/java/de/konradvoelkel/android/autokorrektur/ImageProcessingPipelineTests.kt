@@ -6,13 +6,16 @@ import androidx.test.platform.app.InstrumentationRegistry
 import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
 import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
 import org.junit.After
+import org.junit.AfterClass
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.opencv.BuildConfig
 import org.opencv.core.Core
 import org.opencv.core.Mat
 import org.opencv.core.Scalar
@@ -22,6 +25,27 @@ import java.io.File
 @RunWith(AndroidJUnit4::class)
 class ImageProcessingPipelineTests {
 
+    companion object {
+        private lateinit var sharedYolo: YoloInferenceTFLite
+        private lateinit var sharedImageProcessor: ImageProcessor
+
+        @BeforeClass @JvmStatic
+        fun beforeAll() {
+            TestUtils.initOpenCV()
+            val ctx = InstrumentationRegistry.getInstrumentation().targetContext
+            sharedYolo = YoloInferenceTFLite(ctx)
+            sharedYolo.initialize("yolo11s")
+            sharedImageProcessor = ImageProcessor(ctx)
+        }
+
+        @AfterClass @JvmStatic
+        fun afterAll() {
+            if (this::sharedYolo.isInitialized) {
+                sharedYolo.close()
+            }
+        }
+    }
+
     private val appContext = InstrumentationRegistry.getInstrumentation().targetContext
     private lateinit var yoloInference: YoloInferenceTFLite
     private lateinit var imageProcessor: ImageProcessor
@@ -29,15 +53,14 @@ class ImageProcessingPipelineTests {
 
     @Before
     fun setUp() {
-        TestUtils.initOpenCV()
-        yoloInference = YoloInferenceTFLite(appContext)
-        yoloInference.initialize("yolo11s")
-        imageProcessor = ImageProcessor(appContext)
+        // Reuse shared instances to avoid per-test initialization cost
+        yoloInference = sharedYolo
+        imageProcessor = sharedImageProcessor
     }
 
     @After
     fun tearDown() {
-        yoloInference.close()
+        // Do not close shared instances here; only clean up temp files
         tempFiles.forEach { it.delete() }
     }
 
@@ -109,10 +132,12 @@ class ImageProcessingPipelineTests {
         )
 
         // for debugging, how does the no-car-but-still-some-mask look like?
-        val outputFileName = "debug_mask_car.png"
-        val outputFile = File(appContext.getExternalFilesDir(null), outputFileName)
-        Imgcodecs.imwrite(outputFile.absolutePath, resultMask)
-        println("[DEBUG_LOG] Saved debug mask to: ${outputFile.absolutePath}")
+        if (BuildConfig.DEBUG) {
+            val outputFileName = "debug_mask_car.png"
+            val outputFile = File(appContext.getExternalFilesDir(null), outputFileName)
+            Imgcodecs.imwrite(outputFile.absolutePath, resultMask)
+            println("[DEBUG_LOG] Saved debug mask to: ${outputFile.absolutePath}")
+        }
 
         assertTrue(
             "Car should be detected in image_1_with_car_640x640.png",
@@ -144,10 +169,12 @@ class ImageProcessingPipelineTests {
         )
 
         // for debugging, how does the no-car-but-still-some-mask look like?
-        val outputFileName = "debug_mask_no_car.png"
-        val outputFile = File(appContext.getExternalFilesDir(null), outputFileName)
-        Imgcodecs.imwrite(outputFile.absolutePath, resultMask)
-        println("[DEBUG_LOG] Saved debug mask to: ${outputFile.absolutePath}")
+        if (BuildConfig.DEBUG) {
+            val outputFileName = "debug_mask_no_car.png"
+            val outputFile = File(appContext.getExternalFilesDir(null), outputFileName)
+            Imgcodecs.imwrite(outputFile.absolutePath, resultMask)
+            println("[DEBUG_LOG] Saved debug mask to: ${outputFile.absolutePath}")
+        }
 
         assertFalse(
             "Car should NOT be detected in image_1_without_car_640x640.png",
@@ -286,18 +313,20 @@ class ImageProcessingPipelineTests {
         )
 
         // Optionally save debug images
-        val outDebugDir = appContext.getExternalFilesDir(null)
-        if (outDebugDir != null) {
-            val resultPath = File(outDebugDir, "debug_mask_result.png").absolutePath
-            val referencePath = File(outDebugDir, "debug_mask_reference.png").absolutePath
-            val diffPath = File(outDebugDir, "debug_mask_diff.png").absolutePath
-            Imgcodecs.imwrite(resultPath, resultMask)
-            Imgcodecs.imwrite(referencePath, referenceMask)
-            Imgcodecs.imwrite(diffPath, diff)
-            println("[DEBUG_LOG] Saved debug images to: ${outDebugDir.absolutePath}")
-            println("[DEBUG_LOG] - result: $resultPath")
-            println("[DEBUG_LOG] - reference: $referencePath")
-            println("[DEBUG_LOG] - diff: $diffPath")
+        if (BuildConfig.DEBUG) {
+            val outDebugDir = appContext.getExternalFilesDir(null)
+            if (outDebugDir != null) {
+                val resultPath = File(outDebugDir, "debug_mask_result.png").absolutePath
+                val referencePath = File(outDebugDir, "debug_mask_reference.png").absolutePath
+                val diffPath = File(outDebugDir, "debug_mask_diff.png").absolutePath
+                Imgcodecs.imwrite(resultPath, resultMask)
+                Imgcodecs.imwrite(referencePath, referenceMask)
+                Imgcodecs.imwrite(diffPath, diff)
+                println("[DEBUG_LOG] Saved debug images to: ${outDebugDir.absolutePath}")
+                println("[DEBUG_LOG] - result: $resultPath")
+                println("[DEBUG_LOG] - reference: $referencePath")
+                println("[DEBUG_LOG] - diff: $diffPath")
+            }
         }
 
         assertTrue("Generated mask should agree with reference mask >= 95%", agreement >= 0.95)

@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import de.konradvoelkel.android.autokorrektur.utils.matToBitmapForDebug
-import org.opencv.BuildConfig
+import org.opencv.BuildConfig // TODO: Replace with app BuildConfig when available in generated sources
 import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
@@ -34,6 +34,12 @@ class YoloInferenceTFLite(private val context: Context) {
     private var inputWidth = 640 // Default, will be updated from model
     private var inputHeight = 640 // Default, will be updated from model
     private var inputChannels = 3  // Default, will be updated from model
+
+    // Cached shapes and reusable buffers to reduce per-inference allocations
+    private var detectionTensorShape: IntArray? = null
+    private var prototypeTensorShape: IntArray? = null
+    private var inputBuffer: ByteBuffer? = null
+    private val outputBuffers = mutableMapOf<Int, ByteBuffer>()
 
     // Labels from COCO dataset
     private val labels = arrayOf(
@@ -93,9 +99,9 @@ class YoloInferenceTFLite(private val context: Context) {
             modelBuffer.rewind()
 
             val options = Interpreter.Options()
-            options.setNumThreads(
-                Runtime.getRuntime().availableProcessors()
-            ) // Use available processors
+            // Use conservative threads in DEBUG to avoid oversubscription on emulators/CI
+            val threads = if (BuildConfig.DEBUG) 2 else Runtime.getRuntime().availableProcessors()
+            options.setNumThreads(threads)
             interpreter = Interpreter(modelBuffer, options)
 
             val inputTensor = interpreter!!.getInputTensor(0)
@@ -111,6 +117,15 @@ class YoloInferenceTFLite(private val context: Context) {
             AppLogger.debug("Model input shape: [${inputShape.joinToString(", ")}]")
             AppLogger.debug("Input dimensions: ${inputWidth}x${inputHeight}x${inputChannels}")
             AppLogger.debug("Detection threshold: $scoreThreshold")
+
+            // Cache output tensor shapes for buffer reuse
+            try {
+                detectionTensorShape = interpreter!!.getOutputTensor(0).shape()
+                prototypeTensorShape = interpreter!!.getOutputTensor(1).shape()
+                AppLogger.debug("Cached output shapes: detections=${detectionTensorShape?.joinToString()}, prototypes=${prototypeTensorShape?.joinToString()}")
+            } catch (e: Exception) {
+                AppLogger.warn("Failed to cache output tensor shapes: ${e.message}")
+            }
 
             isInitialized = true
             AppLogger.debug("TFLite YoloInference initialized successfully")
@@ -144,33 +159,41 @@ class YoloInferenceTFLite(private val context: Context) {
         overlayGray.setTo(Scalar(255.0)) // White background
 
         try {
-            // Prepare input buffer
-            val inputBufferCapacity =
-                4 * this.inputWidth * this.inputHeight * this.inputChannels // 4 bytes per float
-            val inputBuffer = ByteBuffer.allocateDirect(inputBufferCapacity)
-            inputBuffer.order(ByteOrder.nativeOrder())
-            matToByteBuffer(transformedMat, inputBuffer) // Populate inputBuffer from transformedMat
+            // Prepare or reuse input buffer
+            val inputBufferCapacity = 4 * this.inputWidth * this.inputHeight * this.inputChannels // 4 bytes per float
+            if (inputBuffer == null || inputBuffer!!.capacity() < inputBufferCapacity) {
+                inputBuffer = ByteBuffer.allocateDirect(inputBufferCapacity).apply { order(ByteOrder.nativeOrder()) }
+            }
+            inputBuffer!!.rewind()
+            matToByteBuffer(transformedMat, inputBuffer!!) // Populate inputBuffer from transformedMat
 
-            // Prepare output buffers map
+            // Prepare output buffers map (reusing when possible)
             val outputMap = mutableMapOf<Int, Any>()
             val numOutputs = interpreter!!.outputTensorCount
-            AppLogger.debug("Model has $numOutputs outputs")
+            if (BuildConfig.DEBUG) {
+                AppLogger.debug("Model has $numOutputs outputs")
+            }
 
             for (i in 0 until numOutputs) {
                 val outputTensor = interpreter!!.getOutputTensor(i)
                 val outputShape = outputTensor.shape()
-                AppLogger.debug("Output $i shape: [${outputShape.joinToString(", ")}]")
-                // Calculate size needed for the buffer based on tensor shape (product of dimensions) * bytes_per_element
-                val outputSize = outputShape.fold(1L) { acc, dim -> acc * dim }
-                    .toInt() // Use Long for intermediate to avoid overflow
-                val outputBuffer =
-                    ByteBuffer.allocateDirect(4 * outputSize) // Assuming Float32 output
-                outputBuffer.order(ByteOrder.nativeOrder())
-                outputMap[i] = outputBuffer
+                if (BuildConfig.DEBUG) {
+                    AppLogger.debug("Output $i shape: [${outputShape.joinToString(", ")}]")
+                }
+                val outputSize = outputShape.fold(1L) { acc, dim -> acc * dim }.toInt()
+                val neededBytes = 4 * outputSize // Float32
+                val buf = outputBuffers[i]
+                if (buf == null || buf.capacity() < neededBytes) {
+                    val newBuf = ByteBuffer.allocateDirect(neededBytes).apply { order(ByteOrder.nativeOrder()) }
+                    outputBuffers[i] = newBuf
+                }
+                val reuse = outputBuffers[i]!!
+                reuse.rewind()
+                outputMap[i] = reuse
             }
 
             // Run inference
-            interpreter!!.runForMultipleInputsOutputs(arrayOf(inputBuffer), outputMap)
+            interpreter!!.runForMultipleInputsOutputs(arrayOf(inputBuffer!!), outputMap)
 
             // Process outputs to create segmentation mask on overlayGray
             processOutputsToMask(
@@ -306,12 +329,14 @@ class YoloInferenceTFLite(private val context: Context) {
             detectionsBuffer.rewind()
             prototypeMasksBuffer.rewind()
 
-            // Example for detectionsBuffer
-            val floatBuffer = detectionsBuffer.asFloatBuffer()
-            val sampleData = FloatArray(20)
-            floatBuffer.get(sampleData)
-            AppLogger.debug("[DEBUG_DUMP] Detections Buffer (first 20 floats): ${sampleData.joinToString()}")
-            detectionsBuffer.rewind() // Rewind again for the actual processing
+            // Example for detectionsBuffer (only when debugging)
+            if (BuildConfig.DEBUG) {
+                val floatBuffer = detectionsBuffer.asFloatBuffer()
+                val sampleData = FloatArray(20)
+                floatBuffer.get(sampleData)
+                AppLogger.debug("[DEBUG_DUMP] Detections Buffer (first 20 floats): ${sampleData.joinToString()}")
+                detectionsBuffer.rewind() // Rewind again for the actual processing
+            }
 
             AppLogger.debug("Detections buffer capacity: ${detectionsBuffer.capacity()} bytes")
             AppLogger.debug("Prototype masks buffer capacity: ${prototypeMasksBuffer.capacity()} bytes")
@@ -345,15 +370,19 @@ class YoloInferenceTFLite(private val context: Context) {
 
             // loop over all detections:
             var i = 0
-            for (detection in detections) {
-                i += 1
-                AppLogger.debug("Detection[${i}].maskCoefficients: ${detection.maskCoefficients}")
-                AppLogger.debug("Detection[${i}].classId: ${detection.classId}")
-                AppLogger.debug("Detection[${i}].confidence: ${detection.confidence}")
-                AppLogger.debug("Detection[${i}].x: ${detection.x}")
-                AppLogger.debug("Detection[${i}].y: ${detection.y}")
-                AppLogger.debug("Detection[${i}].width: ${detection.width}")
-                AppLogger.debug("Detection[${i}].height: ${detection.height}")
+            if (BuildConfig.DEBUG) {
+                for (detection in detections) {
+                    i += 1
+                    AppLogger.debug("Detection[${i}].maskCoefficients: ${detection.maskCoefficients}")
+                    AppLogger.debug("Detection[${i}].classId: ${detection.classId}")
+                    AppLogger.debug("Detection[${i}].confidence: ${detection.confidence}")
+                    AppLogger.debug("Detection[${i}].x: ${detection.x}")
+                    AppLogger.debug("Detection[${i}].y: ${detection.y}")
+                    AppLogger.debug("Detection[${i}].width: ${detection.width}")
+                    AppLogger.debug("Detection[${i}].height: ${detection.height}")
+                }
+            } else {
+                i = detections.size
             }
 
             val filteredDetections = applyNMS(detections, iouThreshold)
@@ -781,9 +810,9 @@ class YoloInferenceTFLite(private val context: Context) {
 
             // Get the correctly structured prototype Mat and crop it to bounding box
             val singleProtoMat = prototypeMats[i]
-            matToBitmapForDebug(singleProtoMat)
+            if (BuildConfig.DEBUG) { matToBitmapForDebug(singleProtoMat) }
             val croppedProtoMat = Mat(singleProtoMat, cropRect)
-            matToBitmapForDebug(croppedProtoMat)
+            if (BuildConfig.DEBUG) { matToBitmapForDebug(croppedProtoMat) }
 
 
             // Step 1: Multiply the cropped prototype by its coefficient using Core.multiply
@@ -791,7 +820,7 @@ class YoloInferenceTFLite(private val context: Context) {
 
             // Step 2: Add the weighted result to the combined mask
             Core.add(combinedProtoMask, weightedProtoMat, combinedProtoMask)
-            matToBitmapForDebug(combinedProtoMask)
+            if (BuildConfig.DEBUG) { matToBitmapForDebug(combinedProtoMask) }
             croppedProtoMat.release()
         }
 
