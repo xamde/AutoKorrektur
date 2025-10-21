@@ -79,8 +79,13 @@ class MiGanInference(private val context: Context) {
             CvType.CV_8UC3 -> imageMat.copyTo(processedImage)
             CvType.CV_8UC4 -> {
                 // Convert RGBA to RGB
-                org.opencv.imgproc.Imgproc.cvtColor(imageMat, processedImage, org.opencv.imgproc.Imgproc.COLOR_RGBA2RGB)
+                org.opencv.imgproc.Imgproc.cvtColor(
+                    imageMat,
+                    processedImage,
+                    org.opencv.imgproc.Imgproc.COLOR_RGBA2RGB
+                )
             }
+
             else -> {
                 val tmp = Mat()
                 imageMat.convertTo(tmp, CvType.CV_8UC3)
@@ -96,9 +101,17 @@ class MiGanInference(private val context: Context) {
         } else {
             val gray = Mat()
             if (maskMat.channels() == 3) {
-                org.opencv.imgproc.Imgproc.cvtColor(maskMat, gray, org.opencv.imgproc.Imgproc.COLOR_RGB2GRAY)
+                org.opencv.imgproc.Imgproc.cvtColor(
+                    maskMat,
+                    gray,
+                    org.opencv.imgproc.Imgproc.COLOR_RGB2GRAY
+                )
             } else if (maskMat.channels() == 4) {
-                org.opencv.imgproc.Imgproc.cvtColor(maskMat, gray, org.opencv.imgproc.Imgproc.COLOR_RGBA2GRAY)
+                org.opencv.imgproc.Imgproc.cvtColor(
+                    maskMat,
+                    gray,
+                    org.opencv.imgproc.Imgproc.COLOR_RGBA2GRAY
+                )
             } else {
                 maskMat.convertTo(gray, CvType.CV_8UC1)
             }
@@ -112,7 +125,10 @@ class MiGanInference(private val context: Context) {
             org.opencv.imgproc.Imgproc.resize(
                 processedMask,
                 resizedMask,
-                org.opencv.core.Size(processedImage.cols().toDouble(), processedImage.rows().toDouble()),
+                org.opencv.core.Size(
+                    processedImage.cols().toDouble(),
+                    processedImage.rows().toDouble()
+                ),
                 0.0,
                 0.0,
                 org.opencv.imgproc.Imgproc.INTER_NEAREST
@@ -262,61 +278,6 @@ class MiGanInference(private val context: Context) {
     }
 
     /**
-     * Converts a Mat to CHW (Channel, Height, Width) format.
-     *
-     * @param mat The input Mat
-     * @return A float array in CHW format
-     */
-    private fun orderInCHW(mat: Mat): FloatArray {
-        // Log Mat properties for debugging
-        AppLogger.debug("orderInCHW - Mat type: ${mat.type()}, Depth: ${mat.depth()}, Channels: ${mat.channels()}")
-        AppLogger.debug("orderInCHW - Mat rows: ${mat.rows()}, cols: ${mat.cols()}")
-        AppLogger.debug("orderInCHW - CV_32F constant: ${CvType.CV_32F}")
-
-        val channels = ArrayList<Mat>()
-        Core.split(mat, channels)
-
-        val c = channels.size
-        val h = mat.rows()
-        val w = mat.cols()
-
-        val chwArray = FloatArray(c * h * w)
-
-        for (i in 0 until c) {
-            val channelMat = channels[i]
-            AppLogger.debug("orderInCHW - Channel $i type: ${channelMat.type()}, depth: ${channelMat.depth()}")
-
-            // Check the data type and use appropriate array type
-            if (channelMat.type() == CvType.CV_32F || channelMat.depth() == CvType.CV_32F) {
-                // Handle 32-bit float data (CV_32F)
-                val channelData = FloatArray(h * w)
-                channelMat.get(0, 0, channelData)
-
-                for (y in 0 until h) {
-                    for (x in 0 until w) {
-                        // Data is already normalized (0.0-1.0), so use directly
-                        chwArray[i * h * w + y * w + x] = channelData[y * w + x]
-                    }
-                }
-            } else {
-                // Handle 8-bit unsigned data (CV_8U)
-                val channelData = ByteArray(h * w)
-                channelMat.get(0, 0, channelData)
-
-                for (y in 0 until h) {
-                    for (x in 0 until w) {
-                        // Convert from 0-255 to 0.0-1.0
-                        chwArray[i * h * w + y * w + x] =
-                            (channelData[y * w + x].toInt() and 0xFF) / 255.0f
-                    }
-                }
-            }
-        }
-
-        return chwArray
-    }
-
-    /**
      * Reorders CHW image data into HWC image data.
      * Similar to the JavaScript reorderToHWC function.
      *
@@ -405,14 +366,8 @@ class MiGanInference(private val context: Context) {
                         0
                     }
 
-                    // Clamp pixel value (like JavaScript)
-                    val newPixel = when {
-                        pixelVal > 255 -> 255
-                        pixelVal < 0 -> 0
-                        else -> pixelVal
-                    }
-
-                    hwcData[(h * width + w) * 3 + c] = newPixel.toByte()
+                    // pixelVal is already in 0..255 (uint8), assign directly
+                    hwcData[(h * width + w) * 3 + c] = pixelVal.toByte()
                 }
             }
         }
@@ -480,25 +435,6 @@ class MiGanInference(private val context: Context) {
         }
     }
 
-    /**
-     * Converts a ByteArray to FloatArray assuming IEEE 754 float representation.
-     */
-    private fun convertByteArrayToFloatArray(byteArray: ByteArray): FloatArray {
-        if (byteArray.size % 4 != 0) {
-            AppLogger.debug("ByteArray size is not a multiple of 4, treating as uint8 values")
-            // If not divisible by 4, treat as uint8 values and convert to 0.0-1.0 range
-            return FloatArray(byteArray.size) { i ->
-                (byteArray[i].toInt() and 0xFF) / 255.0f
-            }
-        }
-
-        val buffer = ByteBuffer.wrap(byteArray).order(java.nio.ByteOrder.LITTLE_ENDIAN)
-        val floatArray = FloatArray(byteArray.size / 4)
-        for (i in floatArray.indices) {
-            floatArray[i] = buffer.getFloat(i * 4)
-        }
-        return floatArray
-    }
 
     /**
      * Extracts FloatArray from nested Array structure.
