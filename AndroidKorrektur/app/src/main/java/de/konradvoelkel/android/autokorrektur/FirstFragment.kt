@@ -779,8 +779,10 @@ class FirstFragment : Fragment() {
                     // Step 3: Run Mi-GAN inference for inpainting
                     AppLogger.debug("Step 3: Running Mi-GAN inference")
                     val resultMat = try {
+                        // IMPORTANT: Run Mi-GAN on the original-sized image to match the mask dimensions
+                        // Using transformedMat here would misalign with the mask and produce artifacts.
                         miGanInference.inferMiGan(
-                            imageMat = processedImage.transformedMat,
+                            imageMat = processedImage.originalMat,
                             maskMat = maskMat
                         )
                     } catch (e: Exception) {
