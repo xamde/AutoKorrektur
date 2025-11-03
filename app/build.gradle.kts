@@ -49,8 +49,10 @@ dependencies {
     implementation(libs.androidx.navigation.ui.ktx)
     implementation(libs.onnxruntime.android)
     implementation(libs.tensorflow.lite)
-    implementation(project(":opencv-sdk"))
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    // https://mvnrepository.com/artifact/org.opencv/opencv
+    implementation(libs.opencv)
+
 }
