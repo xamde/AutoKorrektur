@@ -22,3 +22,5 @@ local.properties
 /native/
 /kotlin-profile/
 opencv-sdk
+gradlew
+.idea/deploymentTargetSelector.xml
