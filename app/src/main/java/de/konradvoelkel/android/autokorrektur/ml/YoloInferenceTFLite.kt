@@ -3,9 +3,7 @@ package de.konradvoelkel.android.autokorrektur.ml
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.ApplicationInfo
-import android.graphics.Bitmap
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
-import de.konradvoelkel.android.autokorrektur.utils.matToBitmapForDebug
 import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
@@ -31,6 +29,7 @@ class YoloInferenceTFLite(private val context: Context) {
     // Avoid direct dependency on generated BuildConfig to prevent IDE sync/import issues.
     // Determines debuggability via reflection first, then falls back to ApplicationInfo flag.
     private val isDebugBuild: Boolean by lazy {
+        // Konrad: I was running a non-debug build on my physical phone and saw debug logging indicating that "idDebugBuild" was True. So sad.
         try {
             val clazz = Class.forName("${'$'}{context.packageName}.BuildConfig")
             val field = clazz.getField("DEBUG")
@@ -830,13 +829,13 @@ class YoloInferenceTFLite(private val context: Context) {
 
             // Get the correctly structured prototype Mat and crop it to bounding box
             val singleProtoMat = prototypeMats[i]
-            if (isDebugBuild) {
-                matToBitmapForDebug(singleProtoMat)
-            }
+            //if (isDebugBuild) {
+            //    matToBitmapForDebug(singleProtoMat)
+            //}
             val croppedProtoMat = Mat(singleProtoMat, cropRect)
-            if (isDebugBuild) {
-                matToBitmapForDebug(croppedProtoMat)
-            }
+            //if (isDebugBuild) {
+            //    matToBitmapForDebug(croppedProtoMat)
+            //}
 
 
             // Step 1: Multiply the cropped prototype by its coefficient using Core.multiply
@@ -844,9 +843,9 @@ class YoloInferenceTFLite(private val context: Context) {
 
             // Step 2: Add the weighted result to the combined mask
             Core.add(combinedProtoMask, weightedProtoMat, combinedProtoMask)
-            if (isDebugBuild) {
-                matToBitmapForDebug(combinedProtoMask)
-            }
+            //if (isDebugBuild) {
+            //    matToBitmapForDebug(combinedProtoMask)
+            //}
             croppedProtoMat.release()
         }
 
@@ -857,15 +856,15 @@ class YoloInferenceTFLite(private val context: Context) {
         AppLogger.debug("Used $nonZeroCoeffs non-zero coefficients out of $numPrototypesChannels")
 
         // === DEBUG VIEW 1: After combining all prototypes ===
-        var debugBitmap1: Bitmap? = null
-        var debugBitmap2: Bitmap? = null
-        var debugBitmap3: Bitmap? = null
-        var debugBitmap4: Bitmap? = null
-        var debugBitmap5: Bitmap? = null
+        //var debugBitmap1: Bitmap? = null
+        //var debugBitmap2: Bitmap? = null
+        //var debugBitmap3: Bitmap? = null
+        //var debugBitmap4: Bitmap? = null
+        //var debugBitmap5: Bitmap? = null
 
-        if (isDebugBuild) {
-            debugBitmap1 = matToBitmapForDebug(combinedProtoMask)
-        }
+        //if (isDebugBuild) {
+        //    debugBitmap1 = matToBitmapForDebug(combinedProtoMask)
+        //}
         // Check combined mask statistics
         val minMaxResult = Core.minMaxLoc(combinedProtoMask)
         AppLogger.debug("Combined mask before sigmoid: min=${minMaxResult.minVal}, max=${minMaxResult.maxVal}")
@@ -873,9 +872,9 @@ class YoloInferenceTFLite(private val context: Context) {
         // 2. Apply sigmoid to the combined 160x160 mask (values become 0-1)
         AppLogger.debug("Step 2: Applying sigmoid")
         applySigmoid(combinedProtoMask)
-        if (isDebugBuild) {
-            debugBitmap2 = matToBitmapForDebug(combinedProtoMask)
-        }
+        // if (isDebugBuild) {
+        //    debugBitmap2 = matToBitmapForDebug(combinedProtoMask)
+        // }
 
         val minMaxAfterSigmoid = Core.minMaxLoc(combinedProtoMask)
         AppLogger.debug("Combined mask after sigmoid: min=${minMaxAfterSigmoid.minVal}, max=${minMaxAfterSigmoid.maxVal}")
@@ -885,9 +884,9 @@ class YoloInferenceTFLite(private val context: Context) {
         Imgproc.threshold(combinedProtoMask, combinedProtoMask, 0.4, 1.0, Imgproc.THRESH_BINARY)
 
 
-        if (isDebugBuild) {
-            debugBitmap3 = matToBitmapForDebug(combinedProtoMask)
-        }
+        // if (isDebugBuild) {
+        //     debugBitmap3 = matToBitmapForDebug(combinedProtoMask)
+        // }
 
         val minMaxAfterThreshold = Core.minMaxLoc(combinedProtoMask)
         AppLogger.debug("Combined mask after threshold: min=${minMaxAfterThreshold.minVal}, max=${minMaxAfterThreshold.maxVal}")
@@ -910,16 +909,16 @@ class YoloInferenceTFLite(private val context: Context) {
             0.0,
             Imgproc.INTER_LINEAR
         )
-        if (isDebugBuild) {
-            debugBitmap4 = matToBitmapForDebug(combinedProtoMask)
-        }
+        // if (isDebugBuild) {
+        //     debugBitmap4 = matToBitmapForDebug(combinedProtoMask)
+        // }
 
         // 5. Convert to 8UC1 (grayscale) for overlay
         AppLogger.debug("Step 5: Converting to CV_8UC1")
         resizedMask.convertTo(resizedMask, CvType.CV_8UC1, 255.0)
-        if (isDebugBuild) {
-            debugBitmap5 = matToBitmapForDebug(resizedMask)
-        }
+        // if (isDebugBuild) {
+        //     debugBitmap5 = matToBitmapForDebug(resizedMask)
+        // }
 
         val finalMinMax = Core.minMaxLoc(resizedMask)
         AppLogger.debug(
