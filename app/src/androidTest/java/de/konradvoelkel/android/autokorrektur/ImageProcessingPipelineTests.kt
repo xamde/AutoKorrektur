@@ -23,6 +23,7 @@ import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.imgproc.Imgproc
 import java.io.File
 
+@org.junit.Ignore("Split into pipeline/* tests")
 @RunWith(AndroidJUnit4::class)
 class ImageProcessingPipelineTests : de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest() {
 

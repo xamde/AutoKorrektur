@@ -1,17 +1,32 @@
 package de.konradvoelkel.android.autokorrektur
 
 import android.graphics.Bitmap
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import de.konradvoelkel.android.autokorrektur.utils.MaskOverlayUtils
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 import org.opencv.android.Utils
 import org.opencv.imgcodecs.Imgcodecs
 
-@RunWith(AndroidJUnit4::class)
-class ImageOverlayTests : de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest() {
+@RunWith(Parameterized::class)
+class ImageOverlayTests(
+    private val threshold: Int,
+    private val alpha: Int
+) : de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest() {
 
+    companion object {
+        @JvmStatic
+        @Parameterized.Parameters(name = "threshold={0}, alpha={1}")
+        fun params(): Collection<Array<Int>> = listOf(
+            arrayOf(96, 96),
+            arrayOf(96, 128),
+            arrayOf(128, 96),
+            arrayOf(128, 128),
+            arrayOf(160, 96),
+            arrayOf(160, 128),
+        )
+    }
 
     @Test
     fun overlay_should_not_tint_entire_image_and_should_tint_lower_left_region() {
@@ -29,7 +44,7 @@ class ImageOverlayTests : de.konradvoelkel.android.autokorrektur.shared.AndroidI
         // Create a white base image and draw overlay
         val base = Bitmap.createBitmap(maskBitmap.width, maskBitmap.height, Bitmap.Config.ARGB_8888)
         base.eraseColor(0xFFFFFFFF.toInt())
-        MaskOverlayUtils.drawOverlayOnto(base, maskBitmap, threshold = 128, alpha = 128)
+        MaskOverlayUtils.drawOverlayOnto(base, maskBitmap, threshold = threshold, alpha = alpha)
 
         // Analyze result pixels
         val w = base.width
@@ -49,7 +64,7 @@ class ImageOverlayTests : de.konradvoelkel.android.autokorrektur.shared.AndroidI
         }
 
         // Expect some but not all pixels to be tinted
-        assertTrue("Overlay should tint some pixels", tintedCount in 1 until total)
+        assertTrue("Overlay should tint some pixels (thr=$threshold, alpha=$alpha)", tintedCount in 1 until total)
 
         // Expect more tint in lower-left quadrant than upper-right (car is lower-left)
         val halfW = w / 2
@@ -70,7 +85,7 @@ class ImageOverlayTests : de.konradvoelkel.android.autokorrektur.shared.AndroidI
         }
         // We expect lower-left to have noticeably more tinted pixels than upper-right
         assertTrue(
-            "Lower-left should have more red overlay than upper-right (ll=$llTint, ur=$urTint)",
+            "Lower-left should have more red overlay than upper-right (thr=$threshold, alpha=$alpha, ll=$llTint, ur=$urTint)",
             llTint > urTint * 2
         )
 
