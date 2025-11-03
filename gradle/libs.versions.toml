@@ -13,6 +13,8 @@ navigationUiKtx = "2.9.5"
 onnxruntimeAndroid = "latest.release"
 opencvVersion = "4.12.0"
 tensorflowLite = "2.17.0"
+mockito = "5.20.0"
+mockk = "1.14.6"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -28,6 +30,8 @@ androidx-navigation-ui-ktx = { group = "androidx.navigation", name = "navigation
 onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntimeAndroid" }
 opencv = { module = "org.opencv:opencv", version.ref = "opencvVersion" }
 tensorflow-lite = { group = "org.tensorflow", name = "tensorflow-lite", version.ref = "tensorflowLite" }
+mockito-core = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }
+mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
