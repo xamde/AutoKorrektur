@@ -13,6 +13,9 @@ import org.opencv.core.Scalar
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
 import java.io.IOException
+import java.io.InputStream
+import java.io.File
+import java.io.FileInputStream
 import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
@@ -226,6 +229,23 @@ class ImageProcessor(private val context: Context) {
      */
     @Throws(IOException::class)
     private fun loadBitmapFromUri(imageUri: Uri): Bitmap {
+        // Helper to open InputStream for both content:// and file:// URIs
+        fun openInputStreamCompat(uri: Uri): InputStream? {
+            return try {
+                when (uri.scheme?.lowercase()) {
+                    null, "file" -> {
+                        val path = uri.path ?: return null
+                        val file = File(path)
+                        if (!file.exists()) return null
+                        FileInputStream(file)
+                    }
+                    else -> context.contentResolver.openInputStream(uri)
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
+
         // Maximum pixels to load initially (before any downscaling).
         // This prevents OOM when loading very high-resolution images.
         // 16MP is a reasonable limit that most modern devices can handle.
@@ -235,10 +255,17 @@ class ImageProcessor(private val context: Context) {
         val options = android.graphics.BitmapFactory.Options().apply {
             inJustDecodeBounds = true
         }
-        
-        context.contentResolver.openInputStream(imageUri)?.use { inputStream ->
-            android.graphics.BitmapFactory.decodeStream(inputStream, null, options)
-        } ?: throw IOException("Could not open input stream for URI: $imageUri")
+
+        val scheme = imageUri.scheme?.lowercase()
+        if (scheme == null || scheme == "file") {
+            val path = imageUri.path ?: throw IOException("File URI has no path: $imageUri")
+            if (!File(path).exists()) throw IOException("File not found: $path")
+            android.graphics.BitmapFactory.decodeFile(path, options)
+        } else {
+            openInputStreamCompat(imageUri)?.use { inputStream ->
+                android.graphics.BitmapFactory.decodeStream(inputStream, null, options)
+            } ?: throw IOException("Could not open input stream for URI: $imageUri")
+        }
         
         val imageWidth = options.outWidth
         val imageHeight = options.outHeight
@@ -272,8 +299,14 @@ class ImageProcessor(private val context: Context) {
             inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
         }
         
-        val bitmap = context.contentResolver.openInputStream(imageUri)?.use { inputStream ->
-            android.graphics.BitmapFactory.decodeStream(inputStream, null, decodeOptions)
+        val bitmap = if (scheme == null || scheme == "file") {
+            val path = imageUri.path ?: throw IOException("File URI has no path: $imageUri")
+            if (!File(path).exists()) throw IOException("File not found: $path")
+            android.graphics.BitmapFactory.decodeFile(path, decodeOptions)
+        } else {
+            openInputStreamCompat(imageUri)?.use { inputStream ->
+                android.graphics.BitmapFactory.decodeStream(inputStream, null, decodeOptions)
+            }
         } ?: throw IOException("Could not decode bitmap from URI: $imageUri")
         
         if (bitmap == null) {
