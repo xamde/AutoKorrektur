@@ -123,8 +123,8 @@ class ImageProcessor(private val context: Context) {
         modelHeight: Int,
         stride: Int = 32
     ): PreprocessingResult {
-        // Resize to dimensions divisible by stride
-        val (w, h) = divStride(stride, rgbMat.cols(), rgbMat.rows())
+        // Resize to dimensions divisible by stride (pure helper moved to ImageProcessingUtils)
+        val (w, h) = ImageProcessingUtils.divStride(stride, rgbMat.cols(), rgbMat.rows())
         val resizedMat = Mat()
         Imgproc.resize(
             rgbMat,
@@ -184,36 +184,6 @@ class ImageProcessor(private val context: Context) {
         return PreprocessingResult(transformedMat, transformedMatForBitmap, xRatio, yRatio)
     }
 
-    /**
-     * Get dimensions divisible by stride.
-     *
-     * @param stride The stride value
-     * @param width The original width
-     * @param height The original height
-     * @return A pair of width and height divisible by stride
-     */
-    private fun divStride(stride: Int, width: Int, height: Int): Pair<Int, Int> {
-        var widthDivisibleByStride = width
-        var heightDivisibleByStride = height
-
-        if (widthDivisibleByStride % stride != 0) {
-            widthDivisibleByStride = if (widthDivisibleByStride % stride >= stride / 2) {
-                (widthDivisibleByStride / stride + 1) * stride
-            } else {
-                (widthDivisibleByStride / stride) * stride
-            }
-        }
-
-        if (heightDivisibleByStride % stride != 0) {
-            heightDivisibleByStride = if (heightDivisibleByStride % stride >= stride / 2) {
-                (heightDivisibleByStride / stride + 1) * stride
-            } else {
-                (heightDivisibleByStride / stride) * stride
-            }
-        }
-
-        return Pair(widthDivisibleByStride, heightDivisibleByStride)
-    }
 
     /**
      * Loads a bitmap from a URI with intelligent downsampling to prevent OOM errors.

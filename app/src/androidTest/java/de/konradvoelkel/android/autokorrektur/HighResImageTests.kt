@@ -4,14 +4,12 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
 import org.junit.After
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
-import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
@@ -21,17 +19,8 @@ import java.io.FileOutputStream
  * Tests to verify that high-resolution images can be loaded and processed without crashing.
  */
 @RunWith(AndroidJUnit4::class)
-class HighResImageTests {
+class HighResImageTests : de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest() {
 
-    companion object {
-        @BeforeClass
-        @JvmStatic
-        fun beforeAll() {
-            TestUtils.initOpenCV()
-        }
-    }
-
-    private val appContext = InstrumentationRegistry.getInstrumentation().targetContext
     private lateinit var imageProcessor: ImageProcessor
     private val tempFiles = mutableListOf<File>()
 
