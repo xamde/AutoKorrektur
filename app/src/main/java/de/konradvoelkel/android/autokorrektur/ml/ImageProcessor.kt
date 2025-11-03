@@ -249,14 +249,15 @@ class ImageProcessor(private val context: Context) {
         
         AppLogger.debug("ImageProcessor: Image dimensions from URI: ${imageWidth}x${imageHeight}")
         
-        // Calculate the megapixels
-        val imageMegapixels = (imageWidth * imageHeight) / 1000000f
+        // Calculate the megapixels (pixels to megapixels conversion factor)
+        val pixelsToMegapixels = 1_000_000f
+        val imageMegapixels = (imageWidth * imageHeight) / pixelsToMegapixels
         
         // Calculate inSampleSize to reduce memory usage for very large images
         // inSampleSize is a power of 2 that reduces both dimensions by that factor
         var inSampleSize = 1
         if (imageMegapixels > maxInitialMegapixels) {
-            val scaleFactor = sqrt(imageMegapixels / maxInitialMegapixels.toDouble()).toFloat()
+            val scaleFactor = sqrt(imageMegapixels / maxInitialMegapixels)
             // Round up to nearest power of 2 for inSampleSize
             while (inSampleSize * 2 <= scaleFactor) {
                 inSampleSize *= 2
