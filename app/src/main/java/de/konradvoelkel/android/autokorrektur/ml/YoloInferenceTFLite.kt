@@ -26,17 +26,10 @@ import kotlin.math.min
 @SuppressLint("DefaultLocale")
 class YoloInferenceTFLite(private val context: Context) {
 
-    // Avoid direct dependency on generated BuildConfig to prevent IDE sync/import issues.
-    // Determines debuggability via reflection first, then falls back to ApplicationInfo flag.
+    // Determine debuggability using the official ApplicationInfo flag.
+    // Avoid reflection on BuildConfig.DEBUG; it can be unreliable across variants.
     private val isDebugBuild: Boolean by lazy {
-        // Konrad: I was running a non-debug build on my physical phone and saw debug logging indicating that "idDebugBuild" was True. So sad.
-        try {
-            val clazz = Class.forName("${'$'}{context.packageName}.BuildConfig")
-            val field = clazz.getField("DEBUG")
-            field.getBoolean(null)
-        } catch (_: Exception) {
-            (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
-        }
+        (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
     }
 
     private var interpreter: Interpreter? = null
