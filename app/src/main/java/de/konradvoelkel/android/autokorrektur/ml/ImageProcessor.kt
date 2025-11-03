@@ -2,7 +2,10 @@ package de.konradvoelkel.android.autokorrektur.ml
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
 import android.net.Uri
+import android.os.ParcelFileDescriptor
 import androidx.core.graphics.createBitmap
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import org.opencv.android.Utils
@@ -14,7 +17,6 @@ import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
 import java.io.File
 import java.io.IOException
-import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
@@ -135,12 +137,12 @@ class ImageProcessor(private val context: Context) {
             Imgproc.INTER_LANCZOS4
         )
 
-        // Padding image to square dimensions
-        val maxSize = max(resizedMat.rows(), resizedMat.cols())
-        val xPad = maxSize - resizedMat.cols()
-        val xRatio = maxSize.toFloat() / resizedMat.cols()
-        val yPad = maxSize - resizedMat.rows()
-        val yRatio = maxSize.toFloat() / resizedMat.rows()
+        // Padding image to square dimensions (math delegated to pure helper for JVM testing)
+        val pr = ImageProcessingUtils.computeSquarePaddingAndRatios(resizedMat.cols(), resizedMat.rows())
+        val xPad = pr.xPad
+        val yPad = pr.yPad
+        val xRatio = pr.xRatio
+        val yRatio = pr.yRatio
 
         val paddedMat = Mat()
         Core.copyMakeBorder(
@@ -200,16 +202,16 @@ class ImageProcessor(private val context: Context) {
         // Prefer FileDescriptor-based decoding. Some Photo Picker providers return null streams
         // for content:// URIs but do support file descriptors. On Android 9+ we will prefer
         // ImageDecoder for content URIs which is more compatible with modern providers.
-        fun openFileDescriptorCompat(uri: Uri): android.os.ParcelFileDescriptor? {
+        fun openFileDescriptorCompat(uri: Uri): ParcelFileDescriptor? {
             return try {
                 when (uri.scheme?.lowercase()) {
                     null, "file" -> {
                         val path = uri.path ?: return null
                         val file = File(path)
                         if (!file.exists()) return null
-                        android.os.ParcelFileDescriptor.open(
+                        ParcelFileDescriptor.open(
                             file,
-                            android.os.ParcelFileDescriptor.MODE_READ_ONLY
+                            ParcelFileDescriptor.MODE_READ_ONLY
                         )
                     }
                     else -> context.contentResolver.openFileDescriptor(uri, "r")
@@ -231,10 +233,10 @@ class ImageProcessor(private val context: Context) {
 
         // For file URIs, keep using BitmapFactory fast-path.
         if (scheme == null || scheme == "file") {
-            val options = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             val path = imageUri.path ?: throw IOException("File URI has no path: $imageUri")
             if (!File(path).exists()) throw IOException("File not found: $path")
-            android.graphics.BitmapFactory.decodeFile(path, options)
+            BitmapFactory.decodeFile(path, options)
 
             val imageWidth = options.outWidth
             val imageHeight = options.outHeight
@@ -249,11 +251,11 @@ class ImageProcessor(private val context: Context) {
                 AppLogger.info("ImageProcessor: Image is ${imageMegapixels}MP, downsampling by ${inSampleSize}x to fit ${maxInitialMegapixels}MP limit")
             }
 
-            val decodeOptions = android.graphics.BitmapFactory.Options().apply {
+            val decodeOptions = BitmapFactory.Options().apply {
                 this.inSampleSize = inSampleSize
                 inPreferredConfig = Bitmap.Config.ARGB_8888
             }
-            val bitmap = android.graphics.BitmapFactory.decodeFile(path, decodeOptions)
+            val bitmap = BitmapFactory.decodeFile(path, decodeOptions)
                 ?: throw IOException("Could not decode bitmap from file path: $path")
             AppLogger.debug("ImageProcessor: Loaded bitmap with dimensions ${bitmap.width}x${bitmap.height} (inSampleSize=$inSampleSize)")
             return bitmap
@@ -261,44 +263,42 @@ class ImageProcessor(private val context: Context) {
 
         // For content URIs, prefer ImageDecoder on API 28+, as some providers do not support raw
         // openInputStream or file descriptors depending on OEM implementation.
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-            try {
-                val source = android.graphics.ImageDecoder.createSource(context.contentResolver, imageUri)
-                var headerW = -1
-                var headerH = -1
-                // Decode using header to compute safe target sample
-                val bitmap = android.graphics.ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
-                    headerW = info.size.width
-                    headerH = info.size.height
-                    if (headerW <= 0 || headerH <= 0) {
-                        // Let it throw later if decode fails
-                        return@decodeBitmap
-                    }
-                    val imageMp = (headerW.toFloat() * headerH.toFloat()) / pixelsToMegapixels
-                    var sample = 1
-                    if (imageMp > maxInitialMegapixels) {
-                        val scaleFactor = sqrt(imageMp / maxInitialMegapixels)
-                        while (sample * 2 <= scaleFactor) sample *= 2
-                        AppLogger.info("ImageProcessor: (ImageDecoder) Image is ${imageMp}MP, setTargetSampleSize=${sample}")
-                        decoder.setTargetSampleSize(sample)
-                    }
-                    decoder.allocator = android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE
-                    decoder.isMutableRequired = false
+        try {
+            val source = ImageDecoder.createSource(context.contentResolver, imageUri)
+            var headerW: Int
+            var headerH: Int
+            // Decode using header to compute safe target sample
+            val bitmap = ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+                headerW = info.size.width
+                headerH = info.size.height
+                if (headerW <= 0 || headerH <= 0) {
+                    // Let it throw later if decode fails
+                    return@decodeBitmap
                 }
-                AppLogger.debug("ImageProcessor: Loaded bitmap via ImageDecoder with dimensions ${bitmap.width}x${bitmap.height}")
-                return bitmap
-            } catch (e: Exception) {
-                AppLogger.warn("ImageProcessor: ImageDecoder path failed for $imageUri: ${e.message}")
-                // fall through to FD/stream attempts
+                val imageMp = (headerW.toFloat() * headerH.toFloat()) / pixelsToMegapixels
+                var sample = 1
+                if (imageMp > maxInitialMegapixels) {
+                    val scaleFactor = sqrt(imageMp / maxInitialMegapixels)
+                    while (sample * 2 <= scaleFactor) sample *= 2
+                    AppLogger.info("ImageProcessor: (ImageDecoder) Image is ${imageMp}MP, setTargetSampleSize=${sample}")
+                    decoder.setTargetSampleSize(sample)
+                }
+                decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                decoder.isMutableRequired = false
             }
+            AppLogger.debug("ImageProcessor: Loaded bitmap via ImageDecoder with dimensions ${bitmap.width}x${bitmap.height}")
+            return bitmap
+        } catch (e: Exception) {
+            AppLogger.warn("ImageProcessor: ImageDecoder path failed for $imageUri: ${e.message}")
+            // fall through to FD/stream attempts
         }
 
         // Fallback for content URIs on older APIs or if ImageDecoder failed
         // First, try a file descriptor
         openFileDescriptorCompat(imageUri)?.use { pfd ->
             // Decode bounds
-            val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            android.graphics.BitmapFactory.decodeFileDescriptor(pfd.fileDescriptor, null, bounds)
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFileDescriptor(pfd.fileDescriptor, null, bounds)
             val imageWidth = bounds.outWidth
             val imageHeight = bounds.outHeight
             if (imageWidth <= 0 || imageHeight <= 0) {
@@ -310,11 +310,11 @@ class ImageProcessor(private val context: Context) {
                 val scaleFactor = sqrt(imageMegapixels / maxInitialMegapixels)
                 while (inSampleSize * 2 <= scaleFactor) inSampleSize *= 2
             }
-            val decodeOptions = android.graphics.BitmapFactory.Options().apply {
+            val decodeOptions = BitmapFactory.Options().apply {
                 this.inSampleSize = inSampleSize
                 inPreferredConfig = Bitmap.Config.ARGB_8888
             }
-            val bmp = android.graphics.BitmapFactory.decodeFileDescriptor(pfd.fileDescriptor, null, decodeOptions)
+            val bmp = BitmapFactory.decodeFileDescriptor(pfd.fileDescriptor, null, decodeOptions)
             if (bmp != null) return bmp
         }
 
@@ -322,7 +322,7 @@ class ImageProcessor(private val context: Context) {
         val inputStream = try { context.contentResolver.openInputStream(imageUri) } catch (_: Exception) { null }
         inputStream?.use { stream ->
             // We cannot do a true two-pass with the same stream easily; just decode directly.
-            val bmp = android.graphics.BitmapFactory.decodeStream(stream)
+            val bmp = BitmapFactory.decodeStream(stream)
             if (bmp != null) return bmp
         }
 

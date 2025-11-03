@@ -30,4 +30,34 @@ internal object ImageProcessingUtils {
 
         return Pair(widthDivisibleByStride, heightDivisibleByStride)
     }
+
+    /**
+     * Result values used when padding an image to a square and computing scaling ratios.
+     */
+    internal data class PaddingRatios(
+        val xPad: Int,
+        val yPad: Int,
+        val xRatio: Float,
+        val yRatio: Float,
+        val maxSize: Int
+    )
+
+    /**
+     * Computes the square padding amounts and scaling ratios for an image of size [w]x[h].
+     *
+     * Definitions (matching existing ImageProcessor preprocessing logic):
+     * - maxSize = max(w, h)
+     * - xPad = maxSize - w
+     * - yPad = maxSize - h
+     * - xRatio = maxSize / w
+     * - yRatio = maxSize / h
+     */
+    fun computeSquarePaddingAndRatios(w: Int, h: Int): PaddingRatios {
+        val maxSize = kotlin.math.max(w, h)
+        val xPad = maxSize - w
+        val yPad = maxSize - h
+        val xRatio = maxSize.toFloat() / w.toFloat()
+        val yRatio = maxSize.toFloat() / h.toFloat()
+        return PaddingRatios(xPad, yPad, xRatio, yRatio, maxSize)
+    }
 }
