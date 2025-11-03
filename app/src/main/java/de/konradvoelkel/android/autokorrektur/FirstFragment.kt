@@ -37,8 +37,8 @@ import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
 import de.konradvoelkel.android.autokorrektur.ml.MiGanInference
 import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
+import de.konradvoelkel.android.autokorrektur.utils.BitmapUtils
 import de.konradvoelkel.android.autokorrektur.utils.MaskOverlayUtils
-import org.opencv.android.Utils
 import org.opencv.core.Mat
 import java.io.File
 import java.io.FileOutputStream
@@ -101,6 +101,22 @@ class FirstFragment : Fragment() {
                     if (uri != null) {
                         AppLogger.info("Gallery image selected successfully: $uri")
                         try {
+                            // Take persistable URI permission for content URIs from media picker
+                            // This is necessary to access the URI beyond the current activity lifecycle
+                            if (uri.scheme == "content") {
+                                try {
+                                    requireContext().contentResolver.takePersistableUriPermission(
+                                        uri,
+                                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                    )
+                                    AppLogger.debug("Took persistable URI permission for: $uri")
+                                } catch (e: SecurityException) {
+                                    // Some content URIs don't support persistent permissions
+                                    // This is okay - we can still try to use the URI
+                                    AppLogger.debug("Could not take persistable permission for URI (this is okay): ${e.message}")
+                                }
+                            }
+                            
                             selectedImageUri = uri
                             displayImage(uri, "Original")
                             binding.startInference.isEnabled = true
@@ -198,6 +214,24 @@ class FirstFragment : Fragment() {
             selectedImageUris.clear()
             selectedImageUris.addAll(uris)
             AppLogger.info("Selected ${uris.size} images for batch processing")
+
+            // Take persistable URI permissions for content URIs from media picker
+            // This is necessary to access the URIs beyond the current activity lifecycle
+            uris.forEach { uri ->
+                if (uri.scheme == "content") {
+                    try {
+                        requireContext().contentResolver.takePersistableUriPermission(
+                            uri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        )
+                        AppLogger.debug("Took persistable URI permission for: $uri")
+                    } catch (e: SecurityException) {
+                        // Some content URIs don't support persistent permissions
+                        // This is okay - we can still try to use the URI
+                        AppLogger.debug("Could not take persistable permission for URI (this is okay): ${e.message}")
+                    }
+                }
+            }
 
             // Display first few images as preview
             clearImagesContainer()
@@ -776,12 +810,11 @@ class FirstFragment : Fragment() {
                                 }
 
                                 AppLogger.debug("Creating mask bitmap")
-                                val maskBitmap = createBitmap(maskMat.cols(), maskMat.rows())
-                                Utils.matToBitmap(maskMat, maskBitmap)
+                                val maskBitmap = BitmapUtils.matToBitmap(maskMat)
 
                                 val tempMaskFile = File(requireContext().cacheDir, "mask_image.jpg")
                                 val maskOutputStream = FileOutputStream(tempMaskFile)
-                                maskBitmap.compress(
+                                maskBitmap?.compress(
                                     Bitmap.CompressFormat.JPEG,
                                     100,
                                     maskOutputStream
@@ -832,8 +865,7 @@ class FirstFragment : Fragment() {
                                 }
 
                                 AppLogger.debug("Creating result bitmap")
-                                processedBitmap = createBitmap(resultMat.cols(), resultMat.rows())
-                                Utils.matToBitmap(resultMat, processedBitmap!!)
+                                processedBitmap = BitmapUtils.matToBitmap(resultMat)
 
                                 // Create a temporary file to display the processed image
                                 val tempFile =
@@ -1082,9 +1114,8 @@ class FirstFragment : Fragment() {
                         )
 
                         // Convert result to bitmap
-                        val resultBitmap = createBitmap(resultMat.cols(), resultMat.rows())
-                        Utils.matToBitmap(resultMat, resultBitmap)
-                        processedBitmaps.add(resultBitmap)
+                        val resultBitmap = BitmapUtils.matToBitmap(resultMat)
+                        resultBitmap?.let { processedBitmaps.add(it) }
 
                         val processingTime = System.currentTimeMillis() - startTime
 
@@ -1248,27 +1279,30 @@ class FirstFragment : Fragment() {
             val overlayBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true)
 
             // Convert mask to bitmap
-            val maskBitmap = createBitmap(maskMatrix.cols(), maskMatrix.rows())
-            Utils.matToBitmap(maskMatrix, maskBitmap)
+            val maskBitmap = BitmapUtils.matToBitmap(maskMatrix)
 
             // Build an overlay that is transparent everywhere except masked area (car)
-            val overlayMaskBitmap = MaskOverlayUtils
-                .createRedOverlayBitmap(
-                    maskBitmap,
-                    overlayBitmap.width,
-                    overlayBitmap.height,
-                    threshold = 128,
-                    alpha = 128
-                )
+            val overlayMaskBitmap = maskBitmap?.let {
+                MaskOverlayUtils
+                    .createRedOverlayBitmap(
+                        it,
+                        overlayBitmap.width,
+                        overlayBitmap.height,
+                        threshold = 128,
+                        alpha = 128
+                    )
+            }
 
             // Draw the overlay onto the original image
             val overlayCanvas = Canvas(overlayBitmap)
             val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-            overlayCanvas.drawBitmap(overlayMaskBitmap, 0f, 0f, paint)
+            if (overlayMaskBitmap != null) {
+                overlayCanvas.drawBitmap(overlayMaskBitmap, 0f, 0f, paint)
+            }
 
             // Recycle temporary bitmaps
-            overlayMaskBitmap.recycle()
-            maskBitmap.recycle()
+            overlayMaskBitmap?.recycle()
+            maskBitmap?.recycle()
 
             // Save overlay image to temporary file
             val tempOverlayFile = File(requireContext().cacheDir, "mask_overlay.jpg")
