@@ -21,6 +21,10 @@ class MiGanInference(private val context: Context) {
     private val ortEnvironment = OrtEnvironment.getEnvironment()
     private var miGanSession: OrtSession? = null
 
+    companion object {
+        private const val MODEL_INPUT_SIZE = 512
+    }
+
     /**
      * Initializes the Mi-GAN model session.
      *
@@ -138,25 +142,35 @@ class MiGanInference(private val context: Context) {
             resizedMask.release()
         }
 
-        val imageHeight = processedImage.rows()
-        val imageWidth = processedImage.cols()
+        val originalHeight = processedImage.rows()
+        val originalWidth = processedImage.cols()
 
-        // Convert image and mask to CHW format for ONNX Runtime (uint8)
-        val imageArray = orderInCHWAsBytes(processedImage)
-        val maskArray = orderInCHWAsBytes(processedMask)
+        // Resize image and mask to the model's expected input size
+        val modelInputSize = org.opencv.core.Size(MODEL_INPUT_SIZE.toDouble(), MODEL_INPUT_SIZE.toDouble())
+
+        val resizedImage = Mat()
+        org.opencv.imgproc.Imgproc.resize(processedImage, resizedImage, modelInputSize)
+
+        val resizedMask = Mat()
+        org.opencv.imgproc.Imgproc.resize(processedMask, resizedMask, modelInputSize, 0.0, 0.0, org.opencv.imgproc.Imgproc.INTER_NEAREST)
+
+
+        // Convert resized image and mask to CHW format for ONNX Runtime (uint8)
+        val imageArray = orderInCHWAsBytes(resizedImage)
+        val maskArray = orderInCHWAsBytes(resizedMask)
 
         // Create input tensors (uint8)
         val imageTensor = OnnxTensor.createTensor(
             ortEnvironment,
             ByteBuffer.wrap(imageArray),
-            longArrayOf(1, 3, imageHeight.toLong(), imageWidth.toLong()),
+            longArrayOf(1, 3, MODEL_INPUT_SIZE.toLong(), MODEL_INPUT_SIZE.toLong()),
             OnnxJavaType.UINT8
         )
 
         val maskTensor = OnnxTensor.createTensor(
             ortEnvironment,
             ByteBuffer.wrap(maskArray),
-            longArrayOf(1, 1, imageHeight.toLong(), imageWidth.toLong()),
+            longArrayOf(1, 1, MODEL_INPUT_SIZE.toLong(), MODEL_INPUT_SIZE.toLong()),
             OnnxJavaType.UINT8
         )
 
@@ -205,17 +219,28 @@ class MiGanInference(private val context: Context) {
         AppLogger.debug("Final output data type: ${outputData?.javaClass?.name}")
 
         // Convert output to HWC format
-        val outputHWC = reorderToHWC(outputData, imageWidth, imageHeight)
+        val outputHWC = reorderToHWC(outputData, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE)
 
-        // Create output Mat
-        val resultMat = Mat(imageHeight, imageWidth, CvType.CV_8UC3)
-        resultMat.put(0, 0, outputHWC)
+        // Create output Mat from model output
+        val modelOutputMat = Mat(MODEL_INPUT_SIZE, MODEL_INPUT_SIZE, CvType.CV_8UC3)
+        modelOutputMat.put(0, 0, outputHWC)
+
+        // Resize the output to the original image dimensions
+        val finalResultMat = Mat()
+        org.opencv.imgproc.Imgproc.resize(modelOutputMat, finalResultMat, org.opencv.core.Size(originalWidth.toDouble(), originalHeight.toDouble()))
+
 
         // Clean up
         imageTensor.close()
         maskTensor.close()
+        resizedImage.release()
+        resizedMask.release()
+        modelOutputMat.release()
+        processedImage.release()
+        processedMask.release()
 
-        return resultMat
+
+        return finalResultMat
     }
 
     /**
