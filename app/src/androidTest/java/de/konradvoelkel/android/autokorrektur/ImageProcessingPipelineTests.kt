@@ -25,10 +25,10 @@ import java.io.File
 
 @org.junit.Ignore("Split into pipeline/* tests")
 @RunWith(AndroidJUnit4::class)
-class ImageProcessingPipelineTests : de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest() {
+class ImageProcessingPipelineTests :
+    de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest() {
 
     // --- Helpers to avoid code duplication in tests ---
-
 
 
     companion object {
@@ -67,7 +67,9 @@ class ImageProcessingPipelineTests : de.konradvoelkel.android.autokorrektur.shar
 
     private fun isDebug(): Boolean {
         val debuggable = (appContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
-        return debuggable && de.konradvoelkel.android.autokorrektur.shared.OpenCvTestUtils.shouldWriteDebugArtifacts(appContext)
+        return debuggable && de.konradvoelkel.android.autokorrektur.shared.OpenCvTestUtils.shouldWriteDebugArtifacts(
+            appContext
+        )
     }
 
     @Before
@@ -106,8 +108,12 @@ class ImageProcessingPipelineTests : de.konradvoelkel.android.autokorrektur.shar
 
     @Test
     fun testImageSelectionSimulation() {
-        val mockupImageUri = de.konradvoelkel.android.autokorrektur.shared.AndroidTestUtils.copyAssetToCache(appContext, "image_1_with_car_640x640.png")
-            .let { Uri.fromFile(it) }
+        val mockupImageUri =
+            de.konradvoelkel.android.autokorrektur.shared.AndroidTestUtils.copyAssetToCache(
+                appContext,
+                "image_1_with_car_640x640.png"
+            )
+                .let { Uri.fromFile(it) }
         assertNotNull("Mockup image URI should not be null", mockupImageUri)
 
         val processedImage = imageProcessor.processInputImage(
@@ -532,7 +538,10 @@ class ImageProcessingPipelineTests : de.konradvoelkel.android.autokorrektur.shar
         val refFile = cacheAsset("example2Result.png", tempFiles)
         val refBgr = Imgcodecs.imread(refFile.absolutePath, Imgcodecs.IMREAD_COLOR)
         assertTrue("Reference image should load", !refBgr.empty())
-        val refRgb = de.konradvoelkel.android.autokorrektur.shared.OpenCvTestUtils.matLoadedFromFileBgrToRgb(refBgr)
+        val refRgb =
+            de.konradvoelkel.android.autokorrektur.shared.OpenCvTestUtils.matLoadedFromFileBgrToRgb(
+                refBgr
+            )
         refBgr.release()
 
         // 5) Ensure sizes match
@@ -546,7 +555,12 @@ class ImageProcessingPipelineTests : de.konradvoelkel.android.autokorrektur.shar
         val refRgb8 = Mat()
         inpainted.convertTo(inRgb8, org.opencv.core.CvType.CV_8UC3)
         refRgb.convertTo(refRgb8, org.opencv.core.CvType.CV_8UC3)
-        val meanAbs = de.konradvoelkel.android.autokorrektur.shared.OpenCvTestUtils.meanAbsDiffOnMaskRgb8u3(mask, inRgb8, refRgb8)
+        val meanAbs =
+            de.konradvoelkel.android.autokorrektur.shared.OpenCvTestUtils.meanAbsDiffOnMaskRgb8u3(
+                mask,
+                inRgb8,
+                refRgb8
+            )
 
         println(
             "[DEBUG_LOG] example2 mean abs diff over white mask: ${
@@ -565,7 +579,10 @@ class ImageProcessingPipelineTests : de.konradvoelkel.android.autokorrektur.shar
 
         // 7) Optionally check that no car remains after inpainting
         val tempOutFile = File(appContext.cacheDir, "example2_migan_out.png")
-        de.konradvoelkel.android.autokorrektur.shared.OpenCvTestUtils.saveDebugRgbMatAsPngBgr(inpainted, tempOutFile) // write via RGB->BGR
+        de.konradvoelkel.android.autokorrektur.shared.OpenCvTestUtils.saveDebugRgbMatAsPngBgr(
+            inpainted,
+            tempOutFile
+        ) // write via RGB->BGR
         tempFiles.add(tempOutFile)
         val outUri = Uri.fromFile(tempOutFile)
         val processedOut = imageProcessor.processInputImage(

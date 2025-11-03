@@ -138,7 +138,8 @@ class ImageProcessor(private val context: Context) {
         )
 
         // Padding image to square dimensions (math delegated to pure helper for JVM testing)
-        val pr = ImageProcessingUtils.computeSquarePaddingAndRatios(resizedMat.cols(), resizedMat.rows())
+        val pr =
+            ImageProcessingUtils.computeSquarePaddingAndRatios(resizedMat.cols(), resizedMat.rows())
         val xPad = pr.xPad
         val yPad = pr.yPad
         val xRatio = pr.xRatio
@@ -214,6 +215,7 @@ class ImageProcessor(private val context: Context) {
                             ParcelFileDescriptor.MODE_READ_ONLY
                         )
                     }
+
                     else -> context.contentResolver.openFileDescriptor(uri, "r")
                 }
             } catch (_: Exception) {
@@ -305,7 +307,8 @@ class ImageProcessor(private val context: Context) {
                 AppLogger.warn("ImageProcessor: Could not read dimensions from FD for $imageUri")
             }
             var inSampleSize = 1
-            val imageMegapixels = if (imageWidth > 0 && imageHeight > 0) (imageWidth * imageHeight) / pixelsToMegapixels else 0f
+            val imageMegapixels =
+                if (imageWidth > 0 && imageHeight > 0) (imageWidth * imageHeight) / pixelsToMegapixels else 0f
             if (imageMegapixels > maxInitialMegapixels) {
                 val scaleFactor = sqrt(imageMegapixels / maxInitialMegapixels)
                 while (inSampleSize * 2 <= scaleFactor) inSampleSize *= 2
@@ -319,7 +322,11 @@ class ImageProcessor(private val context: Context) {
         }
 
         // Last resort: InputStream
-        val inputStream = try { context.contentResolver.openInputStream(imageUri) } catch (_: Exception) { null }
+        val inputStream = try {
+            context.contentResolver.openInputStream(imageUri)
+        } catch (_: Exception) {
+            null
+        }
         inputStream?.use { stream ->
             // We cannot do a true two-pass with the same stream easily; just decode directly.
             val bmp = BitmapFactory.decodeStream(stream)

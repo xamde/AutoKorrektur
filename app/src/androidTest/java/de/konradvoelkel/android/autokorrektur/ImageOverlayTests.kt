@@ -64,7 +64,10 @@ class ImageOverlayTests(
         }
 
         // Expect some but not all pixels to be tinted
-        assertTrue("Overlay should tint some pixels (thr=$threshold, alpha=$alpha)", tintedCount in 1 until total)
+        assertTrue(
+            "Overlay should tint some pixels (thr=$threshold, alpha=$alpha)",
+            tintedCount in 1 until total
+        )
 
         // Expect more tint in lower-left quadrant than upper-right (car is lower-left)
         val halfW = w / 2

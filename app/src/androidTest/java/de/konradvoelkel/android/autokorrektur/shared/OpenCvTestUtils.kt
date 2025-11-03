@@ -59,9 +59,12 @@ object OpenCvTestUtils {
             val mv = mData[i].toInt() and 0xFF
             if (mv >= 245) { // consider white-ish mask
                 val base = i * ch
-                val d0 = kotlin.math.abs((aData[base].toInt() and 0xFF) - (bData[base].toInt() and 0xFF))
-                val d1 = kotlin.math.abs((aData[base + 1].toInt() and 0xFF) - (bData[base + 1].toInt() and 0xFF))
-                val d2 = kotlin.math.abs((aData[base + 2].toInt() and 0xFF) - (bData[base + 2].toInt() and 0xFF))
+                val d0 =
+                    kotlin.math.abs((aData[base].toInt() and 0xFF) - (bData[base].toInt() and 0xFF))
+                val d1 =
+                    kotlin.math.abs((aData[base + 1].toInt() and 0xFF) - (bData[base + 1].toInt() and 0xFF))
+                val d2 =
+                    kotlin.math.abs((aData[base + 2].toInt() and 0xFF) - (bData[base + 2].toInt() and 0xFF))
                 sumAbs += (d0 + d1 + d2)
                 count += 3
             }
@@ -91,18 +94,32 @@ object OpenCvTestUtils {
      *  - An instrumentation argument or system property AUTOKORREKTUR_WRITE_DEBUG == "1".
      */
     fun shouldWriteDebugArtifacts(context: Context): Boolean {
-        val debuggable = (context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        val debuggable =
+            (context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
         if (!debuggable) return false
         val fromArg = try {
             // Available in instrumented runs; best-effort read
             val bundle = androidx.test.platform.app.InstrumentationRegistry.getArguments()
             bundle.getString("AUTOKORREKTUR_WRITE_DEBUG")
-        } catch (_: Throwable) { null }
-        val sys = try { System.getProperty("AUTOKORREKTUR_WRITE_DEBUG") } catch (_: Throwable) { null }
-        val env = try { System.getenv("AUTOKORREKTUR_WRITE_DEBUG") } catch (_: Throwable) { null }
+        } catch (_: Throwable) {
+            null
+        }
+        val sys = try {
+            System.getProperty("AUTOKORREKTUR_WRITE_DEBUG")
+        } catch (_: Throwable) {
+            null
+        }
+        val env = try {
+            System.getenv("AUTOKORREKTUR_WRITE_DEBUG")
+        } catch (_: Throwable) {
+            null
+        }
         val flag = (fromArg ?: sys ?: env)
         val enabled = flag == "1"
-        if (enabled) Log.d(TAG, "Debug artifact writing enabled via AUTOKORREKTUR_WRITE_DEBUG=1 (SDK=${Build.VERSION.SDK_INT})")
+        if (enabled) Log.d(
+            TAG,
+            "Debug artifact writing enabled via AUTOKORREKTUR_WRITE_DEBUG=1 (SDK=${Build.VERSION.SDK_INT})"
+        )
         return enabled
     }
 }

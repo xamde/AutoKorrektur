@@ -1,4 +1,5 @@
 @file:Suppress("unused")
+
 package de.konradvoelkel.android.autokorrektur
 
 import android.content.Context
@@ -19,6 +20,9 @@ object TestUtils {
 
     @Throws(IOException::class)
     fun copyAssetToCache(context: Context, assetFileName: String): File {
-        return de.konradvoelkel.android.autokorrektur.shared.AndroidTestUtils.copyAssetToCache(context, assetFileName)
+        return de.konradvoelkel.android.autokorrektur.shared.AndroidTestUtils.copyAssetToCache(
+            context,
+            assetFileName
+        )
     }
 }

@@ -17,7 +17,8 @@ import org.opencv.imgproc.Imgproc
 import java.io.File
 
 @RunWith(AndroidJUnit4::class)
-class ImageUiParityTests : de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest() {
+class ImageUiParityTests :
+    de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest() {
 
     private lateinit var yolo: YoloInferenceTFLite
     private lateinit var imageProcessor: ImageProcessor
@@ -85,7 +86,10 @@ class ImageUiParityTests : de.konradvoelkel.android.autokorrektur.shared.Android
 
         // Save debug images for manual inspection when running instrumented tests locally
         val outDir = appContext.getExternalFilesDir(null)
-        if (outDir != null && de.konradvoelkel.android.autokorrektur.shared.OpenCvTestUtils.shouldWriteDebugArtifacts(appContext)) {
+        if (outDir != null && de.konradvoelkel.android.autokorrektur.shared.OpenCvTestUtils.shouldWriteDebugArtifacts(
+                appContext
+            )
+        ) {
             // Save via RGB->BGR conversion for correct colors in PNG
             val aBgr = Mat()
             val bBgr = Mat()
@@ -104,7 +108,11 @@ class ImageUiParityTests : de.konradvoelkel.android.autokorrektur.shared.Android
 
         // Minimal assertion to detect the problematic path: A and resized B should not be identical pixel-by-pixel.
         // This highlights that running Mi-GAN on a different-sized image gives a different output, explaining UX mismatch.
-        val equal = de.konradvoelkel.android.autokorrektur.shared.OpenCvTestUtils.matsAreExactlyEqual(a, bResized)
+        val equal =
+            de.konradvoelkel.android.autokorrektur.shared.OpenCvTestUtils.matsAreExactlyEqual(
+                a,
+                bResized
+            )
         assertFalse(
             "Mi-GAN result on transformed size should not exactly equal result on original size when resized back",
             equal

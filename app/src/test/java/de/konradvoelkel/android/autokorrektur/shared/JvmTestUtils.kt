@@ -26,5 +26,6 @@ object JvmTestUtils {
     fun buildIntArray(n: Int, init: (Int) -> Int): IntArray = IntArray(n, init)
 
     /** Approximately equal for floats with absolute epsilon. */
-    fun approxEquals(a: Float, b: Float, eps: Float = 1e-3f): Boolean = kotlin.math.abs(a - b) <= eps
+    fun approxEquals(a: Float, b: Float, eps: Float = 1e-3f): Boolean =
+        kotlin.math.abs(a - b) <= eps
 }

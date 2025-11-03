@@ -21,7 +21,8 @@ import java.io.FileOutputStream
  */
 @RunWith(AndroidJUnit4::class)
 @LargeTest
-class HighResImageTests : de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest() {
+class HighResImageTests :
+    de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest() {
 
     private lateinit var imageProcessor: ImageProcessor
     private val tempFiles = mutableListOf<File>()
