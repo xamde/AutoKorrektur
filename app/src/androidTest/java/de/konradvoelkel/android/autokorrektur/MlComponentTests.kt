@@ -13,7 +13,8 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 @SmallTest
-class MlComponentTests : de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest() {
+class MlComponentTests :
+    de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest() {
 
 
     @Test

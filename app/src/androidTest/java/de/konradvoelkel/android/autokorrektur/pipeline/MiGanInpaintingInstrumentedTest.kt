@@ -114,7 +114,10 @@ class MiGanInpaintingInstrumentedTest : AndroidInstrumentedBaseTest() {
             originalHeight = processedOut.originalMat.rows()
         )
 
-        assertFalse("After Mi-GAN, there should be no car detected", hasCarDetection(yoloMaskOnOutput))
+        assertFalse(
+            "After Mi-GAN, there should be no car detected",
+            hasCarDetection(yoloMaskOnOutput)
+        )
 
         // 2) Verify in non-car (white) regions, output roughly agrees with input
         assertEquals(processed.originalMat.rows(), inpainted.rows())
@@ -128,7 +131,10 @@ class MiGanInpaintingInstrumentedTest : AndroidInstrumentedBaseTest() {
         inpainted.convertTo(outRgb8, CvType.CV_8UC3)
         val meanAbs = OpenCvTestUtils.meanAbsDiffOnMaskRgb8u3(referenceMask, inRgb8, outRgb8)
         val tolerancePerChannel = 10.0
-        assertTrue("Background should be preserved (mean abs diff per channel <= $tolerancePerChannel)", meanAbs <= tolerancePerChannel)
+        assertTrue(
+            "Background should be preserved (mean abs diff per channel <= $tolerancePerChannel)",
+            meanAbs <= tolerancePerChannel
+        )
 
         // cleanup
         inRgb8.release(); outRgb8.release(); yoloMaskOnOutput.release(); inpainted.release(); referenceMask.release()
@@ -138,7 +144,12 @@ class MiGanInpaintingInstrumentedTest : AndroidInstrumentedBaseTest() {
         val totalPixels = mask.rows() * mask.cols()
         if (totalPixels == 0) return false
         val blackMask = Mat()
-        org.opencv.core.Core.inRange(mask, org.opencv.core.Scalar(0.0), org.opencv.core.Scalar(10.0), blackMask)
+        org.opencv.core.Core.inRange(
+            mask,
+            org.opencv.core.Scalar(0.0),
+            org.opencv.core.Scalar(10.0),
+            blackMask
+        )
         val blackPixels = org.opencv.core.Core.countNonZero(blackMask)
         blackMask.release()
         val blackPixelRatio = blackPixels.toDouble() / totalPixels.toDouble()

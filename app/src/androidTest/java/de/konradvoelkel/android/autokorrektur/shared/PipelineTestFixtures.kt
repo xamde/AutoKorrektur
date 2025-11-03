@@ -12,9 +12,14 @@ import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
 object PipelineTestFixtures {
     private val appContext get() = InstrumentationRegistry.getInstrumentation().targetContext
 
-    @Volatile private var _yolo: YoloInferenceTFLite? = null
-    @Volatile private var _migan: MiGanInference? = null
-    @Volatile private var _imageProcessor: ImageProcessor? = null
+    @Volatile
+    private var _yolo: YoloInferenceTFLite? = null
+
+    @Volatile
+    private var _migan: MiGanInference? = null
+
+    @Volatile
+    private var _imageProcessor: ImageProcessor? = null
 
     fun yolo(): YoloInferenceTFLite {
         var local = _yolo

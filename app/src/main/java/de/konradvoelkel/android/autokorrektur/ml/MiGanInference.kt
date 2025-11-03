@@ -146,13 +146,21 @@ class MiGanInference(private val context: Context) {
         val originalWidth = processedImage.cols()
 
         // Resize image and mask to the model's expected input size
-        val modelInputSize = org.opencv.core.Size(MODEL_INPUT_SIZE.toDouble(), MODEL_INPUT_SIZE.toDouble())
+        val modelInputSize =
+            org.opencv.core.Size(MODEL_INPUT_SIZE.toDouble(), MODEL_INPUT_SIZE.toDouble())
 
         val resizedImage = Mat()
         org.opencv.imgproc.Imgproc.resize(processedImage, resizedImage, modelInputSize)
 
         val resizedMask = Mat()
-        org.opencv.imgproc.Imgproc.resize(processedMask, resizedMask, modelInputSize, 0.0, 0.0, org.opencv.imgproc.Imgproc.INTER_NEAREST)
+        org.opencv.imgproc.Imgproc.resize(
+            processedMask,
+            resizedMask,
+            modelInputSize,
+            0.0,
+            0.0,
+            org.opencv.imgproc.Imgproc.INTER_NEAREST
+        )
 
 
         // Convert resized image and mask to CHW format for ONNX Runtime (uint8)
@@ -227,7 +235,11 @@ class MiGanInference(private val context: Context) {
 
         // Resize the output to the original image dimensions
         val finalResultMat = Mat()
-        org.opencv.imgproc.Imgproc.resize(modelOutputMat, finalResultMat, org.opencv.core.Size(originalWidth.toDouble(), originalHeight.toDouble()))
+        org.opencv.imgproc.Imgproc.resize(
+            modelOutputMat,
+            finalResultMat,
+            org.opencv.core.Size(originalWidth.toDouble(), originalHeight.toDouble())
+        )
 
 
         // Clean up

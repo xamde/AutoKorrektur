@@ -86,8 +86,18 @@ class ReferenceComparisonInstrumentedTest : AndroidInstrumentedBaseTest() {
         // Binarize: treat near-black as car (255), others 0
         val binResult = Mat()
         val binReference = Mat()
-        org.opencv.core.Core.inRange(resultMask, org.opencv.core.Scalar(0.0), org.opencv.core.Scalar(10.0), binResult)
-        org.opencv.core.Core.inRange(referenceMask, org.opencv.core.Scalar(0.0), org.opencv.core.Scalar(10.0), binReference)
+        org.opencv.core.Core.inRange(
+            resultMask,
+            org.opencv.core.Scalar(0.0),
+            org.opencv.core.Scalar(10.0),
+            binResult
+        )
+        org.opencv.core.Core.inRange(
+            referenceMask,
+            org.opencv.core.Scalar(0.0),
+            org.opencv.core.Scalar(10.0),
+            binReference
+        )
 
         // Compute XOR to find mismatches
         val diff = Mat()
@@ -169,7 +179,10 @@ class ReferenceComparisonInstrumentedTest : AndroidInstrumentedBaseTest() {
             originalWidth = processedOut.originalMat.cols(),
             originalHeight = processedOut.originalMat.rows()
         )
-        assertFalse("After inpainting, there should be no car detected (example2)", hasCarDetection(maskAfter))
+        assertFalse(
+            "After inpainting, there should be no car detected (example2)",
+            hasCarDetection(maskAfter)
+        )
 
         // Cleanup
         inRgb8.release(); refRgb8.release(); refRgb.release(); maskAfter.release(); mask.release()
@@ -179,7 +192,12 @@ class ReferenceComparisonInstrumentedTest : AndroidInstrumentedBaseTest() {
         val totalPixels = mask.rows() * mask.cols()
         if (totalPixels == 0) return false
         val blackMask = Mat()
-        org.opencv.core.Core.inRange(mask, org.opencv.core.Scalar(0.0), org.opencv.core.Scalar(10.0), blackMask)
+        org.opencv.core.Core.inRange(
+            mask,
+            org.opencv.core.Scalar(0.0),
+            org.opencv.core.Scalar(10.0),
+            blackMask
+        )
         val blackPixels = org.opencv.core.Core.countNonZero(blackMask)
         blackMask.release()
         val blackPixelRatio = blackPixels.toDouble() / totalPixels.toDouble()
