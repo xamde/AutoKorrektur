@@ -1,5 +1,5 @@
 # AutoKorrektur
-We re-implemented the (https://github.com/BenB2/AutoKorrektur)[AutoKorrektur Web Version] in Android.
+We re-implemented the [AutoKorrektur Web Version](https://github.com/BenB2/AutoKorrektur) in Android.
 This web version was based on a Bachelor Thesis "Autokorrektur - Automatisierte Objektersetzung in Fotos" by Till Schellscheidt.
 
 <table>
