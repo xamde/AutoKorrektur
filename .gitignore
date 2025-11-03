@@ -25,3 +25,11 @@ opencv-sdk
 gradlew
 .idea/deploymentTargetSelector.xml
 .idea/androidTestResultsUserPreferences.xml
+/AndroidKorrektur/.tmp/
+/AndroidKorrektur/caches/
+/AndroidKorrektur/native/
+/AndroidKorrektur/wrapper/
+/AndroidKorrektur/jdks/
+/AndroidKorrektur/kotlin-profile/
+
+
