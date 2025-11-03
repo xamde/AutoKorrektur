@@ -11,6 +11,11 @@ import java.io.IOException
 /**
  * Android-specific test utilities for instrumented tests.
  * These intentionally depend on Instrumentation APIs and should not be used in JVM tests.
+ *
+ * Canonical implementation note:
+ * - `copyAssetToCache(Context, String)` is the single, canonical way to copy assets into the
+ *   app's cache directory for instrumented tests. Prefer calling this directly (or via
+ *   `AndroidInstrumentedBaseTest.cacheAsset(...)` for convenience and cleanup tracking).
  */
 object AndroidTestUtils {
 

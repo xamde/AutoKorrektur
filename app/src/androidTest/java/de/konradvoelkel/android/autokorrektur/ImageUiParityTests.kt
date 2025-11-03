@@ -41,17 +41,11 @@ class ImageUiParityTests : de.konradvoelkel.android.autokorrektur.shared.Android
         migan.close()
     }
 
-    private fun copyAssetToCache(assetFileName: String): File {
-        val file = de.konradvoelkel.android.autokorrektur.shared.AndroidTestUtils
-            .copyAssetToCache(appContext, assetFileName)
-        tempFiles.add(file)
-        return file
-    }
 
     @Test
     fun testUiPathUsesOriginalImageSizeForMiGan() {
         // Use example2, which is already covered elsewhere, to compare two inpainting paths
-        val inputFile = copyAssetToCache("example2.png")
+        val inputFile = cacheAsset("example2.png", tempFiles)
         val inputUri = Uri.fromFile(inputFile)
 
         val processed = imageProcessor.processInputImage(
@@ -91,7 +85,7 @@ class ImageUiParityTests : de.konradvoelkel.android.autokorrektur.shared.Android
 
         // Save debug images for manual inspection when running instrumented tests locally
         val outDir = appContext.getExternalFilesDir(null)
-        if (outDir != null) {
+        if (outDir != null && de.konradvoelkel.android.autokorrektur.shared.OpenCvTestUtils.shouldWriteDebugArtifacts(appContext)) {
             // Save via RGB->BGR conversion for correct colors in PNG
             val aBgr = Mat()
             val bBgr = Mat()
@@ -110,7 +104,7 @@ class ImageUiParityTests : de.konradvoelkel.android.autokorrektur.shared.Android
 
         // Minimal assertion to detect the problematic path: A and resized B should not be identical pixel-by-pixel.
         // This highlights that running Mi-GAN on a different-sized image gives a different output, explaining UX mismatch.
-        val equal = matsAreExactlyEqual(a, bResized)
+        val equal = de.konradvoelkel.android.autokorrektur.shared.OpenCvTestUtils.matsAreExactlyEqual(a, bResized)
         assertFalse(
             "Mi-GAN result on transformed size should not exactly equal result on original size when resized back",
             equal
@@ -123,16 +117,4 @@ class ImageUiParityTests : de.konradvoelkel.android.autokorrektur.shared.Android
         mask.release()
     }
 
-    private fun matsAreExactlyEqual(a: Mat, b: Mat): Boolean {
-        if (a.rows() != b.rows() || a.cols() != b.cols() || a.type() != b.type()) return false
-        val total = a.rows() * a.cols() * a.channels()
-        val ad = ByteArray(total)
-        val bd = ByteArray(total)
-        a.get(0, 0, ad)
-        b.get(0, 0, bd)
-        for (i in 0 until total) {
-            if (ad[i] != bd[i]) return false
-        }
-        return true
-    }
 }
