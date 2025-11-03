@@ -215,19 +215,73 @@ class ImageProcessor(private val context: Context) {
     }
 
     /**
-     * Loads a bitmap from a URI.
+     * Loads a bitmap from a URI with intelligent downsampling to prevent OOM errors.
+     * 
+     * This method first decodes the image dimensions without loading the full bitmap,
+     * then calculates an appropriate sample size to ensure the image fits within
+     * reasonable memory constraints.
      *
      * @param imageUri The URI of the image
-     * @return The loaded bitmap
+     * @return The loaded bitmap, potentially downsampled to fit memory constraints
      */
     @Throws(IOException::class)
     private fun loadBitmapFromUri(imageUri: Uri): Bitmap {
-        val inputStream = context.contentResolver.openInputStream(imageUri)
-            ?: throw IOException("Could not open input stream for URI: $imageUri")
-
-        val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
-        inputStream.close()
-
+        // Maximum pixels to load initially (before any downscaling).
+        // This prevents OOM when loading very high-resolution images.
+        // 16MP is a reasonable limit that most modern devices can handle.
+        val maxInitialMegapixels = 16.0f
+        
+        // First pass: decode image dimensions without loading the full bitmap
+        val options = android.graphics.BitmapFactory.Options().apply {
+            inJustDecodeBounds = true
+        }
+        
+        context.contentResolver.openInputStream(imageUri)?.use { inputStream ->
+            android.graphics.BitmapFactory.decodeStream(inputStream, null, options)
+        } ?: throw IOException("Could not open input stream for URI: $imageUri")
+        
+        val imageWidth = options.outWidth
+        val imageHeight = options.outHeight
+        
+        if (imageWidth <= 0 || imageHeight <= 0) {
+            throw IOException("Invalid image dimensions: ${imageWidth}x${imageHeight}")
+        }
+        
+        AppLogger.debug("ImageProcessor: Image dimensions from URI: ${imageWidth}x${imageHeight}")
+        
+        // Calculate the megapixels
+        val imageMegapixels = (imageWidth * imageHeight) / 1000000f
+        
+        // Calculate inSampleSize to reduce memory usage for very large images
+        // inSampleSize is a power of 2 that reduces both dimensions by that factor
+        var inSampleSize = 1
+        if (imageMegapixels > maxInitialMegapixels) {
+            val scaleFactor = sqrt(imageMegapixels / maxInitialMegapixels)
+            // Round up to nearest power of 2 for inSampleSize
+            inSampleSize = 1
+            while (inSampleSize * 2 <= scaleFactor) {
+                inSampleSize *= 2
+            }
+            AppLogger.info("ImageProcessor: Image is ${imageMegapixels}MP, downsampling by ${inSampleSize}x to fit ${maxInitialMegapixels}MP limit")
+        }
+        
+        // Second pass: decode the bitmap with the calculated sample size
+        val decodeOptions = android.graphics.BitmapFactory.Options().apply {
+            this.inSampleSize = inSampleSize
+            // Prefer ARGB_8888 for better quality, but the system may choose RGB_565 if needed
+            inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
+        }
+        
+        val bitmap = context.contentResolver.openInputStream(imageUri)?.use { inputStream ->
+            android.graphics.BitmapFactory.decodeStream(inputStream, null, decodeOptions)
+        } ?: throw IOException("Could not decode bitmap from URI: $imageUri")
+        
+        if (bitmap == null) {
+            throw IOException("Failed to decode bitmap from URI: $imageUri")
+        }
+        
+        AppLogger.debug("ImageProcessor: Loaded bitmap with dimensions ${bitmap.width}x${bitmap.height} (inSampleSize=$inSampleSize)")
+        
         return bitmap
     }
 
