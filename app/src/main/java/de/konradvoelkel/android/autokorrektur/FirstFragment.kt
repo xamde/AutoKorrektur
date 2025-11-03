@@ -503,8 +503,11 @@ class FirstFragment : Fragment() {
     private fun launchGallery() {
         try {
             AppLogger.debug("Launching gallery picker")
-            val intent = Intent(Intent.ACTION_GET_CONTENT)
-            intent.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/*")
+            val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                type = "image/*"
+                addCategory(Intent.CATEGORY_OPENABLE)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
             selectImageLauncher.launch(intent)
             AppLogger.debug("Gallery picker launched successfully")
         } catch (e: Exception) {
