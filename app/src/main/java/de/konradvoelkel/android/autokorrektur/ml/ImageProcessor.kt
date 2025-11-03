@@ -256,9 +256,8 @@ class ImageProcessor(private val context: Context) {
         // inSampleSize is a power of 2 that reduces both dimensions by that factor
         var inSampleSize = 1
         if (imageMegapixels > maxInitialMegapixels) {
-            val scaleFactor = sqrt(imageMegapixels / maxInitialMegapixels)
+            val scaleFactor = sqrt(imageMegapixels / maxInitialMegapixels.toDouble()).toFloat()
             // Round up to nearest power of 2 for inSampleSize
-            inSampleSize = 1
             while (inSampleSize * 2 <= scaleFactor) {
                 inSampleSize *= 2
             }
