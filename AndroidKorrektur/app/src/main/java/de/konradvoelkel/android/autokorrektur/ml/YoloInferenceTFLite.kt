@@ -893,7 +893,9 @@ class YoloInferenceTFLite(private val context: Context) {
         AppLogger.debug("Combined mask after threshold: min=${minMaxAfterThreshold.minVal}, max=${minMaxAfterThreshold.maxVal}")
 
         // 4. Resize the mask to the bounding box dimensions (scaled by upscaleFactor)
-        val targetWidth = (boxW * inputWidth * upscaleFactor).toInt().coerceAtLeast(1)
+        val dWidth = boxW * inputWidth * upscaleFactor
+        val dWidthInt = dWidth.toInt()
+        val targetWidth = dWidthInt.coerceAtLeast(1)
         val targetHeight = (boxH * inputHeight * upscaleFactor).toInt().coerceAtLeast(1)
         AppLogger.debug("Step 4: Resizing mask from ${cropW}x${cropH} to ${targetWidth}x${targetHeight}")
         if ((targetWidth == 1) and (targetHeight == 1)) {
