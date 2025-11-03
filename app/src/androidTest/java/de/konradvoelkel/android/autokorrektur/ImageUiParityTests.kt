@@ -2,7 +2,6 @@ package de.konradvoelkel.android.autokorrektur
 
 import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
 import de.konradvoelkel.android.autokorrektur.ml.MiGanInference
 import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
@@ -18,8 +17,7 @@ import org.opencv.imgproc.Imgproc
 import java.io.File
 
 @RunWith(AndroidJUnit4::class)
-class ImageUiParityTests {
-    private val appContext = InstrumentationRegistry.getInstrumentation().targetContext
+class ImageUiParityTests : de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest() {
 
     private lateinit var yolo: YoloInferenceTFLite
     private lateinit var imageProcessor: ImageProcessor
@@ -29,7 +27,6 @@ class ImageUiParityTests {
 
     @Before
     fun setup() {
-        TestUtils.initOpenCV()
         yolo = YoloInferenceTFLite(appContext)
         yolo.initialize("yolo11s")
         imageProcessor = ImageProcessor(appContext)
@@ -45,7 +42,8 @@ class ImageUiParityTests {
     }
 
     private fun copyAssetToCache(assetFileName: String): File {
-        val file = TestUtils.copyAssetToCache(appContext, assetFileName)
+        val file = de.konradvoelkel.android.autokorrektur.shared.AndroidTestUtils
+            .copyAssetToCache(appContext, assetFileName)
         tempFiles.add(file)
         return file
     }
