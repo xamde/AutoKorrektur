@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.LargeTest
 import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
 import org.junit.After
 import org.junit.Assert.assertNotNull
@@ -19,6 +20,7 @@ import java.io.FileOutputStream
  * Tests to verify that high-resolution images can be loaded and processed without crashing.
  */
 @RunWith(AndroidJUnit4::class)
+@LargeTest
 class HighResImageTests : de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest() {
 
     private lateinit var imageProcessor: ImageProcessor

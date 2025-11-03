@@ -27,57 +27,8 @@ import java.io.File
 class ImageProcessingPipelineTests : de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest() {
 
     // --- Helpers to avoid code duplication in tests ---
-    private fun saveDebugRgbMatAsPngBgr(matRgb: Mat, file: File) {
-        val bgr = Mat()
-        Imgproc.cvtColor(matRgb, bgr, Imgproc.COLOR_RGB2BGR)
-        Imgcodecs.imwrite(file.absolutePath, bgr)
-        bgr.release()
-    }
 
-    private fun meanAbsDiffPerChannelOnWhiteMask(
-        maskGray: Mat,
-        aRgb8u3: Mat,
-        bRgb8u3: Mat
-    ): Double {
-        require(maskGray.type() == org.opencv.core.CvType.CV_8UC1) { "maskGray must be CV_8UC1" }
-        require(aRgb8u3.type() == org.opencv.core.CvType.CV_8UC3) { "aRgb8u3 must be CV_8UC3" }
-        require(bRgb8u3.type() == org.opencv.core.CvType.CV_8UC3) { "bRgb8u3 must be CV_8UC3" }
-        require(aRgb8u3.rows() == bRgb8u3.rows() && aRgb8u3.cols() == bRgb8u3.cols()) { "Image sizes must match" }
-        require(maskGray.rows() == aRgb8u3.rows() && maskGray.cols() == aRgb8u3.cols()) { "Mask size must match image size" }
 
-        val aData = ByteArray(aRgb8u3.rows() * aRgb8u3.cols() * aRgb8u3.channels())
-        val bData = ByteArray(bRgb8u3.rows() * bRgb8u3.cols() * bRgb8u3.channels())
-        val mData = ByteArray(maskGray.rows() * maskGray.cols())
-        aRgb8u3.get(0, 0, aData)
-        bRgb8u3.get(0, 0, bData)
-        maskGray.get(0, 0, mData)
-
-        var sumAbs: Long = 0
-        var count: Long = 0
-        val ch = 3
-        for (i in mData.indices) {
-            val mv = mData[i].toInt() and 0xFF
-            if (mv >= 245) {
-                val base = i * ch
-                val d0 =
-                    kotlin.math.abs((aData[base].toInt() and 0xFF) - (bData[base].toInt() and 0xFF))
-                val d1 =
-                    kotlin.math.abs((aData[base + 1].toInt() and 0xFF) - (bData[base + 1].toInt() and 0xFF))
-                val d2 =
-                    kotlin.math.abs((aData[base + 2].toInt() and 0xFF) - (bData[base + 2].toInt() and 0xFF))
-                sumAbs += (d0 + d1 + d2).toLong()
-                count += 3
-            }
-        }
-        assertTrue("Reference mask must contain white pixels", count > 0)
-        return sumAbs.toDouble() / count.toDouble()
-    }
-
-    private fun matLoadedFromFileBgrToRgb(matBgr: Mat): Mat {
-        val rgb = Mat()
-        Imgproc.cvtColor(matBgr, rgb, Imgproc.COLOR_BGR2RGB)
-        return rgb
-    }
 
     companion object {
         private lateinit var sharedYolo: YoloInferenceTFLite
@@ -114,7 +65,8 @@ class ImageProcessingPipelineTests : de.konradvoelkel.android.autokorrektur.shar
     private val tempFiles = mutableListOf<File>()
 
     private fun isDebug(): Boolean {
-        return (appContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        val debuggable = (appContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        return debuggable && de.konradvoelkel.android.autokorrektur.shared.OpenCvTestUtils.shouldWriteDebugArtifacts(appContext)
     }
 
     @Before
@@ -131,12 +83,6 @@ class ImageProcessingPipelineTests : de.konradvoelkel.android.autokorrektur.shar
         tempFiles.forEach { it.delete() }
     }
 
-    private fun copyAssetToCache(assetFileName: String): File {
-        val file = de.konradvoelkel.android.autokorrektur.shared.AndroidTestUtils
-            .copyAssetToCache(appContext, assetFileName)
-        tempFiles.add(file)
-        return file
-    }
 
     private fun hasCarDetection(mask: Mat): Boolean {
         val totalPixels = mask.rows() * mask.cols()
@@ -179,7 +125,7 @@ class ImageProcessingPipelineTests : de.konradvoelkel.android.autokorrektur.shar
 
     @Test
     fun testCarDetectionOnExampleImage() {
-        val tempFile = copyAssetToCache("image_1_with_car_640x640.png")
+        val tempFile = cacheAsset("image_1_with_car_640x640.png", tempFiles)
         val fileUri = Uri.fromFile(tempFile)
 
         val processedImage = imageProcessor.processInputImage(
@@ -216,7 +162,7 @@ class ImageProcessingPipelineTests : de.konradvoelkel.android.autokorrektur.shar
 
     @Test
     fun testNoCarDetectionOnResultImage() {
-        val tempFile = copyAssetToCache("image_1_without_car_640x640.png")
+        val tempFile = cacheAsset("image_1_without_car_640x640.png", tempFiles)
         val fileUri = Uri.fromFile(tempFile)
 
         val processedImage = imageProcessor.processInputImage(
@@ -253,7 +199,7 @@ class ImageProcessingPipelineTests : de.konradvoelkel.android.autokorrektur.shar
 
     @Test
     fun testYoloMaskCreationProperties() {
-        val tempFile = copyAssetToCache("image_1_with_car_640x640.png")
+        val tempFile = cacheAsset("image_1_with_car_640x640.png", tempFiles)
         val fileUri = Uri.fromFile(tempFile)
 
         val processedImage = imageProcessor.processInputImage(
@@ -283,7 +229,7 @@ class ImageProcessingPipelineTests : de.konradvoelkel.android.autokorrektur.shar
 
     @Test
     fun testCarDetectionMaskIsSensible() {
-        val tempFile = copyAssetToCache("image_1_with_car_640x640.png")
+        val tempFile = cacheAsset("image_1_with_car_640x640.png", tempFiles)
         val fileUri = Uri.fromFile(tempFile)
 
         val processedImage = imageProcessor.processInputImage(
@@ -320,7 +266,7 @@ class ImageProcessingPipelineTests : de.konradvoelkel.android.autokorrektur.shar
 
     @Test
     fun testCarMaskMatchesReference() {
-        val photoFile = copyAssetToCache("photo_with_car_1.png")
+        val photoFile = cacheAsset("photo_with_car_1.png", tempFiles)
         val photoUri = Uri.fromFile(photoFile)
 
         val processedImage = imageProcessor.processInputImage(
@@ -340,7 +286,7 @@ class ImageProcessingPipelineTests : de.konradvoelkel.android.autokorrektur.shar
             originalHeight = processedImage.originalMat.rows()
         )
 
-        val refMaskFile = copyAssetToCache("photo_with_car_1_mask.png")
+        val refMaskFile = cacheAsset("photo_with_car_1_mask.png", tempFiles)
         val referenceMask = Imgcodecs.imread(refMaskFile.absolutePath, Imgcodecs.IMREAD_GRAYSCALE)
 
         assertNotNull("Reference mask should load", referenceMask)
@@ -415,9 +361,9 @@ class ImageProcessingPipelineTests : de.konradvoelkel.android.autokorrektur.shar
     @Test
     fun testMiGanRemovesCarAndKeepsBackground() {
         // Load input photo and reference mask
-        val photoFile = copyAssetToCache("photo_with_car_1.png")
+        val photoFile = cacheAsset("photo_with_car_1.png", tempFiles)
         val photoUri = Uri.fromFile(photoFile)
-        val refMaskFile = copyAssetToCache("photo_with_car_1_mask.png")
+        val refMaskFile = cacheAsset("photo_with_car_1_mask.png", tempFiles)
         val referenceMask = Imgcodecs.imread(refMaskFile.absolutePath, Imgcodecs.IMREAD_GRAYSCALE)
         assertNotNull("Reference mask should load", referenceMask)
         assertTrue("Reference mask should not be empty", !referenceMask.empty())
@@ -558,7 +504,7 @@ class ImageProcessingPipelineTests : de.konradvoelkel.android.autokorrektur.shar
     @Test
     fun testEndToEndMiGanOnExample2MatchesReferenceOutsideMask() {
         // 1) Load input and process
-        val inputFile = copyAssetToCache("example2.png")
+        val inputFile = cacheAsset("example2.png", tempFiles)
         val inputUri = Uri.fromFile(inputFile)
         val processedIn = imageProcessor.processInputImage(
             imageUri = inputUri,
@@ -582,10 +528,10 @@ class ImageProcessingPipelineTests : de.konradvoelkel.android.autokorrektur.shar
         val inpainted = miGanInference.inferMiGan(processedIn.originalMat, mask)
 
         // 4) Load reference result and convert BGR->RGB for fair comparison
-        val refFile = copyAssetToCache("example2Result.png")
+        val refFile = cacheAsset("example2Result.png", tempFiles)
         val refBgr = Imgcodecs.imread(refFile.absolutePath, Imgcodecs.IMREAD_COLOR)
         assertTrue("Reference image should load", !refBgr.empty())
-        val refRgb = matLoadedFromFileBgrToRgb(refBgr)
+        val refRgb = de.konradvoelkel.android.autokorrektur.shared.OpenCvTestUtils.matLoadedFromFileBgrToRgb(refBgr)
         refBgr.release()
 
         // 5) Ensure sizes match
@@ -599,7 +545,7 @@ class ImageProcessingPipelineTests : de.konradvoelkel.android.autokorrektur.shar
         val refRgb8 = Mat()
         inpainted.convertTo(inRgb8, org.opencv.core.CvType.CV_8UC3)
         refRgb.convertTo(refRgb8, org.opencv.core.CvType.CV_8UC3)
-        val meanAbs = meanAbsDiffPerChannelOnWhiteMask(mask, inRgb8, refRgb8)
+        val meanAbs = de.konradvoelkel.android.autokorrektur.shared.OpenCvTestUtils.meanAbsDiffOnMaskRgb8u3(mask, inRgb8, refRgb8)
 
         println(
             "[DEBUG_LOG] example2 mean abs diff over white mask: ${
@@ -618,7 +564,7 @@ class ImageProcessingPipelineTests : de.konradvoelkel.android.autokorrektur.shar
 
         // 7) Optionally check that no car remains after inpainting
         val tempOutFile = File(appContext.cacheDir, "example2_migan_out.png")
-        saveDebugRgbMatAsPngBgr(inpainted, tempOutFile) // write via RGB->BGR
+        de.konradvoelkel.android.autokorrektur.shared.OpenCvTestUtils.saveDebugRgbMatAsPngBgr(inpainted, tempOutFile) // write via RGB->BGR
         tempFiles.add(tempOutFile)
         val outUri = Uri.fromFile(tempOutFile)
         val processedOut = imageProcessor.processInputImage(
@@ -644,7 +590,7 @@ class ImageProcessingPipelineTests : de.konradvoelkel.android.autokorrektur.shar
         if (isDebug()) {
             val outDir = appContext.getExternalFilesDir(null)
             if (outDir != null) {
-                saveDebugRgbMatAsPngBgr(
+                de.konradvoelkel.android.autokorrektur.shared.OpenCvTestUtils.saveDebugRgbMatAsPngBgr(
                     inpainted,
                     File(outDir, "debug_example2_migan_inpainted.png")
                 )
