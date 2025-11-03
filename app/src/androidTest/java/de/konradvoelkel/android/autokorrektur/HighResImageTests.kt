@@ -7,7 +7,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
@@ -49,14 +51,14 @@ class HighResImageTests {
      */
     private fun createHighResTestImage(width: Int, height: Int): File {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        
+
         // Fill with a simple pattern to make it realistic
         val canvas = android.graphics.Canvas(bitmap)
         val paint = android.graphics.Paint().apply {
             color = android.graphics.Color.BLUE
         }
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
-        
+
         // Draw some shapes to make it more interesting
         paint.color = android.graphics.Color.RED
         canvas.drawCircle(width / 2f, height / 2f, width / 4f, paint)
@@ -86,9 +88,15 @@ class HighResImageTests {
 
         assertNotNull("Processed image should not be null", processedImage)
         assertNotNull("Original bitmap should not be null", processedImage.originalBitmap)
-        assertTrue("Original bitmap width should be positive", processedImage.originalBitmap.width > 0)
-        assertTrue("Original bitmap height should be positive", processedImage.originalBitmap.height > 0)
-        
+        assertTrue(
+            "Original bitmap width should be positive",
+            processedImage.originalBitmap.width > 0
+        )
+        assertTrue(
+            "Original bitmap height should be positive",
+            processedImage.originalBitmap.height > 0
+        )
+
         // Clean up
         processedImage.originalBitmap.recycle()
         processedImage.transformedBitmap.recycle()
@@ -110,7 +118,7 @@ class HighResImageTests {
 
         assertNotNull("Processed image should not be null", processedImage)
         assertNotNull("Original bitmap should not be null", processedImage.originalBitmap)
-        
+
         // Clean up
         processedImage.originalBitmap.recycle()
         processedImage.transformedBitmap.recycle()
@@ -132,7 +140,7 @@ class HighResImageTests {
 
         assertNotNull("Processed image should not be null", processedImage)
         assertNotNull("Original bitmap should not be null", processedImage.originalBitmap)
-        
+
         // Clean up
         processedImage.originalBitmap.recycle()
         processedImage.transformedBitmap.recycle()
@@ -153,14 +161,15 @@ class HighResImageTests {
         )
 
         assertNotNull("Processed image should not be null", processedImage)
-        
+
         // Verify the image was downscaled
-        val megapixels = (processedImage.originalMat.rows() * processedImage.originalMat.cols()) / 1000000f
+        val megapixels =
+            (processedImage.originalMat.rows() * processedImage.originalMat.cols()) / 1000000f
         assertTrue(
             "Image should be downscaled to approximately 2MP or less, but was ${megapixels}MP",
             megapixels <= 2.1f // Allow small margin
         )
-        
+
         // Clean up
         processedImage.originalBitmap.recycle()
         processedImage.transformedBitmap.recycle()
@@ -183,7 +192,7 @@ class HighResImageTests {
             )
 
             assertNotNull("Processed image should not be null", processedImage)
-            
+
             // If we got here, it worked! Clean up
             processedImage.originalBitmap.recycle()
             processedImage.transformedBitmap.recycle()
@@ -192,8 +201,9 @@ class HighResImageTests {
             fail("OutOfMemoryError occurred when loading extremely large image - this is the bug we need to fix: ${e.message}")
         } catch (e: Exception) {
             // Other exceptions might be okay (e.g., file too large), but OOM is not
-            if (e.message?.contains("OutOfMemory") == true || 
-                e.message?.contains("Failed to allocate") == true) {
+            if (e.message?.contains("OutOfMemory") == true ||
+                e.message?.contains("Failed to allocate") == true
+            ) {
                 fail("Memory allocation error when loading extremely large image: ${e.message}")
             }
             // For other exceptions, we can tolerate them as long as the app doesn't crash
@@ -205,14 +215,14 @@ class HighResImageTests {
     fun testBitmapFactoryOptions_inSampleSize_shouldReduceMemoryUsage() {
         // This test verifies that using inSampleSize reduces memory usage
         val testFile = createHighResTestImage(4000, 3000) // 12MP
-        
+
         // Load full resolution
         val options1 = BitmapFactory.Options()
         val fullBitmap = BitmapFactory.decodeFile(testFile.absolutePath, options1)
         assertNotNull("Full bitmap should load", fullBitmap)
         val fullSize = fullBitmap.byteCount
         fullBitmap.recycle()
-        
+
         // Load with inSampleSize = 2 (1/4 the pixels, roughly 1/4 the memory)
         val options2 = BitmapFactory.Options().apply {
             inSampleSize = 2
@@ -221,7 +231,7 @@ class HighResImageTests {
         assertNotNull("Downsampled bitmap should load", downsampledBitmap)
         val downsampledSize = downsampledBitmap.byteCount
         downsampledBitmap.recycle()
-        
+
         assertTrue(
             "Downsampled bitmap should use significantly less memory (full: $fullSize, downsampled: $downsampledSize)",
             downsampledSize < fullSize / 2

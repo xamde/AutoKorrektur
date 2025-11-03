@@ -1,11 +1,10 @@
 = Debug
 
-
 [source,shell]
 ----
 adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Download/image_1_with_car_640x640.png
 ----
 
-
 == OpenCV
+
 https://opencv.org/opencv4android-usage-models/[]

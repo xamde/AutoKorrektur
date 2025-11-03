@@ -1,6 +1,9 @@
 # AutoKorrektur
-We re-implemented the [AutoKorrektur Web Version](https://github.com/BenB2/AutoKorrektur) in Android.
-This web version was based on a Bachelor Thesis "Autokorrektur - Automatisierte Objektersetzung in Fotos" by Till Schellscheidt.
+
+We re-implemented the [AutoKorrektur Web Version](https://github.com/BenB2/AutoKorrektur) in
+Android.
+This web version was based on a Bachelor Thesis "Autokorrektur - Automatisierte Objektersetzung in
+Fotos" by Till Schellscheidt.
 
 <table>
   <tr>
@@ -9,13 +12,14 @@ This web version was based on a Bachelor Thesis "Autokorrektur - Automatisierte 
   </tr>
 </table>
 
-This application is intended to remove cars from pictures to make it easier to imagine a world, in which the most dangerous animal in cities (cars) are less prevalent.
+This application is intended to remove cars from pictures to make it easier to imagine a world, in
+which the most dangerous animal in cities (cars) are less prevalent.
 All processing is done on device.
 Usage is free.
 
 ## Known Bugs
-- Pictures must be taken in landscape mode (we plan to fix this)
 
+- Pictures must be taken in landscape mode (we plan to fix this)
 
 ## Tech
 
@@ -28,7 +32,8 @@ Usage is free.
 
 The licensing of this project is governed by the licenses of some components.
 
-*   **YOLOv11-seg:** Licensed under GNU AGPLv3. You must comply with its terms, which may require this entire project to be licensed similarly.
+* **YOLOv11-seg:** Licensed under GNU AGPLv3. You must comply with its terms, which may require this
+  entire project to be licensed similarly.
 
 Therefore this Project is licensed under the GNU AGPLv3 License. 
 
