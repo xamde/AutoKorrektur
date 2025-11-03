@@ -48,28 +48,30 @@ app/
 
 ### Building the Project
 
-This is an Android project built with Gradle. Since there's no `gradlew` wrapper checked in, you'll need to use Android Studio or install Gradle separately.
+This is an Android project built with Gradle. The Gradle wrapper executable (`gradlew`) is excluded from version control (see `.gitignore`) but can be generated.
 
-**Using Android Studio**:
+**Using Android Studio** (recommended):
 1. Open the project in Android Studio
-2. Sync Gradle files
+2. Sync Gradle files (this will generate the wrapper)
 3. Build > Make Project
 
-**Using Gradle** (if installed):
+**Using Gradle Wrapper** (after generation or on Windows using gradlew.bat):
 ```bash
-gradle build
+./gradlew build
+# or on Windows:
+gradlew.bat build
 ```
 
 ### Running Tests
 
 **Unit Tests**:
 ```bash
-gradle test
+./gradlew test
 ```
 
 **Android Instrumentation Tests**:
 ```bash
-gradle connectedAndroidTest
+./gradlew connectedAndroidTest
 ```
 
 Key test files:
@@ -127,7 +129,7 @@ Key test files:
 
 1. **Memory Management**: ML models require significant memory. Always test with realistic image sizes.
 2. **Image Orientation**: The app currently only supports landscape images.
-3. **Build Cache**: Use `org.gradle.configuration-cache=true` is enabled - some plugins may not be compatible.
+3. **Build Cache**: `org.gradle.configuration-cache=true` is enabled - some plugins may not be compatible.
 4. **OpenCV**: Ensure OpenCV native libraries are properly loaded before use.
 5. **License Compliance**: Remember AGPLv3 requirements when adding features or dependencies.
 
