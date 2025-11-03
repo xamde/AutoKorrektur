@@ -15,7 +15,6 @@ Usage is free.
 
 ## Known Bugs
 - Pictures must be taken in landscape mode (we plan to fix this)
-- High-res pictures let the app fail (we are working in that)
 
 
 ## Tech
