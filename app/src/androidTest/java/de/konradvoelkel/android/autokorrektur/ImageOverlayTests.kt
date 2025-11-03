@@ -2,32 +2,22 @@ package de.konradvoelkel.android.autokorrektur
 
 import android.graphics.Bitmap
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import de.konradvoelkel.android.autokorrektur.utils.MaskOverlayUtils
 import org.junit.Assert.assertTrue
-import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.opencv.android.Utils
 import org.opencv.imgcodecs.Imgcodecs
 
 @RunWith(AndroidJUnit4::class)
-class ImageOverlayTests {
+class ImageOverlayTests : de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest() {
 
-    companion object {
-        @JvmStatic
-        @BeforeClass
-        fun setupOnce() {
-            TestUtils.initOpenCV()
-        }
-    }
 
     @Test
     fun overlay_should_not_tint_entire_image_and_should_tint_lower_left_region() {
-        val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-
         // Load reference mask from assets
-        val maskFile = TestUtils.copyAssetToCache(appContext, "photo_with_car_1_mask.png")
+        val maskFile = de.konradvoelkel.android.autokorrektur.shared.AndroidTestUtils
+            .copyAssetToCache(appContext, "photo_with_car_1_mask.png")
         val maskMat = Imgcodecs.imread(maskFile.absolutePath, Imgcodecs.IMREAD_GRAYSCALE)
         require(!maskMat.empty()) { "Failed to load reference mask" }
 

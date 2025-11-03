@@ -24,7 +24,7 @@ import org.opencv.imgproc.Imgproc
 import java.io.File
 
 @RunWith(AndroidJUnit4::class)
-class ImageProcessingPipelineTests {
+class ImageProcessingPipelineTests : de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest() {
 
     // --- Helpers to avoid code duplication in tests ---
     private fun saveDebugRgbMatAsPngBgr(matRgb: Mat, file: File) {
@@ -87,7 +87,7 @@ class ImageProcessingPipelineTests {
         @BeforeClass
         @JvmStatic
         fun beforeAll() {
-            TestUtils.initOpenCV()
+            de.konradvoelkel.android.autokorrektur.shared.AndroidTestUtils.initOpenCV()
             val ctx = InstrumentationRegistry.getInstrumentation().targetContext
             sharedYolo = YoloInferenceTFLite(ctx)
             sharedYolo.initialize("yolo11s")
@@ -108,7 +108,6 @@ class ImageProcessingPipelineTests {
         }
     }
 
-    private val appContext = InstrumentationRegistry.getInstrumentation().targetContext
     private lateinit var yoloInference: YoloInferenceTFLite
     private lateinit var imageProcessor: ImageProcessor
     private lateinit var miGanInference: de.konradvoelkel.android.autokorrektur.ml.MiGanInference
@@ -133,7 +132,8 @@ class ImageProcessingPipelineTests {
     }
 
     private fun copyAssetToCache(assetFileName: String): File {
-        val file = TestUtils.copyAssetToCache(appContext, assetFileName)
+        val file = de.konradvoelkel.android.autokorrektur.shared.AndroidTestUtils
+            .copyAssetToCache(appContext, assetFileName)
         tempFiles.add(file)
         return file
     }
@@ -159,7 +159,7 @@ class ImageProcessingPipelineTests {
 
     @Test
     fun testImageSelectionSimulation() {
-        val mockupImageUri = TestUtils.copyAssetToCache(appContext, "image_1_with_car_640x640.png")
+        val mockupImageUri = de.konradvoelkel.android.autokorrektur.shared.AndroidTestUtils.copyAssetToCache(appContext, "image_1_with_car_640x640.png")
             .let { Uri.fromFile(it) }
         assertNotNull("Mockup image URI should not be null", mockupImageUri)
 
