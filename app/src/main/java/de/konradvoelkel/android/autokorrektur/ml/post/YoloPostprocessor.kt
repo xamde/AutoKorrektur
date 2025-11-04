@@ -35,6 +35,10 @@ object YoloPostprocessor {
         val numBBoxCoords = 4
         val numMaskCoeffs = 32
 
+        // Normalize allowed classes: keep only valid indices; if none valid -> allow all
+        val validAllowed: Set<Int> = allowedClassIndices.filter { it in 0 until numClasses }.toSet()
+        val allowAll = validAllowed.isEmpty()
+
         // Read all floats once
         val floatArray = FloatArray(buffer.capacity() / 4)
         buffer.asFloatBuffer().get(floatArray)
@@ -44,6 +48,9 @@ object YoloPostprocessor {
             val cy = floatArray[1 * numProposals + i]
             val w = floatArray[2 * numProposals + i]
             val h = floatArray[3 * numProposals + i]
+
+            // Degenerate boxes are discarded early
+            if (w <= 0f || h <= 0f) continue
 
             // Find best class (after sigmoid)
             var maxProb = 0f
@@ -63,7 +70,8 @@ object YoloPostprocessor {
                 coeffs[j] = floatArray[(numBBoxCoords + numClasses + j) * numProposals + i]
             }
 
-            if (maxProb > scoreThreshold && allowedClassIndices.contains(bestClass)) {
+            val classAllowed = allowAll || validAllowed.contains(bestClass)
+            if (maxProb > scoreThreshold && classAllowed) {
                 val xMin = (cx - (w / 2f))
                 val yMin = (cy - (h / 2f))
                 detections.add(

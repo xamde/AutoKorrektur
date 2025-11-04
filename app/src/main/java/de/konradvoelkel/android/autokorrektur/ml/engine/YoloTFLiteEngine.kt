@@ -39,55 +39,63 @@ class YoloTFLiteEngine(private val context: Context) {
     private var outputDetections: ByteBuffer? = null
     private var outputPrototypes: ByteBuffer? = null
 
+    // Synchronization lock for lifecycle and run serialization
+    private val lock = Any()
+
     val isInitialized: Boolean
         get() = interpreter != null
 
+    val isClosed: Boolean
+        get() = interpreter == null
+
     @Throws(ModelLoadException::class)
     fun initialize(modelName: String = "yolo11s", useFP16: Boolean = false) {
-        if (isInitialized) {
-            AppLogger.debug("YoloTFLiteEngine already initialized")
-            return
-        }
-        val modelFile = if (useFP16) {
-            "model/${modelName}-seg_saved_model/${modelName}-seg_float16.tflite"
-        } else {
-            "model/${modelName}-seg_saved_model/${modelName}-seg_float32.tflite"
-        }
-        try {
-            val afd = context.assets.openFd(modelFile)
-            val inputStream = afd.createInputStream()
-            val modelBytes = inputStream.readBytes()
-            inputStream.close()
-            afd.close()
+        synchronized(lock) {
+            if (isInitialized) {
+                AppLogger.debug("YoloTFLiteEngine already initialized")
+                return
+            }
+            val modelFile = if (useFP16) {
+                "model/${modelName}-seg_saved_model/${modelName}-seg_float16.tflite"
+            } else {
+                "model/${modelName}-seg_saved_model/${modelName}-seg_float32.tflite"
+            }
+            try {
+                val afd = context.assets.openFd(modelFile)
+                val inputStream = afd.createInputStream()
+                val modelBytes = inputStream.readBytes()
+                inputStream.close()
+                afd.close()
 
-            val modelBuffer = ByteBuffer.allocateDirect(modelBytes.size)
-            modelBuffer.order(ByteOrder.nativeOrder())
-            modelBuffer.put(modelBytes)
-            modelBuffer.rewind()
+                val modelBuffer = ByteBuffer.allocateDirect(modelBytes.size)
+                modelBuffer.order(ByteOrder.nativeOrder())
+                modelBuffer.put(modelBytes)
+                modelBuffer.rewind()
 
-            val options = Interpreter.Options()
-            val threads = if (isDebugBuild) 2 else Runtime.getRuntime().availableProcessors()
-            options.setNumThreads(threads)
-            interpreter = Interpreter(modelBuffer, options)
+                val options = Interpreter.Options()
+                val threads = if (isDebugBuild) 2 else Runtime.getRuntime().availableProcessors()
+                options.setNumThreads(threads)
+                interpreter = Interpreter(modelBuffer, options)
 
-            // Input shape [1, H, W, C]
-            val inTensor = interpreter!!.getInputTensor(0)
-            val inShape = inTensor.shape()
-            if (inShape.size != 4) throw ShapeMismatchException("Unexpected input shape: ${inShape.joinToString()}")
-            inputH = inShape[1]
-            inputW = inShape[2]
-            inputC = inShape[3]
-            AppLogger.debug("Engine input shape: [${inShape.joinToString()}]")
+                // Input shape [1, H, W, C]
+                val inTensor = interpreter!!.getInputTensor(0)
+                val inShape = inTensor.shape()
+                if (inShape.size != 4) throw ShapeMismatchException("Unexpected input shape: ${inShape.joinToString()}")
+                inputH = inShape[1]
+                inputW = inShape[2]
+                inputC = inShape[3]
+                AppLogger.debug("Engine input shape: [${inShape.joinToString()}]")
 
-            // Output shapes
-            detShape = interpreter!!.getOutputTensor(0).shape()
-            protoShape = interpreter!!.getOutputTensor(1).shape()
-            AppLogger.debug("Engine output shapes: det=${detShape.joinToString()}, proto=${protoShape.joinToString()}")
+                // Output shapes
+                detShape = interpreter!!.getOutputTensor(0).shape()
+                protoShape = interpreter!!.getOutputTensor(1).shape()
+                AppLogger.debug("Engine output shapes: det=${detShape.joinToString()}, proto=${protoShape.joinToString()}")
 
-            allocateBuffers()
-            AppLogger.debug("YoloTFLiteEngine initialized. Threads=$threads")
-        } catch (e: Exception) {
-            throw ModelLoadException("Failed to initialize TFLite YOLO model: ${e.message}", e)
+                allocateBuffers()
+                AppLogger.debug("YoloTFLiteEngine initialized. Threads=$threads")
+            } catch (e: Exception) {
+                throw ModelLoadException("Failed to initialize TFLite YOLO model: ${e.message}", e)
+            }
         }
     }
 
@@ -126,47 +134,80 @@ class YoloTFLiteEngine(private val context: Context) {
      */
     @Throws(InferenceException::class)
     fun run(rgbMat: Mat): RawOutputs {
-        try {
-            if (rgbMat.rows() != inputH || rgbMat.cols() != inputW) {
-                // Resize into a temporary Mat to match model input
-                val resized = Mat()
-                Imgproc.resize(rgbMat, resized, org.opencv.core.Size(inputW.toDouble(), inputH.toDouble()))
-                try {
-                    matToByteBuffer(resized, inputBuffer!!)
-                } finally {
-                    resized.release()
+        synchronized(lock) {
+            try {
+                if (!isInitialized) {
+                    throw InferenceException("YoloTFLiteEngine.run() called before initialize()")
                 }
-            } else {
-                matToByteBuffer(rgbMat, inputBuffer!!)
+
+                if (inputBuffer == null || outputDetections == null || outputPrototypes == null) {
+                    // Allocate or reallocate buffers if needed (defensive)
+                    allocateBuffers()
+                }
+
+                if (rgbMat.rows() != inputH || rgbMat.cols() != inputW) {
+                    // Resize into a temporary Mat to match model input
+                    val resized = Mat()
+                    Imgproc.resize(rgbMat, resized, org.opencv.core.Size(inputW.toDouble(), inputH.toDouble()))
+                    try {
+                        matToByteBuffer(resized, inputBuffer!!)
+                    } finally {
+                        resized.release()
+                    }
+                } else {
+                    matToByteBuffer(rgbMat, inputBuffer!!)
+                }
+
+                val inputs = arrayOf<Any>(inputBuffer as Any)
+                val outputs = HashMap<Int, Any>(2)
+                // Ensure output buffers are rewound
+                outputDetections!!.rewind()
+                outputPrototypes!!.rewind()
+                outputs[0] = outputDetections as Any
+                outputs[1] = outputPrototypes as Any
+
+                interpreter!!.runForMultipleInputsOutputs(inputs, outputs)
+
+                // Duplicate read-only views to return without disturbing internal positions
+                val detCopy = outputDetections!!.duplicate().order(ByteOrder.nativeOrder())
+                detCopy.rewind()
+                val protoCopy = outputPrototypes!!.duplicate().order(ByteOrder.nativeOrder())
+                protoCopy.rewind()
+                return RawOutputs(detCopy, protoCopy, shapes())
+            } catch (e: Exception) {
+                val matType = try { CvType.typeToString(rgbMat.type()) } catch (_: Exception) { "?" }
+                val msg = buildString {
+                    append("TFLite run failed: ")
+                    append(e.message)
+                    append(" | inputMat=")
+                    append(rgbMat.rows()).append("x").append(rgbMat.cols()).append(", ")
+                    append(matType)
+                    append(" | expectedInput=")
+                    append(inputH).append("x").append(inputW).append("x").append(inputC)
+                    append(" | detShape=")
+                    append(detShape.joinToString())
+                    append(" | protoShape=")
+                    append(protoShape.joinToString())
+                }
+                throw InferenceException(msg, e)
             }
-
-            val inputs = arrayOf<Any>(inputBuffer as Any)
-            val outputs = HashMap<Int, Any>(2)
-            // Ensure output buffers are rewound
-            outputDetections!!.rewind()
-            outputPrototypes!!.rewind()
-            outputs[0] = outputDetections as Any
-            outputs[1] = outputPrototypes as Any
-
-            interpreter!!.runForMultipleInputsOutputs(inputs, outputs)
-
-            // Duplicate read-only views to return without disturbing internal positions
-            val detCopy = outputDetections!!.duplicate().order(ByteOrder.nativeOrder())
-            detCopy.rewind()
-            val protoCopy = outputPrototypes!!.duplicate().order(ByteOrder.nativeOrder())
-            protoCopy.rewind()
-            return RawOutputs(detCopy, protoCopy, shapes())
-        } catch (e: Exception) {
-            throw InferenceException("TFLite run failed: ${e.message}", e)
         }
     }
 
     fun close() {
-        try {
-            interpreter?.close()
-        } catch (_: Exception) {
-        } finally {
-            interpreter = null
+        synchronized(lock) {
+            try {
+                interpreter?.close()
+            } catch (_: Exception) {
+            } finally {
+                interpreter = null
+                // Release buffers and reset discovered shapes to safe defaults
+                inputBuffer = null
+                outputDetections = null
+                outputPrototypes = null
+                detShape = intArrayOf()
+                protoShape = intArrayOf()
+            }
         }
     }
 

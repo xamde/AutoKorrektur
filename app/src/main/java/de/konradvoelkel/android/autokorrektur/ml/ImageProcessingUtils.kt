@@ -1,4 +1,4 @@
-package de.konradvoelkel.android.autokorrektur.ml
+package de.konradvoelkel.android.autokorrektur.ml.preprocess
 
 /**
  * Pure image-processing utilities that can be JVM-tested.

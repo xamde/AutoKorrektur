@@ -1,5 +1,6 @@
 package de.konradvoelkel.android.autokorrektur.ml.config
 
+
 /**
  * Configuration values for YOLO post-processing and filtering.
  * Defaults mirror the constants currently embedded in YoloInferenceTFLite.
