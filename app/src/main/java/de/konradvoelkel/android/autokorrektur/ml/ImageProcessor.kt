@@ -6,12 +6,12 @@ import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.net.Uri
 import androidx.core.graphics.createBitmap
+import de.konradvoelkel.android.autokorrektur.ml.preprocess.DefaultPreprocessor
+import de.konradvoelkel.android.autokorrektur.ml.preprocess.Preprocessor
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import org.opencv.android.Utils
-import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
-import org.opencv.core.Scalar
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
 import java.io.File
@@ -25,6 +25,8 @@ import kotlin.math.sqrt
  * to be fed into a machine learning model.
  */
 class ImageProcessor(private val context: Context) {
+
+    private val preprocessor: Preprocessor = DefaultPreprocessor()
 
     companion object {
         /**
@@ -71,24 +73,28 @@ class ImageProcessor(private val context: Context) {
         AppLogger.debug("ImageProcessor: Working Mat dimensions ${workingMat.width()}x${workingMat.height()}")
 
 
-        // 4. Preprocess the image for the model (padding, resizing, normalizing).
-        val prepResult = preprocess(workingMat, modelWidth, modelHeight)
+        // 4. Preprocess the image for the model (padding, resizing, normalizing to 8U here).
+        val prep = preprocessor.prepare(workingMat, modelWidth, modelHeight)
 
         // 5. Convert the preprocessed Mat back to a Bitmap for display, fixing color channels.
-        val transformedBitmap =
-            createDisplayBitmapFromPreprocessedMat(prepResult.transformedMatForBitmap)
+        val transformedBitmap = createDisplayBitmapFromPreprocessedMat(prep.forBitmap)
         AppLogger.debug("ImageProcessor: Created transformed bitmap (${transformedBitmap.width}x${transformedBitmap.height})")
 
-        // 6. Release the 8-bit Mat used for bitmap conversion, as it's no longer needed.
-        prepResult.transformedMatForBitmap.release()
+        // 6. Build the normalized float Mat for the model from the 8-bit engine Mat.
+        val transformedMat = Mat()
+        prep.forEngine.convertTo(transformedMat, CvType.CV_32FC3, 1.0 / 255.0)
+
+        // 7. Release 8-bit mats that are no longer needed on the native side.
+        prep.forBitmap.release()
+        prep.forEngine.release()
 
         return ProcessedImage(
             originalBitmap = originalBitmap,
             transformedBitmap = transformedBitmap,
             originalMat = workingMat, // This is the final, possibly downscaled, Mat.
-            transformedMat = prepResult.transformedMat, // This is the normalized Mat for the model.
-            xRatio = prepResult.xRatio,
-            yRatio = prepResult.yRatio
+            transformedMat = transformedMat, // This is the normalized Mat for the model.
+            xRatio = prep.xRatio,
+            yRatio = prep.yRatio
         )
     }
 
@@ -225,64 +231,6 @@ class ImageProcessor(private val context: Context) {
         return bitmap
     }
 
-    private fun preprocess(
-        rgbMat: Mat,
-        modelWidth: Int,
-        modelHeight: Int,
-        stride: Int = 32
-    ): PreprocessingResult {
-        // Adjust dimensions to be divisible by stride.
-        val (w, h) = ImageProcessingUtils.divStride(stride, rgbMat.cols(), rgbMat.rows())
-        val resizedMat = Mat()
-        Imgproc.resize(
-            rgbMat,
-            resizedMat,
-            Size(w.toDouble(), h.toDouble()),
-            0.0,
-            0.0,
-            Imgproc.INTER_LANCZOS4
-        )
-
-        // Pad to a square.
-        val pr =
-            ImageProcessingUtils.computeSquarePaddingAndRatios(resizedMat.cols(), resizedMat.rows())
-        val paddedMat = Mat()
-        Core.copyMakeBorder(
-            resizedMat,
-            paddedMat,
-            0,
-            pr.yPad,
-            0,
-            pr.xPad,
-            Core.BORDER_CONSTANT,
-            Scalar(0.0, 0.0, 0.0)
-        )
-
-        // Resize to final model input size.
-        val transformedMatForBitmap = Mat() // This is the 8-bit version for display.
-        Imgproc.resize(
-            paddedMat,
-            transformedMatForBitmap,
-            Size(modelWidth.toDouble(), modelHeight.toDouble())
-        )
-
-        // Normalize to 32-bit float for the model.
-        val transformedMat = Mat() // This is the 32-bit float version for inference.
-        transformedMatForBitmap.convertTo(transformedMat, CvType.CV_32FC3, 1.0 / 255.0)
-
-        // Release intermediate mats.
-        resizedMat.release()
-        paddedMat.release()
-
-        return PreprocessingResult(transformedMat, transformedMatForBitmap, pr.xRatio, pr.yRatio)
-    }
-
-    private data class PreprocessingResult(
-        val transformedMat: Mat,      // Normalized Mat for ML inference (CV_32FC3)
-        val transformedMatForBitmap: Mat,  // 8-bit Mat for bitmap conversion (CV_8UC3)
-        val xRatio: Float,
-        val yRatio: Float
-    )
 
     /**
      * Holds all processed image data. Call [release] when done to free native resources.

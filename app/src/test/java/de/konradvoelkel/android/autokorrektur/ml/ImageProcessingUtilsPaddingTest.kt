@@ -1,5 +1,6 @@
 package de.konradvoelkel.android.autokorrektur.ml
 
+import de.konradvoelkel.android.autokorrektur.ml.preprocess.ImageProcessingUtils
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

@@ -42,6 +42,28 @@ object YoloMaskAssembler {
         return prototypeMasks
     }
 
+    /** De-interleave prototype data into per-channel Mats (once per inference). */
+    fun deinterleavePrototypes(prototypeMasksData: FloatArray, protoShape: IntArray): List<Mat> {
+        require(protoShape.size == 4) { "Prototype tensor shape must be [1, H, W, C]" }
+        val prototypeHeight = protoShape[1]
+        val prototypeWidth = protoShape[2]
+        val numPrototypesChannels = protoShape[3]
+        require(prototypeMasksData.size == numPrototypesChannels * prototypeHeight * prototypeWidth) {
+            "Prototype data size mismatch: expected ${numPrototypesChannels * prototypeHeight * prototypeWidth}, got ${prototypeMasksData.size}"
+        }
+        val prototypeMats = List(numPrototypesChannels) { Mat(prototypeHeight, prototypeWidth, CvType.CV_32FC1) }
+        for (y in 0 until prototypeHeight) {
+            for (x in 0 until prototypeWidth) {
+                val base = (y * prototypeWidth * numPrototypesChannels) + (x * numPrototypesChannels)
+                for (c in 0 until numPrototypesChannels) {
+                    val value = prototypeMasksData[base + c]
+                    prototypeMats[c].put(y, x, value.toDouble())
+                }
+            }
+        }
+        return prototypeMats
+    }
+
     /**
      * Apply a sigmoid element-wise on a CV_32F Mat in-place.
      */
@@ -56,52 +78,26 @@ object YoloMaskAssembler {
         temp.release()
     }
 
-    /**
-     * Assembles a segmentation mask for a single detection from prototype masks and coefficients.
-     * Returns an 8-bit single channel mask (CV_8UC1) sized to the detection box scaled by upscaleFactor.
-     *
-     * boxX, boxY, boxW, boxH: normalized coordinates (0..1) on input grid with size inputWidth x inputHeight.
-     */
+    /** Overload that consumes deinterleaved prototypes. */
     fun assembleMaskFromPrototypes(
         maskCoefficients: FloatArray,
-        prototypeMasksData: FloatArray, // Flat array: C * H * W, interleaved per pixel
+        prototypeMats: List<Mat>,
         boxX: Float,
         boxY: Float,
         boxW: Float,
         boxH: Float, // Normalized (0-1)
         upscaleFactor: Float,
         inputWidth: Int,
-        inputHeight: Int,
-        protoShape: IntArray
+        inputHeight: Int
     ): Mat {
-        val prototypeHeight = protoShape[1]
-        val prototypeWidth = protoShape[2]
-        val numPrototypesChannels = protoShape[3]
-
-        AppLogger.debug("Prototype tensor shape: [${protoShape.joinToString(", ")}]")
-        AppLogger.debug("Prototype dims: $numPrototypesChannels channels, ${prototypeHeight}x${prototypeWidth}")
-        AppLogger.debug("Expected prototype data size: ${numPrototypesChannels * prototypeHeight * prototypeWidth}")
-        AppLogger.debug("Actual prototype data size: ${prototypeMasksData.size}")
+        if (prototypeMats.isEmpty()) return Mat()
+        val prototypeHeight = prototypeMats[0].rows()
+        val prototypeWidth = prototypeMats[0].cols()
+        val numPrototypesChannels = prototypeMats.size
 
         if (maskCoefficients.size != numPrototypesChannels) {
             AppLogger.debug("assembleMask: Mask coeffs size mismatch. Expected $numPrototypesChannels, got ${maskCoefficients.size}")
             return Mat()
-        }
-        if (prototypeMasksData.size != numPrototypesChannels * prototypeHeight * prototypeWidth) {
-            AppLogger.debug("assembleMask: Prototype data size mismatch. Expected ${numPrototypesChannels * prototypeHeight * prototypeWidth}, got ${prototypeMasksData.size}")
-            return Mat()
-        }
-
-        // De-interleave into channel Mats
-        val prototypeMats = List(numPrototypesChannels) { Mat(prototypeHeight, prototypeWidth, CvType.CV_32FC1) }
-        for (y in 0 until prototypeHeight) {
-            for (x in 0 until prototypeWidth) {
-                val base = (y * prototypeWidth * numPrototypesChannels) + (x * numPrototypesChannels)
-                for (c in 0 until numPrototypesChannels) {
-                    val value = prototypeMasksData[base + c]
-                    prototypeMats[c].put(y, x, value.toDouble())
-                }
-            }
         }
 
         // Crop area in prototype grid corresponding to the detection bbox
@@ -125,7 +121,6 @@ object YoloMaskAssembler {
             cropped.release()
         }
         weighted.release()
-        prototypeMats.forEach { it.release() }
         AppLogger.debug("Used $nonZeroCoeffs non-zero coefficients out of $numPrototypesChannels")
 
         // Sigmoid and threshold
@@ -149,6 +144,38 @@ object YoloMaskAssembler {
         resizedMask.convertTo(resizedMask, CvType.CV_8UC1, 255.0)
         combinedProtoMask.release()
         return resizedMask
+    }
+
+    /**
+     * Assembles a segmentation mask for a single detection from prototype masks and coefficients.
+     * Returns an 8-bit single channel mask (CV_8UC1) sized to the detection box scaled by upscaleFactor.
+     *
+     * boxX, boxY, boxW, boxH: normalized coordinates (0..1) on input grid with size inputWidth x inputHeight.
+     */
+    fun assembleMaskFromPrototypes(
+        maskCoefficients: FloatArray,
+        prototypeMasksData: FloatArray, // Flat array: C * H * W, interleaved per pixel
+        boxX: Float,
+        boxY: Float,
+        boxW: Float,
+        boxH: Float, // Normalized (0-1)
+        upscaleFactor: Float,
+        inputWidth: Int,
+        inputHeight: Int,
+        protoShape: IntArray
+    ): Mat {
+        val mats = deinterleavePrototypes(prototypeMasksData, protoShape)
+        val result = assembleMaskFromPrototypes(
+            maskCoefficients,
+            mats,
+            boxX, boxY, boxW, boxH,
+            upscaleFactor,
+            inputWidth,
+            inputHeight
+        )
+        // Release temporary mats created here
+        mats.forEach { it.release() }
+        return result
     }
 
     /**
@@ -177,6 +204,70 @@ object YoloMaskAssembler {
             inputWidth,
             inputHeight,
             protoShape
+        )
+
+        if (maskMat.empty()) {
+            AppLogger.debug("assembleMaskFromPrototypes returned empty mask. Skipping application.")
+            return
+        }
+
+        val upscaledMaskWidth = maskMat.cols().toDouble()
+        val upscaledMaskHeight = maskMat.rows().toDouble()
+
+        val xModel = (boxX * inputWidth).toInt()
+        val yModel = (boxY * inputHeight).toInt()
+        val wModel = (boxW * inputWidth).toInt()
+        val hModel = (boxH * inputHeight).toInt()
+
+        val targetX = xModel + (wModel / 2.0) - (upscaledMaskWidth / 2.0)
+        val targetY = yModel + (hModel / 2.0) - (upscaledMaskHeight / 2.0)
+
+        val roiRect = Rect(
+            kotlin.math.max(0, targetX.toInt()),
+            kotlin.math.max(0, targetY.toInt()),
+            kotlin.math.min(upscaledMaskWidth.toInt(), inputWidth - kotlin.math.max(0, targetX.toInt())),
+            kotlin.math.min(upscaledMaskHeight.toInt(), inputHeight - kotlin.math.max(0, targetY.toInt()))
+        )
+
+        val maskRoiRect = Rect(
+            0, 0,
+            kotlin.math.min(upscaledMaskWidth.toInt(), roiRect.width),
+            kotlin.math.min(upscaledMaskHeight.toInt(), roiRect.height)
+        )
+
+        if (roiRect.width > 0 && roiRect.height > 0) {
+            val dstRoi = Mat(overlayGray, roiRect)
+            val srcMaskRoi = Mat(maskMat, maskRoiRect)
+            Core.subtract(dstRoi, srcMaskRoi, dstRoi)
+            dstRoi.release()
+            srcMaskRoi.release()
+        } else {
+            AppLogger.debug("Warning: ROI for mask placement is invalid or out of bounds. Skipping mask application for this detection.")
+        }
+        maskMat.release()
+    }
+
+    /** Overload to consume deinterleaved prototypes without redoing the work per detection. */
+    fun createDetectionMask(
+        detection: Detection,
+        overlayGray: Mat,
+        upscaleFactor: Float,
+        deinterleavedPrototypes: List<Mat>,
+        inputWidth: Int,
+        inputHeight: Int
+    ) {
+        val boxX = detection.x
+        val boxY = detection.y
+        val boxW = detection.width
+        val boxH = detection.height
+
+        val maskMat = assembleMaskFromPrototypes(
+            detection.maskCoefficients,
+            deinterleavedPrototypes,
+            boxX, boxY, boxW, boxH,
+            upscaleFactor,
+            inputWidth,
+            inputHeight
         )
 
         if (maskMat.empty()) {
