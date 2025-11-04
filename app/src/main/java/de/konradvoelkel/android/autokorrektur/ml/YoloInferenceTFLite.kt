@@ -1,8 +1,11 @@
+@file:Suppress("unused", "UNUSED_PARAMETER", "SameParameterValue")
 package de.konradvoelkel.android.autokorrektur.ml
 
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import de.konradvoelkel.android.autokorrektur.ml.api.YoloService
+import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import org.opencv.core.Core
 import org.opencv.core.CvType
@@ -14,7 +17,6 @@ import org.opencv.imgproc.Imgproc
 import org.tensorflow.lite.Interpreter
 import java.io.IOException
 import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.min
@@ -23,6 +25,7 @@ import kotlin.math.min
  * TensorFlow Lite implementation of YOLO model inference for car segmentation.
  * Uses TensorFlow Lite Interpreter directly.
  */
+@Deprecated("Use YoloService/YoloServiceImpl instead. This class is now a thin adapter and will be removed in a future release.")
 @SuppressLint("DefaultLocale")
 class YoloInferenceTFLite(private val context: Context) {
 
@@ -31,6 +34,9 @@ class YoloInferenceTFLite(private val context: Context) {
     private val isDebugBuild: Boolean by lazy {
         (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
     }
+
+    // Thin adapter over the new modular service
+    private val service: YoloService by lazy { YoloServiceImpl(context) }
 
     private var interpreter: Interpreter? = null
     private var isInitialized = false
@@ -80,183 +86,50 @@ class YoloInferenceTFLite(private val context: Context) {
             AppLogger.debug("TFLite YoloInference already initialized")
             return
         }
-
-        val modelFile = if (useFP16) {
-            "model/${modelName}-seg_saved_model/${modelName}-seg_float16.tflite"
-        } else {
-            "model/${modelName}-seg_saved_model/${modelName}-seg_float32.tflite"
-        }
-
-        AppLogger.debug("TFLite YoloInference.initialize() - Loading model: $modelFile")
-
+        // Delegate to modular service
         try {
-            val assetFileDescriptor = context.assets.openFd(modelFile)
-            val inputStream = assetFileDescriptor.createInputStream()
-            val modelBytes = inputStream.readBytes()
-            inputStream.close()
-            assetFileDescriptor.close()
-
-            AppLogger.debug("TFLite model loaded: ${modelBytes.size} bytes")
-
-            val modelBuffer = ByteBuffer.allocateDirect(modelBytes.size)
-            modelBuffer.order(ByteOrder.nativeOrder())
-            modelBuffer.put(modelBytes)
-            modelBuffer.rewind()
-
-            val options = Interpreter.Options()
-            // Use conservative threads in DEBUG to avoid oversubscription on emulators/CI
-            val threads = if (isDebugBuild) 2 else Runtime.getRuntime().availableProcessors()
-            options.setNumThreads(threads)
-            interpreter = Interpreter(modelBuffer, options)
-
-            val inputTensor = interpreter!!.getInputTensor(0)
-            val inputShape = inputTensor.shape()
-            if (inputShape.size == 4) { // Expected [1, H, W, C]
-                inputHeight = inputShape[1]
-                inputWidth = inputShape[2]
-                inputChannels = inputShape[3]
-            } else {
-                throw IOException("Unexpected model input shape: ${inputShape.joinToString(",")}")
-            }
-
-            AppLogger.debug("Model input shape: [${inputShape.joinToString(", ")}]")
-            AppLogger.debug("Input dimensions: ${inputWidth}x${inputHeight}x${inputChannels}")
-            AppLogger.debug("Detection threshold: $scoreThreshold")
-
-            // Cache output tensor shapes for buffer reuse
-            try {
-                detectionTensorShape = interpreter!!.getOutputTensor(0).shape()
-                prototypeTensorShape = interpreter!!.getOutputTensor(1).shape()
-                AppLogger.debug("Cached output shapes: detections=${detectionTensorShape?.joinToString()}, prototypes=${prototypeTensorShape?.joinToString()}")
-            } catch (e: Exception) {
-                AppLogger.warn("Failed to cache output tensor shapes: ${e.message}")
-            }
-
+            service.initialize(modelName, useFP16)
             isInitialized = true
-            AppLogger.debug("TFLite YoloInference initialized successfully")
-
+            AppLogger.debug("YoloInferenceTFLite (adapter) initialized via YoloServiceImpl")
         } catch (e: Exception) {
-            AppLogger.error("========== TFLITE INITIALIZATION FAILED ==========")
-            AppLogger.error("Exception type: ${e.javaClass.simpleName}")
-            AppLogger.error("Exception message: ${e.message}", e)
-            AppLogger.error("================================================")
-            throw IOException("Failed to initialize TFLite YOLO model: ${e.message}", e)
+            throw IOException("Failed to initialize YoloService: ${e.message}", e)
         }
     }
 
     @Throws(IOException::class)
     fun inferYolo(
-        transformedMat: Mat, // Expected: CV_32FC3, RGB, Normalized, this.inputWidth x this.inputHeight
-        xRatio: Float, // Letterbox ratio, used to map back to original size
-        yRatio: Float, // Letterbox ratio
-        upscaleFactor: Float = 1.0f, // Default to 1.0f as in JS reference
-        @Suppress("UNUSED_PARAMETER") downshiftFactor: Float = 0.0f, // Re-added for compatibility, but ignored
+        transformedMat: Mat, // Compatible types; service handles conversion
+        xRatio: Float,
+        yRatio: Float,
+        upscaleFactor: Float = 1.0f,
+        @Suppress("UNUSED_PARAMETER") downshiftFactor: Float = 0.0f, // Kept for API compatibility
         originalWidth: Int? = null,
         originalHeight: Int? = null
     ): Mat {
-        if (!isInitialized || interpreter == null) {
-            AppLogger.debug("Interpreter not initialized. Initializing now...")
-            initialize() // This might throw IOException
+        if (!isInitialized) {
+            AppLogger.debug("Adapter not initialized. Initializing service now...")
+            initialize()
         }
-
-        // Output mask will be the same size as model input, representing the letterboxed image content
-        val overlayGray = Mat.ones(this.inputHeight, this.inputWidth, CvType.CV_8UC1)
-        overlayGray.setTo(Scalar(255.0)) // White background
-
-        try {
-            // Prepare or reuse input buffer
-            val inputBufferCapacity =
-                4 * this.inputWidth * this.inputHeight * this.inputChannels // 4 bytes per float
-            if (inputBuffer == null || inputBuffer!!.capacity() < inputBufferCapacity) {
-                inputBuffer = ByteBuffer.allocateDirect(inputBufferCapacity)
-                    .apply { order(ByteOrder.nativeOrder()) }
-            }
-            inputBuffer!!.rewind()
-            matToByteBuffer(
-                transformedMat,
-                inputBuffer!!
-            ) // Populate inputBuffer from transformedMat
-
-            // Prepare output buffers map (reusing when possible)
-            val outputMap = mutableMapOf<Int, Any>()
-            val numOutputs = interpreter!!.outputTensorCount
-            if (isDebugBuild) {
-                AppLogger.debug("Model has $numOutputs outputs")
-            }
-
-            for (i in 0 until numOutputs) {
-                val outputTensor = interpreter!!.getOutputTensor(i)
-                val outputShape = outputTensor.shape()
-                if (isDebugBuild) {
-                    AppLogger.debug("Output $i shape: [${outputShape.joinToString(", ")}]")
-                }
-                val outputSize = outputShape.fold(1L) { acc, dim -> acc * dim }.toInt()
-                val neededBytes = 4 * outputSize // Float32
-                val buf = outputBuffers[i]
-                if (buf == null || buf.capacity() < neededBytes) {
-                    val newBuf = ByteBuffer.allocateDirect(neededBytes)
-                        .apply { order(ByteOrder.nativeOrder()) }
-                    outputBuffers[i] = newBuf
-                }
-                val reuse = outputBuffers[i]!!
-                reuse.rewind()
-                outputMap[i] = reuse
-            }
-
-            // Run inference
-            interpreter!!.runForMultipleInputsOutputs(arrayOf(inputBuffer!!), outputMap)
-
-            // Process outputs to create segmentation mask on overlayGray
-            processOutputsToMask(
-                outputMap,
-                overlayGray,
-                upscaleFactor
+        return try {
+            service.infer(
+                transformedMat = transformedMat,
+                xRatio = xRatio,
+                yRatio = yRatio,
+                upscaleFactor = upscaleFactor,
+                originalWidth = originalWidth,
+                originalHeight = originalHeight
             )
-
-            var resultMask = overlayGray
-
-            // If target original size provided, remove letterbox padding and resize back to original
-            if (originalWidth != null && originalHeight != null && originalWidth > 0 && originalHeight > 0) {
-                try {
-                    // Compute content region size in model space using ratios from preprocessing
-                    val contentW = max(1, min(this.inputWidth, (this.inputWidth / xRatio).toInt()))
-                    val contentH = max(
-                        1,
-                        min(this.inputHeight, (this.inputHeight / yRatio).toInt())
-                    )
-
-                    val roi = Rect(0, 0, contentW, contentH)
-                    val cropped = Mat(resultMask, roi).clone()
-                    val resized = Mat()
-                    Imgproc.resize(
-                        cropped,
-                        resized,
-                        Size(originalWidth.toDouble(), originalHeight.toDouble()),
-                        0.0,
-                        0.0,
-                        Imgproc.INTER_NEAREST // preserve mask edges
-                    )
-                    cropped.release()
-                    // Release original overlay only if it's not the same as resized
-                    if (resultMask !== resized) {
-                        resultMask.release()
-                    }
-                    resultMask = resized
-                } catch (e: Exception) {
-                    AppLogger.warn("Failed to resize mask back to original size: ${e.message}")
-                }
-            }
-
-            return resultMask
-
         } catch (e: Exception) {
-            AppLogger.debug("TFLite inference failed: ${e.message}")
-            e.printStackTrace()
-            // Return current state of overlayGray even on error
-            return overlayGray
+            AppLogger.warn("YoloInferenceTFLite adapter inference failed: ${e.message}")
+            // Fall back to an empty white mask sized to the provided transformedMat
+            val w = transformedMat.cols().coerceAtLeast(1)
+            val h = transformedMat.rows().coerceAtLeast(1)
+            val overlay = Mat.ones(h, w, CvType.CV_8UC1)
+            overlay.setTo(Scalar(255.0))
+            overlay
         }
     }
-
+    
     /**
      * Converts an OpenCV Mat to ByteBuffer for TensorFlow Lite input.
      * Assumes 'mat' is already:
@@ -890,7 +763,7 @@ class YoloInferenceTFLite(private val context: Context) {
         val targetWidth = dWidthInt.coerceAtLeast(1)
         val targetHeight = (boxH * inputHeight * upscaleFactor).toInt().coerceAtLeast(1)
         AppLogger.debug("Step 4: Resizing mask from ${cropW}x${cropH} to ${targetWidth}x${targetHeight}")
-        if ((targetWidth == 1) and (targetHeight == 1)) {
+        if (targetWidth == 1 && targetHeight == 1) {
             AppLogger.debug("Ahrg in Step 4: target size is 1x1 pixel.")
         }
         val resizedMask = Mat()
@@ -951,9 +824,13 @@ class YoloInferenceTFLite(private val context: Context) {
 
 
     fun close() {
-        interpreter?.close()
-        isInitialized = false
-        AppLogger.debug("TFLite YoloInference closed.")
+        try {
+            service.close()
+        } catch (_: Exception) {
+        } finally {
+            isInitialized = false
+        }
+        AppLogger.debug("YoloInferenceTFLite adapter closed.")
     }
 }
 
