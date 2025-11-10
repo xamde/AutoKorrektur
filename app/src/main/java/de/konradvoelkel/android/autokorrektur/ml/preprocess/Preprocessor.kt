@@ -1,5 +1,3 @@
-@file:Suppress("KDocUnresolvedReference")
-
 package de.konradvoelkel.android.autokorrektur.ml.preprocess
 
 import org.opencv.core.Mat
@@ -12,9 +10,9 @@ interface Preprocessor {
     /**
      * Prepares [rgbMat] for the model with the given input dimensions.
      * Returns a [PreprocessResult] that includes:
-     * - [forEngine]: 8UC3 RGB Mat sized to [targetW]x[targetH]
-     * - [forBitmap]: 8UC3 RGB Mat sized to [targetW]x[targetH] (for UI display)
-     * - [xRatio]/[yRatio]: scale factors used during letterboxing
+     * - [PreprocessResult.forEngine]: 8UC3 RGB Mat sized to [targetW]x[targetH]
+     * - [PreprocessResult.forBitmap]: 8UC3 RGB Mat sized to [targetW]x[targetH] (for UI display)
+     * - [PreprocessResult.xRatio]/[PreprocessResult.yRatio]: scale factors used during letterboxing
      */
     fun prepare(rgbMat: Mat, targetW: Int, targetH: Int): PreprocessResult
 }
