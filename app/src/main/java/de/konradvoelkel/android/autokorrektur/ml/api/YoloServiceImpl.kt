@@ -157,9 +157,12 @@ class YoloServiceImpl(
         // Optional: remove letterbox padding and/or resize back to original
         var maskMat = overlay
         try {
-            val hasOriginal = (originalWidth != null && originalHeight != null && originalWidth > 0 && originalHeight > 0)
-            val contentW = kotlin.math.max(1, kotlin.math.min(shapes.inputW, (shapes.inputW / xRatio).toInt()))
-            val contentH = kotlin.math.max(1, kotlin.math.min(shapes.inputH, (shapes.inputH / yRatio).toInt()))
+            val hasOriginal =
+                (originalWidth != null && originalHeight != null && originalWidth > 0 && originalHeight > 0)
+            val contentW =
+                kotlin.math.max(1, kotlin.math.min(shapes.inputW, (shapes.inputW / xRatio).toInt()))
+            val contentH =
+                kotlin.math.max(1, kotlin.math.min(shapes.inputH, (shapes.inputH / yRatio).toInt()))
 
             if (contentW != shapes.inputW || contentH != shapes.inputH) {
                 val roi = Rect(0, 0, contentW, contentH)

@@ -72,7 +72,8 @@ class MiGanInference(private val context: Context) {
         val originalHeight = processedImage.rows()
         val originalWidth = processedImage.cols()
 
-        val modelInputSize = org.opencv.core.Size(MODEL_INPUT_SIZE.toDouble(), MODEL_INPUT_SIZE.toDouble())
+        val modelInputSize =
+            org.opencv.core.Size(MODEL_INPUT_SIZE.toDouble(), MODEL_INPUT_SIZE.toDouble())
         val resizedImage = Mat()
         Imgproc.resize(processedImage, resizedImage, modelInputSize)
         val resizedMask = Mat()
@@ -82,8 +83,20 @@ class MiGanInference(private val context: Context) {
         val maskArray = orderInCHWAsBytes(resizedMask)
 
         val inputs = mapOf(
-            "image" to createTensor(imageArray, 1, 3, MODEL_INPUT_SIZE.toLong(), MODEL_INPUT_SIZE.toLong()),
-            "mask" to createTensor(maskArray, 1, 1, MODEL_INPUT_SIZE.toLong(), MODEL_INPUT_SIZE.toLong())
+            "image" to createTensor(
+                imageArray,
+                1,
+                3,
+                MODEL_INPUT_SIZE.toLong(),
+                MODEL_INPUT_SIZE.toLong()
+            ),
+            "mask" to createTensor(
+                maskArray,
+                1,
+                1,
+                MODEL_INPUT_SIZE.toLong(),
+                MODEL_INPUT_SIZE.toLong()
+            )
         )
 
         val outputs = miGanSession!!.run(inputs)
@@ -96,7 +109,11 @@ class MiGanInference(private val context: Context) {
         modelOutputMat.put(0, 0, outputHWC)
 
         val finalResultMat = Mat()
-        Imgproc.resize(modelOutputMat, finalResultMat, org.opencv.core.Size(originalWidth.toDouble(), originalHeight.toDouble()))
+        Imgproc.resize(
+            modelOutputMat,
+            finalResultMat,
+            org.opencv.core.Size(originalWidth.toDouble(), originalHeight.toDouble())
+        )
 
         // Clean up
         inputs.values.forEach { it.close() }
@@ -136,17 +153,35 @@ class MiGanInference(private val context: Context) {
 
         if (processedMask.rows() != imageMat.rows() || processedMask.cols() != imageMat.cols()) {
             val resizedMask = Mat()
-            Imgproc.resize(processedMask, resizedMask, imageMat.size(), 0.0, 0.0, Imgproc.INTER_NEAREST)
+            Imgproc.resize(
+                processedMask,
+                resizedMask,
+                imageMat.size(),
+                0.0,
+                0.0,
+                Imgproc.INTER_NEAREST
+            )
             processedMask.release()
             return resizedMask
         }
 
         return processedMask
     }
-    
-    private fun createTensor(data: ByteArray, batchSize: Long, channels: Long, height: Long, width: Long): OnnxTensor {
+
+    private fun createTensor(
+        data: ByteArray,
+        batchSize: Long,
+        channels: Long,
+        height: Long,
+        width: Long
+    ): OnnxTensor {
         val shape = longArrayOf(batchSize, channels, height, width)
-        return OnnxTensor.createTensor(ortEnvironment, ByteBuffer.wrap(data), shape, OnnxJavaType.UINT8)
+        return OnnxTensor.createTensor(
+            ortEnvironment,
+            ByteBuffer.wrap(data),
+            shape,
+            OnnxJavaType.UINT8
+        )
     }
 
     private fun getOutputData(outputTensor: ai.onnxruntime.OnnxValue): Any? {
@@ -214,6 +249,7 @@ class MiGanInference(private val context: Context) {
                     else -> throw IllegalArgumentException("Could not extract usable data from nested array")
                 }
             }
+
             else -> throw IllegalArgumentException("Unexpected model output type: ${outputData?.javaClass?.name}")
         }
 
@@ -261,7 +297,8 @@ class MiGanInference(private val context: Context) {
             for (w in 0 until width) {
                 for (c in 0 until 3) {
                     val chwIndex = c * size + h * width + w
-                    val value = if (chwIndex < floatData.size) floatData[chwIndex] * 255.0f else 0.0f
+                    val value =
+                        if (chwIndex < floatData.size) floatData[chwIndex] * 255.0f else 0.0f
                     hwcData[(h * width + w) * 3 + c] = value.coerceIn(0f, 255f).toInt().toByte()
                 }
             }

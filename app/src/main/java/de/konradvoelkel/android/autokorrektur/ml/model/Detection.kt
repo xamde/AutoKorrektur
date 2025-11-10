@@ -19,12 +19,12 @@ data class Detection(
         if (this === other) return true
         if (other !is Detection) return false
         return x == other.x &&
-            y == other.y &&
-            width == other.width &&
-            height == other.height &&
-            confidence == other.confidence &&
-            classId == other.classId &&
-            maskCoefficients.contentEquals(other.maskCoefficients)
+                y == other.y &&
+                width == other.width &&
+                height == other.height &&
+                confidence == other.confidence &&
+                classId == other.classId &&
+                maskCoefficients.contentEquals(other.maskCoefficients)
     }
 
     override fun hashCode(): Int {

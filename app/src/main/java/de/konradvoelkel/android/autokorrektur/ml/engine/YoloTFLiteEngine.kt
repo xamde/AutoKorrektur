@@ -148,7 +148,11 @@ class YoloTFLiteEngine(private val context: Context) {
                 if (rgbMat.rows() != inputH || rgbMat.cols() != inputW) {
                     // Resize into a temporary Mat to match model input
                     val resized = Mat()
-                    Imgproc.resize(rgbMat, resized, org.opencv.core.Size(inputW.toDouble(), inputH.toDouble()))
+                    Imgproc.resize(
+                        rgbMat,
+                        resized,
+                        org.opencv.core.Size(inputW.toDouble(), inputH.toDouble())
+                    )
                     try {
                         matToByteBuffer(resized, inputBuffer!!)
                     } finally {
@@ -175,7 +179,11 @@ class YoloTFLiteEngine(private val context: Context) {
                 protoCopy.rewind()
                 return RawOutputs(detCopy, protoCopy, shapes())
             } catch (e: Exception) {
-                val matType = try { CvType.typeToString(rgbMat.type()) } catch (_: Exception) { "?" }
+                val matType = try {
+                    CvType.typeToString(rgbMat.type())
+                } catch (_: Exception) {
+                    "?"
+                }
                 val msg = buildString {
                     append("TFLite run failed: ")
                     append(e.message)
