@@ -6,7 +6,11 @@ import org.opencv.core.Mat
 
 /** Public facade for YOLO inference used by the app. */
 interface YoloService {
-    fun initialize(modelName: String = "yolo11s", useFP16: Boolean = false, config: YoloConfig = YoloConfig())
+    fun initialize(
+        modelName: String = "yolo11s",
+        useFP16: Boolean = false,
+        config: YoloConfig = YoloConfig()
+    )
 
     /**
      * Runs inference and returns an overlay mask Mat (CV_8UC1) aligned to the model input size.

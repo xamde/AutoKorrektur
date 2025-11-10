@@ -1,4 +1,5 @@
 @file:Suppress("unused", "UNUSED_PARAMETER", "SameParameterValue")
+
 package de.konradvoelkel.android.autokorrektur.ml
 
 import android.annotation.SuppressLint
@@ -126,12 +127,6 @@ class YoloInferenceTFLite(private val context: Context) {
             overlay
         }
     }
-    
-
-
-
-
-
 
 
     private fun calculateIoU(det1: Detection, det2: Detection): Float {

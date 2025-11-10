@@ -16,10 +16,10 @@ data class YoloConfig(
         if (this === other) return true
         if (other !is YoloConfig) return false
         return scoreThreshold == other.scoreThreshold &&
-            iouThreshold == other.iouThreshold &&
-            topAmountPerClass == other.topAmountPerClass &&
-            vehicleClassIndices.contentEquals(other.vehicleClassIndices) &&
-            labels.contentEquals(other.labels)
+                iouThreshold == other.iouThreshold &&
+                topAmountPerClass == other.topAmountPerClass &&
+                vehicleClassIndices.contentEquals(other.vehicleClassIndices) &&
+                labels.contentEquals(other.labels)
     }
 
     override fun hashCode(): Int {

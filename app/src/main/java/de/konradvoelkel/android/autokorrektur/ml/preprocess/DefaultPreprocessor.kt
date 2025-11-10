@@ -30,7 +30,8 @@ class DefaultPreprocessor(
         )
 
         // 2) Pad to square (letterbox) with black borders
-        val pr = ImageProcessingUtils.computeSquarePaddingAndRatios(resizedMat.cols(), resizedMat.rows())
+        val pr =
+            ImageProcessingUtils.computeSquarePaddingAndRatios(resizedMat.cols(), resizedMat.rows())
         val paddedMat = Mat()
         Core.copyMakeBorder(
             resizedMat,

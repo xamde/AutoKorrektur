@@ -31,7 +31,12 @@ class YoloPostprocessorTest {
         val b = Detection(0.12f, 0.12f, 0.4f, 0.4f, 0.90f, 2, FloatArray(32))
         val c = Detection(0.6f, 0.6f, 0.2f, 0.2f, 0.70f, 2, FloatArray(32))
 
-        val out = YoloPostprocessor.applyNMS(listOf(a, b, c), iouThreshold = 0.5f, topAmountPerClass = 100, numClasses = 80)
+        val out = YoloPostprocessor.applyNMS(
+            listOf(a, b, c),
+            iouThreshold = 0.5f,
+            topAmountPerClass = 100,
+            numClasses = 80
+        )
         // a and b overlap heavily -> keep only the highest confidence (a), plus c
         assertEquals(2, out.size)
         assertTrue(out.contains(a))
@@ -104,7 +109,12 @@ class YoloPostprocessorTest {
         // Two overlapping high-confidence of same class -> NMS keeps one
         val a = Detection(0.1f, 0.1f, 0.4f, 0.4f, 0.95f, 2, FloatArray(32))
         val b = Detection(0.12f, 0.12f, 0.4f, 0.4f, 0.90f, 2, FloatArray(32))
-        val detections = YoloPostprocessor.applyNMS(listOf(a, b), iouThreshold = 0.5f, topAmountPerClass = 1, numClasses = 80)
+        val detections = YoloPostprocessor.applyNMS(
+            listOf(a, b),
+            iouThreshold = 0.5f,
+            topAmountPerClass = 1,
+            numClasses = 80
+        )
         assertEquals(1, detections.size)
     }
 }

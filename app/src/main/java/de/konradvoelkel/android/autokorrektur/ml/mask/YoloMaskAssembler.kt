@@ -51,10 +51,12 @@ object YoloMaskAssembler {
         require(prototypeMasksData.size == numPrototypesChannels * prototypeHeight * prototypeWidth) {
             "Prototype data size mismatch: expected ${numPrototypesChannels * prototypeHeight * prototypeWidth}, got ${prototypeMasksData.size}"
         }
-        val prototypeMats = List(numPrototypesChannels) { Mat(prototypeHeight, prototypeWidth, CvType.CV_32FC1) }
+        val prototypeMats =
+            List(numPrototypesChannels) { Mat(prototypeHeight, prototypeWidth, CvType.CV_32FC1) }
         for (y in 0 until prototypeHeight) {
             for (x in 0 until prototypeWidth) {
-                val base = (y * prototypeWidth * numPrototypesChannels) + (x * numPrototypesChannels)
+                val base =
+                    (y * prototypeWidth * numPrototypesChannels) + (x * numPrototypesChannels)
                 for (c in 0 until numPrototypesChannels) {
                     val value = prototypeMasksData[base + c]
                     prototypeMats[c].put(y, x, value.toDouble())
@@ -103,8 +105,10 @@ object YoloMaskAssembler {
         // Crop area in prototype grid corresponding to the detection bbox
         val cropX = (boxX * prototypeWidth).toInt().coerceIn(0, prototypeWidth - 1)
         val cropY = (boxY * prototypeHeight).toInt().coerceIn(0, prototypeHeight - 1)
-        val cropW = (boxW * prototypeWidth).toInt().coerceAtLeast(1).coerceAtMost(prototypeWidth - cropX)
-        val cropH = (boxH * prototypeHeight).toInt().coerceAtLeast(1).coerceAtMost(prototypeHeight - cropY)
+        val cropW =
+            (boxW * prototypeWidth).toInt().coerceAtLeast(1).coerceAtMost(prototypeWidth - cropX)
+        val cropH =
+            (boxH * prototypeHeight).toInt().coerceAtLeast(1).coerceAtMost(prototypeHeight - cropY)
         val cropRect = Rect(cropX, cropY, cropW, cropH)
         AppLogger.debug("Cropping prototypes: x=$cropX, y=$cropY, w=$cropW, h=$cropH (from ${prototypeWidth}x${prototypeHeight})")
 
@@ -225,8 +229,14 @@ object YoloMaskAssembler {
         val roiRect = Rect(
             kotlin.math.max(0, targetX.toInt()),
             kotlin.math.max(0, targetY.toInt()),
-            kotlin.math.min(upscaledMaskWidth.toInt(), inputWidth - kotlin.math.max(0, targetX.toInt())),
-            kotlin.math.min(upscaledMaskHeight.toInt(), inputHeight - kotlin.math.max(0, targetY.toInt()))
+            kotlin.math.min(
+                upscaledMaskWidth.toInt(),
+                inputWidth - kotlin.math.max(0, targetX.toInt())
+            ),
+            kotlin.math.min(
+                upscaledMaskHeight.toInt(),
+                inputHeight - kotlin.math.max(0, targetY.toInt())
+            )
         )
 
         val maskRoiRect = Rect(
@@ -289,8 +299,14 @@ object YoloMaskAssembler {
         val roiRect = Rect(
             kotlin.math.max(0, targetX.toInt()),
             kotlin.math.max(0, targetY.toInt()),
-            kotlin.math.min(upscaledMaskWidth.toInt(), inputWidth - kotlin.math.max(0, targetX.toInt())),
-            kotlin.math.min(upscaledMaskHeight.toInt(), inputHeight - kotlin.math.max(0, targetY.toInt()))
+            kotlin.math.min(
+                upscaledMaskWidth.toInt(),
+                inputWidth - kotlin.math.max(0, targetX.toInt())
+            ),
+            kotlin.math.min(
+                upscaledMaskHeight.toInt(),
+                inputHeight - kotlin.math.max(0, targetY.toInt())
+            )
         )
 
         val maskRoiRect = Rect(

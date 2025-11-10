@@ -15,10 +15,10 @@ data class Shapes(
         if (this === other) return true
         if (other !is Shapes) return false
         return inputH == other.inputH &&
-            inputW == other.inputW &&
-            inputC == other.inputC &&
-            detShape.contentEquals(other.detShape) &&
-            protoShape.contentEquals(other.protoShape)
+                inputW == other.inputW &&
+                inputC == other.inputC &&
+                detShape.contentEquals(other.detShape) &&
+                protoShape.contentEquals(other.protoShape)
     }
 
     override fun hashCode(): Int {
