@@ -1,36 +1,13 @@
 package de.konradvoelkel.android.autokorrektur.ml
 
-import android.content.Context
-import de.konradvoelkel.android.autokorrektur.utils.AppLogger
-import io.mockk.Runs
-import io.mockk.every
-import io.mockk.just
-import io.mockk.mockkObject
+import de.konradvoelkel.android.autokorrektur.ml.post.YoloPostprocessor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
-import org.mockito.Mockito
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 class YoloInferenceParseDetectionsTest {
-
-    private lateinit var appContext: Context
-    private lateinit var yolo: YoloInferenceTFLite
-
-    @Before
-    fun setUp() {
-        // Mock AppLogger to avoid android.util.Log calls during JVM tests
-        mockkObject(AppLogger)
-        every { AppLogger.debug(any(), any()) } just Runs
-        every { AppLogger.info(any(), any()) } just Runs
-        every { AppLogger.warn(any(), any()) } just Runs
-        every { AppLogger.error(any(), any()) } just Runs
-
-        appContext = Mockito.mock(Context::class.java)
-        yolo = YoloInferenceTFLite(appContext)
-    }
 
     @Test
     fun parseDetections_returnsExpectedDetections_forSmallSyntheticBuffer() {
@@ -85,27 +62,16 @@ class YoloInferenceParseDetectionsTest {
 
         val buffer = ByteBuffer.allocateDirect(floats.size * 4).order(ByteOrder.nativeOrder())
         buffer.asFloatBuffer().put(floats)
+        buffer.rewind()
 
-        // When invoking the private parseDetections via reflection
-        val method = YoloInferenceTFLite::class.java.getDeclaredMethod(
-            "parseDetections",
-            ByteBuffer::class.java,
-            Float::class.javaPrimitiveType,
-            Int::class.javaPrimitiveType,
-            Int::class.javaPrimitiveType,
-            Int::class.javaPrimitiveType
+        val result = YoloPostprocessor.parseDetections(
+            buffer = buffer,
+            numProposals = numProposals,
+            featuresPerProposal = featuresPerProposal,
+            numClasses = numClasses,
+            scoreThreshold = 0.6f,
+            allowedClassIndices = intArrayOf(2)
         )
-        method.isAccessible = true
-
-        @Suppress("UNCHECKED_CAST")
-        val result = method.invoke(
-            yolo,
-            buffer,
-            0.6f, // threshold
-            numProposals,
-            featuresPerProposal,
-            numClasses
-        ) as List<Detection>
 
         // Then: only proposal 0 should remain as a vehicle class (car=2)
         assertEquals(1, result.size)
