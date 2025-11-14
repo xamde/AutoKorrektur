@@ -35,7 +35,9 @@ import com.google.android.material.snackbar.Snackbar
 import de.konradvoelkel.android.autokorrektur.databinding.FragmentFirstBinding
 import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
 import de.konradvoelkel.android.autokorrektur.ml.MiGanInference
-import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
+import de.konradvoelkel.android.autokorrektur.ml.api.YoloService
+import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
+import de.konradvoelkel.android.autokorrektur.ml.config.YoloConfig
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import de.konradvoelkel.android.autokorrektur.utils.MaskOverlayUtils
 import org.opencv.android.Utils
@@ -83,7 +85,7 @@ class FirstFragment : Fragment() {
 
     // ML inference objects
     private lateinit var imageProcessor: ImageProcessor
-    private lateinit var yoloInference: YoloInferenceTFLite
+    private lateinit var yoloInference: YoloService
     private lateinit var miGanInference: MiGanInference
     private var mlComponentsInitialized = false
 
@@ -259,7 +261,7 @@ class FirstFragment : Fragment() {
         try {
             AppLogger.debug("Creating ML inference objects")
             imageProcessor = ImageProcessor(requireContext())
-            yoloInference = YoloInferenceTFLite(requireContext())
+            yoloInference = YoloServiceImpl(requireContext())
             miGanInference = MiGanInference(requireContext())
             mlComponentsInitialized = true
             AppLogger.info("ML inference objects created successfully")
@@ -698,8 +700,17 @@ class FirstFragment : Fragment() {
                     // Initialize ML inference objects if not already done
                     try {
                         AppLogger.debug("Checking if YOLO inference needs initialization")
-                        yoloInference.initialize()
-                        AppLogger.debug("YOLO inference initialized successfully")
+                        // Pass segmentation model choice to initialize
+                        val segModel = binding.segModel.selectedItem.toString().lowercase()
+                        val useFP16 = segModel.contains("fp16")
+                        val modelName = when {
+                            segModel.contains("small") -> "yolo11s"
+                            segModel.contains("nano") -> "yolo11n"
+                            segModel.contains("medium") -> "yolo11m"
+                            else -> "yolo11s" // Default
+                        }
+                        yoloInference.initialize(modelName = modelName, useFP16 = useFP16)
+                        AppLogger.debug("YOLO inference initialized successfully with model: $modelName, useFP16: $useFP16")
 
                         AppLogger.debug("Checking if Mi-GAN inference needs initialization")
                         miGanInference.initialize()
@@ -721,7 +732,7 @@ class FirstFragment : Fragment() {
                     val downscaleMp = getDownscaleMpFromSpinner()
                     val maskUpscale = getMaskUpscaleFromSlider()
                     val scoreThreshold = getScoreThresholdFromSlider()
-                    val downshift = getDownshiftFromSlider()
+                    val downshift = getDownshiftFromSlider() // This is now unused, kept for logging consistency
 
                     AppLogger.debug("Parameters - downscaleMp: $downscaleMp, maskUpscale: $maskUpscale, scoreThreshold: $scoreThreshold, downshift: $downshift")
 
@@ -751,18 +762,18 @@ class FirstFragment : Fragment() {
                     // Step 2: Run YOLO inference to get segmentation mask
                     AppLogger.debug("Step 2: Running YOLO inference")
                     val maskMat = try {
-                        yoloInference.inferYolo(
+                        val config = YoloConfig(scoreThreshold = scoreThreshold)
+                        // Note: downshiftFactor is deprecated and no longer used
+                        val result = yoloInference.inferDetailed(
                             transformedMat = processedImage.transformedMat,
                             xRatio = processedImage.xRatio,
                             yRatio = processedImage.yRatio,
-                            //modelWidth = 640,
-                            //modelHeight = 640,
                             upscaleFactor = maskUpscale,
-                            //scoreThreshold = scoreThreshold,
-                            downshiftFactor = downshift,
                             originalWidth = processedImage.originalMat.cols(),
-                            originalHeight = processedImage.originalMat.rows()
+                            originalHeight = processedImage.originalMat.rows(),
+                            overrideConfig = config
                         )
+                        result.mask
                     } catch (e: Exception) {
                         AppLogger.error("Error during YOLO inference", e)
                         throw Exception("YOLO inference failed: ${e.message}", e)
@@ -1018,9 +1029,18 @@ class FirstFragment : Fragment() {
             try {
                 // Initialize ML inference objects
                 try {
-                    yoloInference.initialize()
+                    // Pass segmentation model choice to initialize
+                    val segModel = binding.segModel.selectedItem.toString().lowercase()
+                    val useFP16 = segModel.contains("fp16")
+                    val modelName = when {
+                        segModel.contains("small") -> "yolo11s"
+                        segModel.contains("nano") -> "yolo11n"
+                        segModel.contains("medium") -> "yolo11m"
+                        else -> "yolo11s" // Default
+                    }
+                    yoloInference.initialize(modelName = modelName, useFP16 = useFP16)
                     miGanInference.initialize()
-                    AppLogger.info("ML inference objects initialized for batch processing")
+                    AppLogger.info("ML inference objects initialized for batch processing with model: $modelName, useFP16: $useFP16")
                 } catch (e: Exception) {
                     AppLogger.error("Failed to initialize ML objects for batch processing", e)
                     throw Exception("Failed to initialize ML models: ${e.message}", e)
@@ -1065,18 +1085,17 @@ class FirstFragment : Fragment() {
                         )
 
                         // Step 2: Run YOLO inference
-                        val maskMat = yoloInference.inferYolo(
+                        val config = YoloConfig(scoreThreshold = scoreThreshold)
+                        val result = yoloInference.inferDetailed(
                             transformedMat = processedImage.transformedMat,
                             xRatio = processedImage.xRatio,
                             yRatio = processedImage.yRatio,
-                            //modelWidth = 640,
-                            //modelHeight = 640,
                             upscaleFactor = maskUpscale,
-                            //scoreThreshold = scoreThreshold,
-                            downshiftFactor = downshift,
                             originalWidth = processedImage.originalMat.cols(),
-                            originalHeight = processedImage.originalMat.rows()
+                            originalHeight = processedImage.originalMat.rows(),
+                            overrideConfig = config
                         )
+                        val maskMat = result.mask
 
                         // Step 3: Run Mi-GAN inference
                         val resultMat = miGanInference.inferMiGan(

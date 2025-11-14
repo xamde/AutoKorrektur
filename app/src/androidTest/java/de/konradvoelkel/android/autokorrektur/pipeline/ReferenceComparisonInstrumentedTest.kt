@@ -4,7 +4,7 @@ import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
-import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
+import de.konradvoelkel.android.autokorrektur.ml.api.YoloService
 import de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest
 import de.konradvoelkel.android.autokorrektur.shared.OpenCvTestUtils
 import de.konradvoelkel.android.autokorrektur.shared.PipelineTestFixtures
@@ -27,7 +27,7 @@ import java.io.File
 @LargeTest
 class ReferenceComparisonInstrumentedTest : AndroidInstrumentedBaseTest() {
 
-    private lateinit var yoloInference: YoloInferenceTFLite
+    private lateinit var yoloInference: YoloService
     private lateinit var imageProcessor: ImageProcessor
     private val tempFiles = mutableListOf<File>()
 
@@ -62,12 +62,11 @@ class ReferenceComparisonInstrumentedTest : AndroidInstrumentedBaseTest() {
             downscaleMp = null
         )
 
-        val resultMask = yoloInference.inferYolo(
+        val resultMask = yoloInference.infer(
             transformedMat = processedImage.transformedMat,
             xRatio = processedImage.xRatio,
             yRatio = processedImage.yRatio,
             upscaleFactor = 1.2f,
-            downshiftFactor = 0.0f,
             originalWidth = processedImage.originalMat.cols(),
             originalHeight = processedImage.originalMat.rows()
         )
@@ -125,12 +124,11 @@ class ReferenceComparisonInstrumentedTest : AndroidInstrumentedBaseTest() {
         )
 
         // 2) Build YOLO mask at original size (black = car), will serve as "allowed difference" mask
-        val mask = yoloInference.inferYolo(
+        val mask = yoloInference.infer(
             transformedMat = processedIn.transformedMat,
             xRatio = processedIn.xRatio,
             yRatio = processedIn.yRatio,
             upscaleFactor = 1.2f,
-            downshiftFactor = 0.0f,
             originalWidth = processedIn.originalMat.cols(),
             originalHeight = processedIn.originalMat.rows()
         )
@@ -170,12 +168,11 @@ class ReferenceComparisonInstrumentedTest : AndroidInstrumentedBaseTest() {
             modelHeight = 640,
             downscaleMp = null
         )
-        val maskAfter = yoloInference.inferYolo(
+        val maskAfter = yoloInference.infer(
             transformedMat = processedOut.transformedMat,
             xRatio = processedOut.xRatio,
             yRatio = processedOut.yRatio,
             upscaleFactor = 1.2f,
-            downshiftFactor = 0.0f,
             originalWidth = processedOut.originalMat.cols(),
             originalHeight = processedOut.originalMat.rows()
         )
