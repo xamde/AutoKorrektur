@@ -3,7 +3,8 @@ package de.konradvoelkel.android.autokorrektur.shared
 import androidx.test.platform.app.InstrumentationRegistry
 import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
 import de.konradvoelkel.android.autokorrektur.ml.MiGanInference
-import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
+import de.konradvoelkel.android.autokorrektur.ml.api.YoloService
+import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
 
 /**
  * Shared, lazily-initialized fixtures for pipeline instrumented tests.
@@ -13,7 +14,7 @@ object PipelineTestFixtures {
     private val appContext get() = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Volatile
-    private var _yolo: YoloInferenceTFLite? = null
+    private var _yolo: YoloService? = null
 
     @Volatile
     private var _migan: MiGanInference? = null
@@ -21,13 +22,13 @@ object PipelineTestFixtures {
     @Volatile
     private var _imageProcessor: ImageProcessor? = null
 
-    fun yolo(): YoloInferenceTFLite {
+    fun yolo(): YoloService {
         var local = _yolo
         if (local == null) {
             synchronized(this) {
                 local = _yolo
                 if (local == null) {
-                    val y = YoloInferenceTFLite(appContext)
+                    val y = YoloServiceImpl(appContext)
                     y.initialize("yolo11s")
                     _yolo = y
                     local = y

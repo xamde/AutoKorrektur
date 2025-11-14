@@ -5,7 +5,8 @@ import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
-import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
+import de.konradvoelkel.android.autokorrektur.ml.api.YoloService
+import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
 import org.junit.After
 import org.junit.AfterClass
 import org.junit.Assert.assertEquals
@@ -32,7 +33,7 @@ class ImageProcessingPipelineTests :
 
 
     companion object {
-        private lateinit var sharedYolo: YoloInferenceTFLite
+        private lateinit var sharedYolo: YoloService
         private lateinit var sharedImageProcessor: ImageProcessor
         private lateinit var sharedMiGan: de.konradvoelkel.android.autokorrektur.ml.MiGanInference
 
@@ -41,7 +42,7 @@ class ImageProcessingPipelineTests :
         fun beforeAll() {
             de.konradvoelkel.android.autokorrektur.shared.AndroidTestUtils.initOpenCV()
             val ctx = InstrumentationRegistry.getInstrumentation().targetContext
-            sharedYolo = YoloInferenceTFLite(ctx)
+            sharedYolo = YoloServiceImpl(ctx)
             sharedYolo.initialize("yolo11s")
             sharedImageProcessor = ImageProcessor(ctx)
             sharedMiGan = de.konradvoelkel.android.autokorrektur.ml.MiGanInference(ctx)
@@ -60,7 +61,7 @@ class ImageProcessingPipelineTests :
         }
     }
 
-    private lateinit var yoloInference: YoloInferenceTFLite
+    private lateinit var yoloInference: YoloService
     private lateinit var imageProcessor: ImageProcessor
     private lateinit var miGanInference: de.konradvoelkel.android.autokorrektur.ml.MiGanInference
     private val tempFiles = mutableListOf<File>()
@@ -142,12 +143,11 @@ class ImageProcessingPipelineTests :
             downscaleMp = null
         )
 
-        val resultMask = yoloInference.inferYolo(
+        val resultMask = yoloInference.infer(
             transformedMat = processedImage.transformedMat,
             xRatio = processedImage.xRatio,
             yRatio = processedImage.yRatio,
             upscaleFactor = 1.2f,
-            downshiftFactor = 0.0f,
             originalWidth = processedImage.originalMat.cols(),
             originalHeight = processedImage.originalMat.rows()
         )
@@ -179,12 +179,11 @@ class ImageProcessingPipelineTests :
             downscaleMp = null
         )
 
-        val resultMask = yoloInference.inferYolo(
+        val resultMask = yoloInference.infer(
             transformedMat = processedImage.transformedMat,
             xRatio = processedImage.xRatio,
             yRatio = processedImage.yRatio,
             upscaleFactor = 1.2f,
-            downshiftFactor = 0.0f,
             originalWidth = processedImage.originalMat.cols(),
             originalHeight = processedImage.originalMat.rows()
         )
@@ -216,12 +215,11 @@ class ImageProcessingPipelineTests :
             downscaleMp = null
         )
 
-        val resultMask = yoloInference.inferYolo(
+        val resultMask = yoloInference.infer(
             transformedMat = processedImage.transformedMat,
             xRatio = processedImage.xRatio,
             yRatio = processedImage.yRatio,
             upscaleFactor = 1.2f,
-            downshiftFactor = 0.0f,
             originalWidth = processedImage.originalMat.cols(),
             originalHeight = processedImage.originalMat.rows()
         )
@@ -246,12 +244,11 @@ class ImageProcessingPipelineTests :
             downscaleMp = null
         )
 
-        val resultMask = yoloInference.inferYolo(
+        val resultMask = yoloInference.infer(
             transformedMat = processedImage.transformedMat,
             xRatio = processedImage.xRatio,
             yRatio = processedImage.yRatio,
             upscaleFactor = 1.2f,
-            downshiftFactor = 0.0f,
             originalWidth = processedImage.originalMat.cols(),
             originalHeight = processedImage.originalMat.rows()
         )
@@ -283,12 +280,11 @@ class ImageProcessingPipelineTests :
             downscaleMp = null
         )
 
-        val resultMask = yoloInference.inferYolo(
+        val resultMask = yoloInference.infer(
             transformedMat = processedImage.transformedMat,
             xRatio = processedImage.xRatio,
             yRatio = processedImage.yRatio,
             upscaleFactor = 1.2f,
-            downshiftFactor = 0.0f,
             originalWidth = processedImage.originalMat.cols(),
             originalHeight = processedImage.originalMat.rows()
         )
@@ -417,12 +413,11 @@ class ImageProcessingPipelineTests :
             downscaleMp = null
         )
 
-        val yoloMaskOnOutput = yoloInference.inferYolo(
+        val yoloMaskOnOutput = yoloInference.infer(
             transformedMat = processedOut.transformedMat,
             xRatio = processedOut.xRatio,
             yRatio = processedOut.yRatio,
             upscaleFactor = 1.2f,
-            downshiftFactor = 0.0f,
             originalWidth = processedOut.originalMat.cols(),
             originalHeight = processedOut.originalMat.rows()
         )
@@ -521,12 +516,11 @@ class ImageProcessingPipelineTests :
         )
 
         // 2) Build YOLO mask at original size (black = car), will serve as "allowed difference" mask
-        val mask = yoloInference.inferYolo(
+        val mask = yoloInference.infer(
             transformedMat = processedIn.transformedMat,
             xRatio = processedIn.xRatio,
             yRatio = processedIn.yRatio,
             upscaleFactor = 1.2f,
-            downshiftFactor = 0.0f,
             originalWidth = processedIn.originalMat.cols(),
             originalHeight = processedIn.originalMat.rows()
         )
@@ -591,12 +585,11 @@ class ImageProcessingPipelineTests :
             modelHeight = 640,
             downscaleMp = null
         )
-        val maskAfter = yoloInference.inferYolo(
+        val maskAfter = yoloInference.infer(
             transformedMat = processedOut.transformedMat,
             xRatio = processedOut.xRatio,
             yRatio = processedOut.yRatio,
             upscaleFactor = 1.2f,
-            downshiftFactor = 0.0f,
             originalWidth = processedOut.originalMat.cols(),
             originalHeight = processedOut.originalMat.rows()
         )

@@ -5,7 +5,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
 import de.konradvoelkel.android.autokorrektur.ml.MiGanInference
-import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
+import de.konradvoelkel.android.autokorrektur.ml.api.YoloService
 import de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest
 import de.konradvoelkel.android.autokorrektur.shared.OpenCvTestUtils
 import de.konradvoelkel.android.autokorrektur.shared.PipelineTestFixtures
@@ -30,7 +30,7 @@ import java.io.File
 @MediumTest
 class MiGanInpaintingInstrumentedTest : AndroidInstrumentedBaseTest() {
 
-    private lateinit var yolo: YoloInferenceTFLite
+    private lateinit var yolo: YoloService
     private lateinit var imageProcessor: ImageProcessor
     private lateinit var migan: MiGanInference
     private val tempFiles = mutableListOf<File>()
@@ -104,12 +104,11 @@ class MiGanInpaintingInstrumentedTest : AndroidInstrumentedBaseTest() {
             downscaleMp = null
         )
 
-        val yoloMaskOnOutput = yolo.inferYolo(
+        val yoloMaskOnOutput = yolo.infer(
             transformedMat = processedOut.transformedMat,
             xRatio = processedOut.xRatio,
             yRatio = processedOut.yRatio,
             upscaleFactor = 1.2f,
-            downshiftFactor = 0.0f,
             originalWidth = processedOut.originalMat.cols(),
             originalHeight = processedOut.originalMat.rows()
         )
