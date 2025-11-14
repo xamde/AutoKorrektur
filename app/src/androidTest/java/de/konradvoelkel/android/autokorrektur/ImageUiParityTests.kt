@@ -4,7 +4,8 @@ import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
 import de.konradvoelkel.android.autokorrektur.ml.MiGanInference
-import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
+import de.konradvoelkel.android.autokorrektur.ml.api.YoloService
+import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
 import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Before
@@ -20,7 +21,7 @@ import java.io.File
 class ImageUiParityTests :
     de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest() {
 
-    private lateinit var yolo: YoloInferenceTFLite
+    private lateinit var yolo: YoloService
     private lateinit var imageProcessor: ImageProcessor
     private lateinit var migan: MiGanInference
 
@@ -28,7 +29,7 @@ class ImageUiParityTests :
 
     @Before
     fun setup() {
-        yolo = YoloInferenceTFLite(appContext)
+        yolo = YoloServiceImpl(appContext)
         yolo.initialize("yolo11s")
         imageProcessor = ImageProcessor(appContext)
         migan = MiGanInference(appContext)
@@ -57,12 +58,11 @@ class ImageUiParityTests :
         )
 
         // Build mask at original size (black = car, white = background)
-        val mask = yolo.inferYolo(
+        val mask = yolo.infer(
             transformedMat = processed.transformedMat,
             xRatio = processed.xRatio,
             yRatio = processed.yRatio,
             upscaleFactor = 1.2f,
-            downshiftFactor = 0.0f,
             originalWidth = processed.originalMat.cols(),
             originalHeight = processed.originalMat.rows()
         )
