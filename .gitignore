@@ -22,7 +22,6 @@ local.properties
 /native/
 /kotlin-profile/
 opencv-sdk
-gradlew
 .idea/deploymentTargetSelector.xml
 .idea/androidTestResultsUserPreferences.xml
 /AndroidKorrektur/.tmp/
