@@ -4,7 +4,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
 import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
 import de.konradvoelkel.android.autokorrektur.ml.MiGanInference
-import de.konradvoelkel.android.autokorrektur.ml.YoloInferenceTFLite
+import de.konradvoelkel.android.autokorrektur.ml.api.YoloService
+import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -28,14 +29,14 @@ class MlComponentTests :
     }
 
     @Test
-    fun testYoloInferenceInstantiationAndInitialization() {
-        var yoloInference: YoloInferenceTFLite? = null
+    fun testYoloServiceInstantiationAndInitialization() {
+        var yoloInference: YoloService? = null
         try {
-            yoloInference = YoloInferenceTFLite(appContext)
-            assertNotNull("YoloInferenceTFLite should not be null", yoloInference)
+            yoloInference = YoloServiceImpl(appContext)
+            assertNotNull("YoloService should not be null", yoloInference)
             yoloInference.initialize("yolo11s")
         } catch (e: Exception) {
-            fail("YoloInferenceTFLite initialization failed: ${e.message}")
+            fail("YoloService initialization failed: ${e.message}")
         } finally {
             yoloInference?.close()
         }
@@ -57,27 +58,27 @@ class MlComponentTests :
     }
 
     @Test
-    fun testTFLiteYoloInference() {
+    fun testYoloServiceModels() {
         try {
-            val yoloTFLite = YoloInferenceTFLite(appContext)
-            assertNotNull("YoloInferenceTFLite should not be null", yoloTFLite)
+            val yoloService = YoloServiceImpl(appContext)
+            assertNotNull("YoloService should not be null", yoloService)
 
             try {
-                yoloTFLite.initialize("yolo11s", useFP16 = true)
-                yoloTFLite.close()
+                yoloService.initialize("yolo11s", useFP16 = true)
+                yoloService.close()
             } catch (_: Exception) {
                 // ignore if FP16 model is not available
             }
 
             try {
-                yoloTFLite.initialize("yolo11s", useFP16 = false)
-                yoloTFLite.close()
+                yoloService.initialize("yolo11s", useFP16 = false)
+                yoloService.close()
             } catch (e: Exception) {
-                fail("TFLite YOLO FP32 initialization failed: ${e.message}")
+                fail("YoloService (FP32) initialization failed: ${e.message}")
             }
 
         } catch (e: Exception) {
-            fail("TFLite YOLO creation should not crash: ${e.message}")
+            fail("YoloService creation should not crash: ${e.message}")
         }
     }
 
