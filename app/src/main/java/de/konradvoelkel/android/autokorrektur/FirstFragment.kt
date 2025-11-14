@@ -31,9 +31,16 @@ import androidx.core.content.FileProvider
 import androidx.core.graphics.createBitmap
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.snackbar.Snackbar
 import de.konradvoelkel.android.autokorrektur.databinding.FragmentFirstBinding
+import de.konradvoelkel.android.autokorrektur.viewmodel.MainViewModel
+import de.konradvoelkel.android.autokorrektur.viewmodel.MainViewModelFactory
 import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import de.konradvoelkel.android.autokorrektur.ml.MiGanInference
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloService
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
@@ -58,7 +65,6 @@ data class BatchProcessingResult(
     val processingTimeMs: Long,
     val maskUpscale: Float,
     val scoreThreshold: Float,
-    val downshift: Float,
     val downscaleMp: String,
     val segmentationModel: String,
     val success: Boolean,
@@ -81,13 +87,19 @@ class FirstFragment : Fragment() {
     private var processedBitmaps: MutableList<Bitmap> = mutableListOf()
     private var photoFile: File? = null
     private var batchProcessingResults: MutableList<BatchProcessingResult> = mutableListOf()
-    private var isProcessingBatch = false
+
+    private val viewModel: MainViewModel by viewModels {
+        MainViewModelFactory(
+            ImageProcessor(requireContext()),
+            YoloServiceImpl(requireContext()),
+            MiGanInference(requireContext())
+        )
+    }
 
     // ML inference objects
     private lateinit var imageProcessor: ImageProcessor
     private lateinit var yoloInference: YoloService
     private lateinit var miGanInference: MiGanInference
-    private var mlComponentsInitialized = false
 
     // Activity result launcher for image selection
     private val selectImageLauncher = registerForActivityResult(
@@ -263,11 +275,9 @@ class FirstFragment : Fragment() {
             imageProcessor = ImageProcessor(requireContext())
             yoloInference = YoloServiceImpl(requireContext())
             miGanInference = MiGanInference(requireContext())
-            mlComponentsInitialized = true
             AppLogger.info("ML inference objects created successfully")
         } catch (e: Exception) {
             AppLogger.error("Failed to create ML inference objects", e)
-            mlComponentsInitialized = false
             Snackbar.make(
                 binding.root,
                 "Failed to initialize ML components: ${e.message}",
@@ -276,6 +286,73 @@ class FirstFragment : Fragment() {
         }
 
         setupUI()
+        observeViewModel()
+    }
+
+    private fun observeViewModel() {
+        viewModel.uiState.observe(viewLifecycleOwner) { state ->
+            when (state) {
+                is de.konradvoelkel.android.autokorrektur.viewmodel.UiState.Success -> {
+                    processedBitmap = state.processedBitmap
+                    val tempFile = File(requireContext().cacheDir, "processed_image.jpg")
+                    val outputStream = java.io.FileOutputStream(tempFile)
+                    processedBitmap?.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                    outputStream.close()
+                    resultImageUri = FileProvider.getUriForFile(
+                        requireContext(),
+                        "${requireContext().packageName}.fileprovider",
+                        tempFile
+                    )
+                    resultImageUri?.let { resultUri ->
+                        addImageToContainer(resultUri, "Result (ONNX Processed)")
+                    }
+                    val maskBitmap = state.maskBitmap
+                    val tempMaskFile = File(requireContext().cacheDir, "mask_image.jpg")
+                    val maskOutputStream = java.io.FileOutputStream(tempMaskFile)
+                    maskBitmap.compress(Bitmap.CompressFormat.JPEG, 100, maskOutputStream)
+                    maskOutputStream.close()
+                    val maskUri = FileProvider.getUriForFile(
+                        requireContext(),
+                        "${requireContext().packageName}.fileprovider",
+                        tempMaskFile
+                    )
+                    displayImage(maskUri, "Mask Processed")
+                    createMaskOverlay(selectedImageUri!!, state.maskBitmap)
+                }
+
+                is de.konradvoelkel.android.autokorrektur.viewmodel.UiState.Error -> {
+                    Snackbar.make(binding.root, state.message, Snackbar.LENGTH_LONG).show()
+                }
+            }
+        }
+
+        viewModel.processing.observe(viewLifecycleOwner) { processing ->
+            binding.startInference.isEnabled = !processing
+            binding.startInference.text = if (processing) {
+                getString(R.string.processing)
+            } else {
+                getString(R.string.start)
+            }
+        }
+
+        viewModel.batchUiState.observe(viewLifecycleOwner) { state ->
+            when (state) {
+                is de.konradvoelkel.android.autokorrektur.viewmodel.BatchUiState.Progress -> {
+                    binding.startInference.text =
+                        "Processing batch (${state.progress}/${state.total})..."
+                }
+
+                is de.konradvoelkel.android.autokorrektur.viewmodel.BatchUiState.Success -> {
+                    processedBitmaps.clear()
+                    processedBitmaps.addAll(state.results)
+                    finalizeBatchProcessing()
+                }
+
+                is de.konradvoelkel.android.autokorrektur.viewmodel.BatchUiState.Error -> {
+                    Snackbar.make(binding.root, state.message, Snackbar.LENGTH_LONG).show()
+                }
+            }
+        }
     }
 
     private fun setupUI() {
@@ -292,7 +369,11 @@ class FirstFragment : Fragment() {
 
         // Setup start inference button
         binding.startInference.setOnClickListener {
-            performOnnxInference()
+            if (binding.batchMode.isChecked) {
+                performBatchProcessing()
+            } else {
+                performOnnxInference()
+            }
         }
 
         // Setup download button
@@ -373,17 +454,6 @@ class FirstFragment : Fragment() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
-        // Mask Downshift slider
-        binding.downshift.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val value = progress * 0.001
-                binding.downshiftVal.text = String.format("%.3f", value)
-            }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
 
         // Score Threshold slider
         binding.scoreThreshold.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -630,382 +700,23 @@ class FirstFragment : Fragment() {
     private fun performOnnxInference() {
         AppLogger.info("Starting ONNX inference")
 
-        // Check if ML components are initialized
-        if (!mlComponentsInitialized) {
-            AppLogger.error("ML components not initialized")
-            Snackbar.make(
-                binding.root,
-                "ML components not initialized. Please restart the app.",
-                Snackbar.LENGTH_LONG
-            ).show()
+        // Check if an image is selected for single processing
+        if (selectedImageUri == null) {
+            AppLogger.warn("No image selected for inference")
+            Snackbar.make(binding.root, "Please select an image first", Snackbar.LENGTH_SHORT)
+                .show()
             return
         }
-
-        // Route to batch or single processing based on mode
-        if (binding.batchMode.isChecked) {
-            if (selectedImageUris.isEmpty()) {
-                AppLogger.warn("No images selected for batch processing")
-                Snackbar.make(
-                    binding.root,
-                    "Please select images for batch processing first",
-                    Snackbar.LENGTH_SHORT
-                ).show()
-                return
-            }
-            performBatchProcessing()
-        } else {
-            // Check if an image is selected for single processing
-            if (selectedImageUri == null) {
-                AppLogger.warn("No image selected for inference")
-                Snackbar.make(binding.root, "Please select an image first", Snackbar.LENGTH_SHORT)
-                    .show()
-                return
-            }
-            performSingleImageInference()
-        }
+        viewModel.performOnnxInference(
+            selectedImageUri = selectedImageUri,
+            resultImageUri = resultImageUri,
+            continueWithResult = binding.continueWithResult.isChecked,
+            segModel = binding.segModel.selectedItem.toString().lowercase(),
+            downscaleMp = getDownscaleMpFromSpinner(),
+            maskUpscale = getMaskUpscaleFromSlider(),
+            scoreThreshold = getScoreThresholdFromSlider()
+        )
     }
-
-    private fun performSingleImageInference() {
-
-        // Disable the button and show processing state
-        binding.startInference.isEnabled = false
-        binding.startInference.text = getString(R.string.processing)
-
-        // Clear the images container
-        clearImagesContainer()
-
-        // Display the original image or previous result based on continue mode
-        val inputUri = if (binding.continueWithResult.isChecked && resultImageUri != null) {
-            resultImageUri!!
-        } else {
-            selectedImageUri!!
-        }
-
-        val inputLabel = if (binding.continueWithResult.isChecked && resultImageUri != null) {
-            "Previous Result (Input)"
-        } else {
-            "Original"
-        }
-
-        displayImage(inputUri, inputLabel)
-
-        // Perform ONNX inference in a background thread
-        Thread {
-            try {
-                AppLogger.debug("Starting background inference thread")
-
-                selectedImageUri?.let { uri ->
-                    AppLogger.debug("Processing image URI: $uri")
-
-                    // Initialize ML inference objects if not already done
-                    try {
-                        AppLogger.debug("Checking if YOLO inference needs initialization")
-                        // Pass segmentation model choice to initialize
-                        val segModel = binding.segModel.selectedItem.toString().lowercase()
-                        val useFP16 = segModel.contains("fp16")
-                        val modelName = when {
-                            segModel.contains("small") -> "yolo11s"
-                            segModel.contains("nano") -> "yolo11n"
-                            segModel.contains("medium") -> "yolo11m"
-                            else -> "yolo11s" // Default
-                        }
-                        yoloInference.initialize(modelName = modelName, useFP16 = useFP16)
-                        AppLogger.debug("YOLO inference initialized successfully with model: $modelName, useFP16: $useFP16")
-
-                        AppLogger.debug("Checking if Mi-GAN inference needs initialization")
-                        miGanInference.initialize()
-                        AppLogger.debug("Mi-GAN inference initialized successfully")
-
-                        AppLogger.info("All ML inference objects initialized successfully")
-                    } catch (e: IOException) {
-                        AppLogger.error("IOException during ML initialization", e)
-                        throw Exception("Failed to load ML models from assets: ${e.message}", e)
-                    } catch (e: RuntimeException) {
-                        AppLogger.error("RuntimeException during ML initialization", e)
-                        throw Exception("Runtime error during ML initialization: ${e.message}", e)
-                    } catch (e: Exception) {
-                        AppLogger.error("Unexpected exception during ML initialization", e)
-                        throw Exception("Failed to initialize ML models: ${e.message}", e)
-                    }
-
-                    // Get UI parameters
-                    val downscaleMp = getDownscaleMpFromSpinner()
-                    val maskUpscale = getMaskUpscaleFromSlider()
-                    val scoreThreshold = getScoreThresholdFromSlider()
-                    val downshift = getDownshiftFromSlider() // This is now unused, kept for logging consistency
-
-                    AppLogger.debug("Parameters - downscaleMp: $downscaleMp, maskUpscale: $maskUpscale, scoreThreshold: $scoreThreshold, downshift: $downshift")
-
-                    // Step 1: Process input image
-                    AppLogger.debug("Step 1: Processing input image")
-                    // Determine input URI based on continue mode
-                    val processingUri =
-                        if (binding.continueWithResult.isChecked && resultImageUri != null) {
-                            resultImageUri!!
-                        } else {
-                            uri
-                        }
-
-                    val processedImage = try {
-                        imageProcessor.processInputImage(
-                            imageUri = processingUri,
-                            modelWidth = 640,  // YOLO model input width
-                            modelHeight = 640, // YOLO model input height
-                            downscaleMp = downscaleMp
-                        )
-                    } catch (e: Exception) {
-                        AppLogger.error("Error processing input image", e)
-                        throw Exception("Failed to process input image: ${e.message}", e)
-                    }
-                    AppLogger.debug("Input image processed successfully")
-
-                    // Step 2: Run YOLO inference to get segmentation mask
-                    AppLogger.debug("Step 2: Running YOLO inference")
-                    val maskMat = try {
-                        val config = YoloConfig(scoreThreshold = scoreThreshold)
-                        // Note: downshiftFactor is deprecated and no longer used
-                        val result = yoloInference.inferDetailed(
-                            transformedMat = processedImage.transformedMat,
-                            xRatio = processedImage.xRatio,
-                            yRatio = processedImage.yRatio,
-                            upscaleFactor = maskUpscale,
-                            originalWidth = processedImage.originalMat.cols(),
-                            originalHeight = processedImage.originalMat.rows(),
-                            overrideConfig = config
-                        )
-                        result.mask
-                    } catch (e: Exception) {
-                        AppLogger.error("Error during YOLO inference", e)
-                        throw Exception("YOLO inference failed: ${e.message}", e)
-                    }
-                    AppLogger.debug("YOLO inference completed successfully")
-
-                    // Display the mask on UI thread
-                    if (isAdded && !isDetached) {
-                        requireActivity().runOnUiThread {
-                            try {
-                                if (!isAdded || isDetached) {
-                                    AppLogger.warn("Fragment not attached, skipping mask display")
-                                    return@runOnUiThread
-                                }
-
-                                AppLogger.debug("Creating mask bitmap")
-                                val maskBitmap = createBitmap(maskMat.cols(), maskMat.rows())
-                                Utils.matToBitmap(maskMat, maskBitmap)
-
-                                val tempMaskFile = File(requireContext().cacheDir, "mask_image.jpg")
-                                val maskOutputStream = FileOutputStream(tempMaskFile)
-                                maskBitmap.compress(
-                                    Bitmap.CompressFormat.JPEG,
-                                    100,
-                                    maskOutputStream
-                                )
-                                maskOutputStream.close()
-
-                                val maskUri = FileProvider.getUriForFile(
-                                    requireContext(),
-                                    "${requireContext().packageName}.fileprovider",
-                                    tempMaskFile
-                                )
-                                displayImage(maskUri, "Mask Processed")
-
-                                // Create and display mask overlay on original image
-                                createMaskOverlay(processingUri, maskMat)
-
-                                AppLogger.debug("Mask displayed successfully")
-                            } catch (e: Exception) {
-                                AppLogger.error("Error displaying mask", e)
-                            }
-                        }
-                    } else {
-                        AppLogger.warn("Fragment not attached, skipping mask display")
-                    }
-
-                    // Step 3: Run Mi-GAN inference for inpainting
-                    AppLogger.debug("Step 3: Running Mi-GAN inference")
-                    val resultMat = try {
-                        // IMPORTANT: Run Mi-GAN on the original-sized image to match the mask dimensions
-                        // Using transformedMat here would misalign with the mask and produce artifacts.
-                        miGanInference.inferMiGan(
-                            imageMat = processedImage.originalMat,
-                            maskMat = maskMat
-                        )
-                    } catch (e: Exception) {
-                        AppLogger.error("Error during Mi-GAN inference", e)
-                        throw Exception("Mi-GAN inference failed: ${e.message}", e)
-                    }
-                    AppLogger.debug("Mi-GAN inference completed successfully")
-
-                    // Convert result to bitmap and display on UI thread
-                    if (isAdded && !isDetached) {
-                        requireActivity().runOnUiThread {
-                            try {
-                                if (!isAdded || isDetached) {
-                                    AppLogger.warn("Fragment not attached, skipping result display")
-                                    return@runOnUiThread
-                                }
-
-                                AppLogger.debug("Creating result bitmap")
-                                processedBitmap = createBitmap(resultMat.cols(), resultMat.rows())
-                                Utils.matToBitmap(resultMat, processedBitmap!!)
-
-                                // Create a temporary file to display the processed image
-                                val tempFile =
-                                    File(requireContext().cacheDir, "processed_image.jpg")
-                                val outputStream = FileOutputStream(tempFile)
-                                processedBitmap?.compress(
-                                    Bitmap.CompressFormat.JPEG,
-                                    100,
-                                    outputStream
-                                )
-                                outputStream.close()
-
-                                // Get URI for the processed image
-                                resultImageUri = FileProvider.getUriForFile(
-                                    requireContext(),
-                                    "${requireContext().packageName}.fileprovider",
-                                    tempFile
-                                )
-
-                                // Display the processed image
-                                resultImageUri?.let { resultUri ->
-                                    addImageToContainer(resultUri, "Result (ONNX Processed)")
-                                }
-
-                                binding.startInference.isEnabled = true
-                                binding.startInference.text = getString(R.string.start)
-
-                                Snackbar.make(
-                                    binding.root,
-                                    "ONNX inference completed successfully",
-                                    Snackbar.LENGTH_SHORT
-                                ).show()
-                                AppLogger.info("Inference completed successfully")
-                            } catch (e: Exception) {
-                                AppLogger.error("Error displaying result", e)
-                                binding.startInference.isEnabled = true
-                                binding.startInference.text = getString(R.string.start)
-                                Snackbar.make(
-                                    binding.root,
-                                    "Error displaying result: ${e.message}",
-                                    Snackbar.LENGTH_LONG
-                                ).show()
-                            }
-                        }
-                    } else {
-                        AppLogger.warn("Fragment not attached, skipping result display")
-                    }
-                } ?: run {
-                    AppLogger.error("selectedImageUri is null in background thread")
-                    if (isAdded && !isDetached) {
-                        requireActivity().runOnUiThread {
-                            if (!isAdded || isDetached) {
-                                AppLogger.warn("Fragment not attached, skipping null URI error display")
-                                return@runOnUiThread
-                            }
-                            binding.startInference.isEnabled = true
-                            binding.startInference.text = getString(R.string.start)
-                            Snackbar.make(binding.root, "No image selected", Snackbar.LENGTH_SHORT)
-                                .show()
-                        }
-                    } else {
-                        AppLogger.warn("Fragment not attached, skipping null URI error display")
-                    }
-                }
-            } catch (e: Exception) {
-                AppLogger.error("Error during inference", e)
-
-                // Handle errors on UI thread
-                if (isAdded && !isDetached) {
-                    requireActivity().runOnUiThread {
-                        if (!isAdded || isDetached) {
-                            AppLogger.warn("Fragment not attached, skipping error display")
-                            return@runOnUiThread
-                        }
-
-                        binding.startInference.isEnabled = true
-                        binding.startInference.text = getString(R.string.start)
-
-                        val errorMessages = when {
-                            e.message?.contains("Failed to create YOLO session") == true -> {
-                                Pair(
-                                    "YOLO Model Loading Failed",
-                                    "The YOLO model could not be loaded. This might be due to:\n• Corrupted model file\n• Insufficient memory\n• Incompatible model format\n\nCheck logcat for detailed error information.\n\nOriginal error: ${e.message}"
-                                )
-                            }
-
-                            e.message?.contains("Failed to create NMS session") == true -> {
-                                Pair(
-                                    "NMS Model Loading Failed",
-                                    "The NMS model could not be loaded. Check logcat for details.\n\nOriginal error: ${e.message}"
-                                )
-                            }
-
-                            e.message?.contains("Failed to create mask session") == true -> {
-                                Pair(
-                                    "Mask Model Loading Failed",
-                                    "The Mask model could not be loaded. Check logcat for details.\n\nOriginal error: ${e.message}"
-                                )
-                            }
-
-                            e.message?.contains("model") == true -> {
-                                Pair(
-                                    "Model Loading Failed",
-                                    "One or more ML models failed to load. Check logcat for detailed error information.\n\nOriginal error: ${e.message}"
-                                )
-                            }
-
-                            e.message?.contains("OpenCV") == true -> {
-                                Pair(
-                                    "OpenCV Error",
-                                    "OpenCV initialization failed. This might indicate a problem with image processing.\n\nOriginal error: ${e.message}"
-                                )
-                            }
-
-                            e.message?.contains("ONNX") == true -> {
-                                Pair(
-                                    "ONNX Runtime Error",
-                                    "ONNX Runtime encountered an error during model execution.\n\nOriginal error: ${e.message}"
-                                )
-                            }
-
-                            e.message?.contains("initialize") == true -> {
-                                Pair(
-                                    "Initialization Failed",
-                                    e.message ?: "Unknown initialization error"
-                                )
-                            }
-
-                            else -> {
-                                Pair(
-                                    "Inference Error",
-                                    "An error occurred during inference processing.\n\nOriginal error: ${e.message}"
-                                )
-                            }
-                        }
-
-                        val shortMessage = errorMessages.first
-                        val detailedMessage = errorMessages.second
-
-                        // Log the error details and show user-friendly message
-                        AppLogger.error("Inference error: $shortMessage - $detailedMessage")
-
-                        // Snackbar for detailed information
-                        Snackbar.make(
-                            binding.root,
-                            detailedMessage as CharSequence,
-                            Snackbar.LENGTH_INDEFINITE
-                        ).setAction("Dismiss") {
-                            // Snackbar will be dismissed
-                        }.show()
-                    }
-                } else {
-                    AppLogger.warn("Fragment not attached, skipping error display")
-                }
-            }
-        }.start()
-    }
-
 
     private fun performBatchProcessing() {
         AppLogger.info("Starting batch processing for ${selectedImageUris.size} images")
@@ -1013,166 +724,22 @@ class FirstFragment : Fragment() {
         // Clear previous results
         batchProcessingResults.clear()
         processedBitmaps.clear()
-        isProcessingBatch = true
 
         // Disable UI and show processing state
         binding.startInference.isEnabled = false
-        binding.startInference.text = "Processing batch (0/${selectedImageUris.size})..."
         binding.fileSelect.isEnabled = false
         binding.batchMode.isEnabled = false
 
         // Clear the images container
         clearImagesContainer()
 
-        // Start batch processing in background thread
-        Thread {
-            try {
-                // Initialize ML inference objects
-                try {
-                    // Pass segmentation model choice to initialize
-                    val segModel = binding.segModel.selectedItem.toString().lowercase()
-                    val useFP16 = segModel.contains("fp16")
-                    val modelName = when {
-                        segModel.contains("small") -> "yolo11s"
-                        segModel.contains("nano") -> "yolo11n"
-                        segModel.contains("medium") -> "yolo11m"
-                        else -> "yolo11s" // Default
-                    }
-                    yoloInference.initialize(modelName = modelName, useFP16 = useFP16)
-                    miGanInference.initialize()
-                    AppLogger.info("ML inference objects initialized for batch processing with model: $modelName, useFP16: $useFP16")
-                } catch (e: Exception) {
-                    AppLogger.error("Failed to initialize ML objects for batch processing", e)
-                    throw Exception("Failed to initialize ML models: ${e.message}", e)
-                }
-
-                // Get UI parameters once for all images
-                val downscaleMp = getDownscaleMpFromSpinner()
-                val maskUpscale = getMaskUpscaleFromSlider()
-                val scoreThreshold = getScoreThresholdFromSlider()
-                val downshift = getDownshiftFromSlider()
-                val segModel = binding.segModel.selectedItem.toString()
-
-                AppLogger.debug("Batch parameters - downscaleMp: $downscaleMp, maskUpscale: $maskUpscale, scoreThreshold: $scoreThreshold, downshift: $downshift, segModel: $segModel")
-
-                // Process each image
-                selectedImageUris.forEachIndexed { index, uri ->
-                    if (!isProcessingBatch) {
-                        AppLogger.info("Batch processing cancelled")
-                        return@Thread
-                    }
-
-                    val startTime = System.currentTimeMillis()
-                    val imageName = "Image_${index + 1}"
-
-                    // Update progress on UI thread
-                    if (isAdded && !isDetached) {
-                        requireActivity().runOnUiThread {
-                            binding.startInference.text =
-                                "Processing batch (${index + 1}/${selectedImageUris.size})..."
-                        }
-                    }
-
-                    try {
-                        AppLogger.debug("Processing image ${index + 1}/${selectedImageUris.size}: $uri")
-
-                        // Step 1: Process input image
-                        val processedImage = imageProcessor.processInputImage(
-                            imageUri = uri,
-                            modelWidth = 640,
-                            modelHeight = 640,
-                            downscaleMp = downscaleMp
-                        )
-
-                        // Step 2: Run YOLO inference
-                        val config = YoloConfig(scoreThreshold = scoreThreshold)
-                        val result = yoloInference.inferDetailed(
-                            transformedMat = processedImage.transformedMat,
-                            xRatio = processedImage.xRatio,
-                            yRatio = processedImage.yRatio,
-                            upscaleFactor = maskUpscale,
-                            originalWidth = processedImage.originalMat.cols(),
-                            originalHeight = processedImage.originalMat.rows(),
-                            overrideConfig = config
-                        )
-                        val maskMat = result.mask
-
-                        // Step 3: Run Mi-GAN inference
-                        val resultMat = miGanInference.inferMiGan(
-                            imageMat = processedImage.transformedMat,
-                            maskMat = maskMat
-                        )
-
-                        // Convert result to bitmap
-                        val resultBitmap = createBitmap(resultMat.cols(), resultMat.rows())
-                        Utils.matToBitmap(resultMat, resultBitmap)
-                        processedBitmaps.add(resultBitmap)
-
-                        val processingTime = System.currentTimeMillis() - startTime
-
-                        // Record successful result
-                        batchProcessingResults.add(
-                            BatchProcessingResult(
-                                originalImageName = imageName,
-                                processingTimeMs = processingTime,
-                                maskUpscale = maskUpscale,
-                                scoreThreshold = scoreThreshold,
-                                downshift = downshift,
-                                downscaleMp = downscaleMp?.toString() ?: "No Scaling",
-                                segmentationModel = segModel,
-                                success = true
-                            )
-                        )
-
-                        AppLogger.debug("Successfully processed image ${index + 1} in ${processingTime}ms")
-
-                    } catch (e: Exception) {
-                        val processingTime = System.currentTimeMillis() - startTime
-                        AppLogger.error("Error processing image ${index + 1}: ${e.message}", e)
-
-                        // Record failed result
-                        batchProcessingResults.add(
-                            BatchProcessingResult(
-                                originalImageName = imageName,
-                                processingTimeMs = processingTime,
-                                maskUpscale = maskUpscale,
-                                scoreThreshold = scoreThreshold,
-                                downshift = downshift,
-                                downscaleMp = downscaleMp?.toString() ?: "No Scaling",
-                                segmentationModel = segModel,
-                                success = false,
-                                errorMessage = e.message
-                            )
-                        )
-                    }
-                }
-
-                // Update UI on completion
-                if (isAdded && !isDetached) {
-                    requireActivity().runOnUiThread {
-                        finalizeBatchProcessing()
-                    }
-                }
-
-            } catch (e: Exception) {
-                AppLogger.error("Batch processing failed", e)
-                if (isAdded && !isDetached) {
-                    requireActivity().runOnUiThread {
-                        binding.startInference.isEnabled = true
-                        binding.startInference.text = "Start Batch Processing"
-                        binding.fileSelect.isEnabled = true
-                        binding.batchMode.isEnabled = true
-                        isProcessingBatch = false
-
-                        Snackbar.make(
-                            binding.root,
-                            "Batch processing failed: ${e.message}",
-                            Snackbar.LENGTH_LONG
-                        ).show()
-                    }
-                }
-            }
-        }.start()
+        viewModel.performBatchProcessing(
+            uris = selectedImageUris,
+            segModel = binding.segModel.selectedItem.toString(),
+            downscaleMp = getDownscaleMpFromSpinner(),
+            maskUpscale = getMaskUpscaleFromSlider(),
+            scoreThreshold = getScoreThresholdFromSlider()
+        )
     }
 
     private fun finalizeBatchProcessing() {
@@ -1186,7 +753,6 @@ class FirstFragment : Fragment() {
         binding.startInference.text = "Start Batch Processing (${selectedImageUris.size} images)"
         binding.fileSelect.isEnabled = true
         binding.batchMode.isEnabled = true
-        isProcessingBatch = false
 
         // Show results summary
         val message =
@@ -1224,14 +790,13 @@ class FirstFragment : Fragment() {
 
         try {
             val csvContent = StringBuilder()
-            csvContent.append("Image Name,Processing Time (ms),Mask Upscale,Score Threshold,Downshift,Downscale MP,Segmentation Model,Success,Error Message\n")
+            csvContent.append("Image Name,Processing Time (ms),Mask Upscale,Score Threshold,Downscale MP,Segmentation Model,Success,Error Message\n")
 
             batchProcessingResults.forEach { result ->
                 csvContent.append("${result.originalImageName},")
                 csvContent.append("${result.processingTimeMs},")
                 csvContent.append("${result.maskUpscale},")
                 csvContent.append("${result.scoreThreshold},")
-                csvContent.append("${result.downshift},")
                 csvContent.append("${result.downscaleMp},")
                 csvContent.append("${result.segmentationModel},")
                 csvContent.append("${result.success},")
@@ -1258,7 +823,7 @@ class FirstFragment : Fragment() {
         }
     }
 
-    private fun createMaskOverlay(originalUri: Uri, maskMatrix: Mat) {
+    private fun createMaskOverlay(originalUri: Uri, maskBitmap: Bitmap) {
         try {
             AppLogger.debug("Creating mask overlay visualization")
 
@@ -1268,10 +833,6 @@ class FirstFragment : Fragment() {
 
             // Create a mutable copy of the original bitmap
             val overlayBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true)
-
-            // Convert mask to bitmap
-            val maskBitmap = createBitmap(maskMatrix.cols(), maskMatrix.rows())
-            Utils.matToBitmap(maskMatrix, maskBitmap)
 
             // Build an overlay that is transparent everywhere except masked area (car)
             val overlayMaskBitmap = MaskOverlayUtils
@@ -1356,7 +917,7 @@ class FirstFragment : Fragment() {
      * Gets the downshift factor from the slider.
      */
     private fun getDownshiftFromSlider(): Float {
-        return (binding.downshift.progress * 0.001).toFloat()
+        return 0.0f
     }
 
     /**
