@@ -31,6 +31,8 @@ import androidx.core.content.FileProvider
 import androidx.core.graphics.createBitmap
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import com.google.android.material.snackbar.Snackbar
 import de.konradvoelkel.android.autokorrektur.databinding.FragmentFirstBinding
 import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
@@ -42,6 +44,7 @@ import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import de.konradvoelkel.android.autokorrektur.utils.MaskOverlayUtils
 import org.opencv.android.Utils
 import org.opencv.core.Mat
+import org.opencv.imgproc.Imgproc
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -250,6 +253,10 @@ class FirstFragment : Fragment() {
         }
     }
 
+    private val mainViewModel: MainViewModel by lazy {
+        androidx.lifecycle.ViewModelProvider(requireActivity())[MainViewModel::class.java]
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -276,6 +283,24 @@ class FirstFragment : Fragment() {
         }
 
         setupUI()
+        restoreViewModelState()
+    }
+
+    private fun restoreViewModelState() {
+        val origBmp = mainViewModel.originalBitmap
+        val procBmp = mainViewModel.processedBitmap
+        val procUri = mainViewModel.processedImageUri.value
+
+        if (origBmp != null && procBmp != null && procUri != null) {
+            processedBitmap = procBmp
+            selectedImageUri = mainViewModel.selectedImageUri.value
+            val safeOrig = de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.createScaledBitmapForDisplay(origBmp)
+            val safeProc = de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.createScaledBitmapForDisplay(procBmp)
+            binding.beforeAfterSliderView.setBitmaps(safeOrig, safeProc)
+            binding.beforeAfterSliderView.setSliderPosition(mainViewModel.sliderPosition)
+            binding.beforeAfterSliderView.visibility = View.VISIBLE
+            addImageToContainer(procUri, "Result (Restored)")
+        }
     }
 
     private fun setupUI() {
@@ -311,6 +336,21 @@ class FirstFragment : Fragment() {
                     "No processed image to download. Run inference first.",
                     Snackbar.LENGTH_SHORT
                 ).show()
+            }
+        }
+
+        // Setup Instagram export button
+        binding.exportInstagram.setOnClickListener {
+            exportInstagramGraphic()
+        }
+
+        // Setup Live AR Car Removal button
+        binding.arLiveModeButton.setOnClickListener {
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                val intent = Intent(requireContext(), de.konradvoelkel.android.autokorrektur.ar.ArCameraActivity::class.java)
+                startActivity(intent)
+            } else {
+                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
             }
         }
 
@@ -481,24 +521,29 @@ class FirstFragment : Fragment() {
         }
     }
 
-    private fun chooseFromGallery() {
-        val readPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Manifest.permission.READ_MEDIA_IMAGES
+    private val pickVisualMediaLauncher = registerForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            AppLogger.info("Zero-permission PickVisualMedia image selected: $uri")
+            selectedImageUri = uri
+            displayImage(uri, "Original")
+            binding.startInference.isEnabled = true
         } else {
-            Manifest.permission.READ_EXTERNAL_STORAGE
+            AppLogger.info("PickVisualMedia selection canceled by user")
         }
+    }
 
-        when {
-            ContextCompat.checkSelfPermission(
-                requireContext(),
-                readPermission
-            ) == PackageManager.PERMISSION_GRANTED -> {
-                launchGallery()
+    private fun chooseFromGallery() {
+        if (ActivityResultContracts.PickVisualMedia.isPhotoPickerAvailable(requireContext())) {
+            pickVisualMediaLauncher.launch(
+                androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+            )
+        } else {
+            val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                type = "image/*"
             }
-
-            else -> {
-                storagePermissionLauncher.launch(readPermission)
-            }
+            selectImageLauncher.launch(intent)
         }
     }
 
@@ -617,6 +662,8 @@ class FirstFragment : Fragment() {
 
     private fun clearImagesContainer() {
         binding.imagesContainer.removeAllViews()
+        binding.beforeAfterSliderView.visibility = View.GONE
+        mainViewModel.clearState()
     }
 
     private fun toggleOptionsPanel() {
@@ -665,7 +712,12 @@ class FirstFragment : Fragment() {
         }
     }
 
+    private var activeInferenceJob: kotlinx.coroutines.Job? = null
+
     private fun performSingleImageInference() {
+
+        // Cancel any previous inference job if running
+        activeInferenceJob?.cancel()
 
         // Disable the button and show processing state
         binding.startInference.isEnabled = false
@@ -689,10 +741,14 @@ class FirstFragment : Fragment() {
 
         displayImage(inputUri, inputLabel)
 
-        // Perform ONNX inference in a background thread
-        Thread {
+        // Perform ONNX inference in background coroutine on Dispatchers.Default
+        activeInferenceJob = launchInferenceJob()
+    }
+
+    private fun launchInferenceJob(): kotlinx.coroutines.Job {
+        return viewLifecycleOwner.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.Default) {
             try {
-                AppLogger.debug("Starting background inference thread")
+                AppLogger.debug("Starting background inference coroutine")
 
                 selectedImageUri?.let { uri ->
                     AppLogger.debug("Processing image URI: $uri")
@@ -846,8 +902,11 @@ class FirstFragment : Fragment() {
                                 }
 
                                 AppLogger.debug("Creating result bitmap")
-                                processedBitmap = createBitmap(resultMat.cols(), resultMat.rows())
-                                Utils.matToBitmap(resultMat, processedBitmap!!)
+                                val rgbaMat = Mat()
+                                Imgproc.cvtColor(resultMat, rgbaMat, Imgproc.COLOR_RGB2RGBA)
+                                processedBitmap = createBitmap(rgbaMat.cols(), rgbaMat.rows())
+                                Utils.matToBitmap(rgbaMat, processedBitmap!!)
+                                rgbaMat.release()
 
                                 // Create a temporary file to display the processed image
                                 val tempFile =
@@ -867,9 +926,16 @@ class FirstFragment : Fragment() {
                                     tempFile
                                 )
 
-                                // Display the processed image
-                                resultImageUri?.let { resultUri ->
-                                    addImageToContainer(resultUri, "Result (ONNX Processed)")
+                                // Display the processed image & enable interactive Before/After split slider
+                                val origBmp = processedImage.originalBitmap
+                                val procBmp = processedBitmap
+                                if (origBmp != null && procBmp != null) {
+                                    val safeOrig = de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.createScaledBitmapForDisplay(origBmp)
+                                    val safeProc = de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.createScaledBitmapForDisplay(procBmp)
+                                    binding.beforeAfterSliderView.setBitmaps(safeOrig, safeProc)
+                                    binding.beforeAfterSliderView.visibility = View.VISIBLE
+                                    mainViewModel.setSelectedImageUri(selectedImageUri)
+                                    mainViewModel.setProcessedResult(resultImageUri, origBmp, procBmp)
                                 }
 
                                 binding.startInference.isEnabled = true
@@ -1003,7 +1069,7 @@ class FirstFragment : Fragment() {
                     AppLogger.warn("Fragment not attached, skipping error display")
                 }
             }
-        }.start()
+        }
     }
 
 
@@ -1396,6 +1462,86 @@ class FirstFragment : Fragment() {
                 Snackbar.LENGTH_LONG
             ).show()
             return null
+        }
+    }
+
+    /**
+     * Generates an Instagram-sized Before/After comparison graphic and triggers share/save options.
+     */
+    private fun exportInstagramGraphic() {
+        val afterBitmap = processedBitmap
+        val beforeUri = selectedImageUri
+
+        if (afterBitmap == null || beforeUri == null) {
+            Snackbar.make(
+                binding.root,
+                "Process an image first before exporting for Instagram",
+                Snackbar.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        try {
+            val beforeBitmap = de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.decodeSampledBitmapFromUri(
+                requireContext(),
+                beforeUri
+            )
+
+            val options = arrayOf(
+                "1:1 Square (Side-by-Side)",
+                "4:5 Feed Portrait (Stacked)",
+                "9:16 Story (Side-by-Side)"
+            )
+
+            AlertDialog.Builder(requireContext())
+                .setTitle("Select Instagram Format")
+                .setItems(options) { _, which ->
+                    val (ratio, layout) = when (which) {
+                        0 -> Pair(de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.AspectRatio.SQUARE_1_1, de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.LayoutStyle.SIDE_BY_SIDE)
+                        1 -> Pair(de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.AspectRatio.PORTRAIT_4_5, de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.LayoutStyle.STACKED)
+                        else -> Pair(de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.AspectRatio.STORY_9_16, de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.LayoutStyle.SIDE_BY_SIDE)
+                    }
+
+                    val graphic = de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.createComparisonBitmap(
+                        beforeBitmap = beforeBitmap,
+                        afterBitmap = afterBitmap,
+                        ratio = ratio,
+                        layout = layout
+                    )
+
+                    // Prompt action: Share vs Save
+                    val actionOptions = arrayOf(
+                        getString(R.string.share_to_instagram),
+                        getString(R.string.save_graphic)
+                    )
+
+                    AlertDialog.Builder(requireContext())
+                        .setTitle("Instagram Graphic Ready")
+                        .setItems(actionOptions) { _, actionWhich ->
+                            when (actionWhich) {
+                                0 -> {
+                                    val shareUri = de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.saveBitmapForSharing(requireContext(), graphic)
+                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "image/jpeg"
+                                        putExtra(Intent.EXTRA_STREAM, shareUri)
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    startActivity(Intent.createChooser(shareIntent, "Share Before/After Graphic"))
+                                }
+                                1 -> {
+                                    val savedUri = saveImageToGallery(graphic)
+                                    if (savedUri != null) {
+                                        Snackbar.make(binding.root, "Instagram graphic saved to gallery!", Snackbar.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        }
+                        .show()
+                }
+                .show()
+        } catch (e: Exception) {
+            AppLogger.error("Failed to generate Instagram comparison graphic", e)
+            Snackbar.make(binding.root, "Export error: ${e.message}", Snackbar.LENGTH_LONG).show()
         }
     }
 

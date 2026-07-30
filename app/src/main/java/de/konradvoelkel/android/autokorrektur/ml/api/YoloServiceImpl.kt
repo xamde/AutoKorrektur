@@ -116,6 +116,9 @@ class YoloServiceImpl(
             null
         }
 
+        // Clamp upscale factor to prevent mask bleeding into building facades
+        val tightUpscaleFactor = upscaleFactor.coerceIn(1.0f, 1.05f)
+
         // 5) Prepare an overlay (white) CV_8UC1, subtract per-detection masks
         val overlay = Mat(shapes.inputH, shapes.inputW, CvType.CV_8UC1)
         overlay.setTo(Scalar(255.0))
@@ -125,7 +128,7 @@ class YoloServiceImpl(
                     YoloMaskAssembler.createDetectionMask(
                         detection = det,
                         overlayGray = overlay,
-                        upscaleFactor = upscaleFactor,
+                        upscaleFactor = tightUpscaleFactor,
                         deinterleavedPrototypes = deinterleaved,
                         inputWidth = shapes.inputW,
                         inputHeight = shapes.inputH
@@ -142,7 +145,7 @@ class YoloServiceImpl(
                     YoloMaskAssembler.createDetectionMask(
                         detection = det,
                         overlayGray = overlay,
-                        upscaleFactor = upscaleFactor,
+                        upscaleFactor = tightUpscaleFactor,
                         prototypeMasksData = prototypes,
                         inputWidth = shapes.inputW,
                         inputHeight = shapes.inputH,

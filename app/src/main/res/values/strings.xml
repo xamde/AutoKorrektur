@@ -11,6 +11,7 @@
     <string name="start">Start</string>
     <string name="download">Download</string>
     <string name="options">Options</string>
+    <string name="live_ar_car_removal">Live AR Car Removal (30 FPS)</string>
 
     <!-- Photo selection dialog -->
     <string name="photo_selection_title">Select Photo</string>
@@ -33,4 +34,7 @@
     <string name="start_btn">Start</string>
     <string name="select_image_btn">Select Image</string>
     <string name="processing">Processing...</string>
+    <string name="export_instagram">Export for Instagram</string>
+    <string name="share_to_instagram">Share graphic</string>
+    <string name="save_graphic">Save graphic</string>
 </resources>

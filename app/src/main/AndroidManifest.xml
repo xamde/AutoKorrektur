@@ -39,6 +39,12 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ar.ArCameraActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AndroidKorrektur" />
+
         <!-- FileProvider for camera photos -->
         <provider
             android:name="androidx.core.content.FileProvider"

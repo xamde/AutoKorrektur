@@ -23,6 +23,17 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
+        <!-- Interactive Before/After Split Slider View (Initially Hidden) -->
+        <de.konradvoelkel.android.autokorrektur.ui.BeforeAfterSliderView
+            android:id="@+id/beforeAfterSliderView"
+            android:layout_width="match_parent"
+            android:layout_height="320dp"
+            android:layout_marginTop="16dp"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/imagesContainer" />
+
         <!-- Select Image Button -->
         <Button
             android:id="@+id/fileSelect"
@@ -34,7 +45,7 @@
             app:iconGravity="textStart"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/imagesContainer"
+            app:layout_constraintTop_toBottomOf="@id/beforeAfterSliderView"
             app:layout_constraintWidth_percent="0.7" />
 
         <!-- Start Inference Button -->
@@ -66,6 +77,36 @@
             app:layout_constraintTop_toBottomOf="@id/startInference"
             app:layout_constraintWidth_percent="0.7" />
 
+        <!-- Export for Instagram Button -->
+        <Button
+            android:id="@+id/exportInstagram"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/export_instagram"
+            app:icon="@android:drawable/ic_menu_share"
+            app:iconGravity="textStart"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/download"
+            app:layout_constraintWidth_percent="0.7" />
+
+        <!-- Live AR Car Removal Button -->
+        <Button
+            android:id="@+id/arLiveModeButton"
+            style="@style/Widget.MaterialComponents.Button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/live_ar_car_removal"
+            app:backgroundTint="#10B981"
+            app:icon="@android:drawable/ic_menu_camera"
+            app:iconGravity="textStart"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/exportInstagram"
+            app:layout_constraintWidth_percent="0.7" />
+
         <!-- Options Button -->
         <Button
             android:id="@+id/optionsButton"
@@ -77,7 +118,7 @@
             app:iconGravity="textStart"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/download"
+            app:layout_constraintTop_toBottomOf="@id/arLiveModeButton"
             app:layout_constraintWidth_percent="0.7" />
 
         <!-- Options Panel (Initially Hidden) -->
