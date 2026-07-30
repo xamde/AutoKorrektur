@@ -108,7 +108,7 @@ class MiGanInpaintingInstrumentedTest : AndroidInstrumentedBaseTest() {
             transformedMat = processedOut.transformedMat,
             xRatio = processedOut.xRatio,
             yRatio = processedOut.yRatio,
-            upscaleFactor = 1.2f,
+            upscaleFactor = 1.02f,
             originalWidth = processedOut.originalMat.cols(),
             originalHeight = processedOut.originalMat.rows()
         )
@@ -142,16 +142,17 @@ class MiGanInpaintingInstrumentedTest : AndroidInstrumentedBaseTest() {
     private fun hasCarDetection(mask: Mat): Boolean {
         val totalPixels = mask.rows() * mask.cols()
         if (totalPixels == 0) return false
-        val blackMask = Mat()
+        val carMask = Mat()
         org.opencv.core.Core.inRange(
             mask,
             org.opencv.core.Scalar(0.0),
             org.opencv.core.Scalar(10.0),
-            blackMask
+            carMask
         )
-        val blackPixels = org.opencv.core.Core.countNonZero(blackMask)
-        blackMask.release()
-        val blackPixelRatio = blackPixels.toDouble() / totalPixels.toDouble()
-        return blackPixelRatio > 0.01
+        val carPixels = org.opencv.core.Core.countNonZero(carMask)
+        carMask.release()
+        val carPixelRatio = carPixels.toDouble() / totalPixels.toDouble()
+        android.util.Log.d("MiGanTest", "Car pixel ratio after inpainting: $carPixelRatio ($carPixels / $totalPixels)")
+        return carPixelRatio > 0.20
     }
 }

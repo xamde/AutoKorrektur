@@ -69,15 +69,30 @@ class MiGanInference(private val context: Context) {
         val processedImage = preprocessImage(imageMat)
         val processedMask = preprocessMask(maskMat, processedImage)
 
-        val originalHeight = processedImage.rows()
-        val originalWidth = processedImage.cols()
+        val origWidth = processedImage.cols()
+        val origHeight = processedImage.rows()
+        val maxSize = kotlin.math.max(origWidth, origHeight)
 
+        // 1. Pad image and mask to square (maxSize x maxSize) to preserve aspect ratio
+        val xPad = maxSize - origWidth
+        val yPad = maxSize - origHeight
+
+        val squareImage = Mat()
+        Core.copyMakeBorder(processedImage, squareImage, 0, yPad, 0, xPad, Core.BORDER_REFLECT_101)
+
+        val squareMask = Mat()
+        Core.copyMakeBorder(processedMask, squareMask, 0, yPad, 0, xPad, Core.BORDER_CONSTANT, org.opencv.core.Scalar(0.0))
+
+        // 2. Resize 1:1 square to 512x512
         val modelInputSize =
             org.opencv.core.Size(MODEL_INPUT_SIZE.toDouble(), MODEL_INPUT_SIZE.toDouble())
         val resizedImage = Mat()
-        Imgproc.resize(processedImage, resizedImage, modelInputSize)
+        Imgproc.resize(squareImage, resizedImage, modelInputSize)
         val resizedMask = Mat()
-        Imgproc.resize(processedMask, resizedMask, modelInputSize, 0.0, 0.0, Imgproc.INTER_NEAREST)
+        Imgproc.resize(squareMask, resizedMask, modelInputSize, 0.0, 0.0, Imgproc.INTER_NEAREST)
+
+        squareImage.release()
+        squareMask.release()
 
         val imageArray = orderInCHWAsBytes(resizedImage)
         val maskArray = orderInCHWAsBytes(resizedMask)
@@ -108,22 +123,33 @@ class MiGanInference(private val context: Context) {
         val modelOutputMat = Mat(MODEL_INPUT_SIZE, MODEL_INPUT_SIZE, CvType.CV_8UC3)
         modelOutputMat.put(0, 0, outputHWC)
 
-        val finalResultMat = Mat()
+        // 3. Resize 512x512 output back to maxSize x maxSize square
+        val squareResultMat = Mat()
         Imgproc.resize(
             modelOutputMat,
-            finalResultMat,
-            org.opencv.core.Size(originalWidth.toDouble(), originalHeight.toDouble())
+            squareResultMat,
+            org.opencv.core.Size(maxSize.toDouble(), maxSize.toDouble())
         )
+
+        // 4. Crop original unpadded dimensions (origWidth x origHeight)
+        val roi = org.opencv.core.Rect(0, 0, origWidth, origHeight)
+        val unpaddedInpainted = Mat(squareResultMat, roi).clone()
+
+        // 5. Blend inpainted content into original image ONLY where maskMat > 0
+        val finalBlendedMat = processedImage.clone()
+        unpaddedInpainted.copyTo(finalBlendedMat, processedMask)
 
         // Clean up
         inputs.values.forEach { it.close() }
         resizedImage.release()
         resizedMask.release()
         modelOutputMat.release()
+        squareResultMat.release()
+        unpaddedInpainted.release()
         processedImage.release()
         processedMask.release()
 
-        return finalResultMat
+        return finalBlendedMat
     }
 
     private fun preprocessImage(imageMat: Mat): Mat {
@@ -201,12 +227,22 @@ class MiGanInference(private val context: Context) {
         }
     }
 
-    /**
-     * Converts a Mat to CHW (Channel, Height, Width) format as uint8 bytes.
-     *
-     * @param mat The input Mat
-     * @return A byte array in CHW format (uint8)
-     */
+    private fun createFloatTensor(
+        data: FloatArray,
+        batchSize: Long,
+        channels: Long,
+        height: Long,
+        width: Long
+    ): OnnxTensor {
+        val shape = longArrayOf(batchSize, channels, height, width)
+        val floatBuffer = java.nio.FloatBuffer.wrap(data)
+        return OnnxTensor.createTensor(
+            ortEnvironment,
+            floatBuffer,
+            shape
+        )
+    }
+
     private fun orderInCHWAsBytes(mat: Mat): ByteArray {
         val channels = ArrayList<Mat>()
         Core.split(mat, channels)
@@ -222,6 +258,7 @@ class MiGanInference(private val context: Context) {
             val channelData = ByteArray(h * w)
             channelMat.get(0, 0, channelData)
             System.arraycopy(channelData, 0, chwArray, i * h * w, h * w)
+            channelMat.release()
         }
 
         return chwArray

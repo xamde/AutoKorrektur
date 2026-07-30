@@ -17,9 +17,10 @@ which the most dangerous animal in cities (cars) are less prevalent.
 All processing is done on device.
 Usage is free.
 
-## Known Bugs
+## Features
 
-- Pictures must be taken in landscape mode (we plan to fix this)
+* **On-Device Inference**: Full ML processing (YOLOv11-seg and MI-GAN) runs locally.
+* **Orientation Support**: Full support for both portrait and landscape mode photos with automatic EXIF rotation correction.
 
 ## Tech
 

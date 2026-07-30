@@ -104,11 +104,56 @@ class ImageProcessor(private val context: Context) {
      */
     @Throws(IOException::class)
     private fun loadBitmapFromUri(imageUri: Uri): Bitmap {
-        return when (val scheme = imageUri.scheme?.lowercase()) {
+        val loaded = when (val scheme = imageUri.scheme?.lowercase()) {
             "file" -> loadBitmapFromFile(imageUri)
             "content" -> loadBitmapFromContentProvider(imageUri)
             else -> throw IOException("Unsupported URI scheme: $scheme")
         }
+        return rotateBitmapIfRequired(loaded, imageUri)
+    }
+
+    /**
+     * Inspects EXIF metadata and rotates the bitmap if it contains an orientation tag.
+     */
+    private fun rotateBitmapIfRequired(bitmap: Bitmap, uri: Uri): Bitmap {
+        val inputStream = try {
+            when (uri.scheme?.lowercase()) {
+                "file" -> uri.path?.let { java.io.FileInputStream(it) }
+                "content" -> context.contentResolver.openInputStream(uri)
+                else -> null
+            }
+        } catch (e: Exception) {
+            null
+        } ?: return bitmap
+
+        val exif = try {
+            android.media.ExifInterface(inputStream)
+        } catch (e: Exception) {
+            return bitmap
+        } finally {
+            try { inputStream.close() } catch (_: Exception) {}
+        }
+
+        val orientation = exif.getAttributeInt(
+            android.media.ExifInterface.TAG_ORIENTATION,
+            android.media.ExifInterface.ORIENTATION_NORMAL
+        )
+
+        val matrix = android.graphics.Matrix()
+        when (orientation) {
+            android.media.ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+            android.media.ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+            android.media.ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+            android.media.ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
+            android.media.ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
+            else -> return bitmap
+        }
+
+        val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        if (rotated != bitmap) {
+            bitmap.recycle()
+        }
+        return rotated
     }
 
     /** Loads a bitmap from a `file://` URI. */
