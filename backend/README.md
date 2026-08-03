@@ -58,14 +58,16 @@ This backend service provides opt-in, photorealistic **SDXL Cloud Inpainting** f
 
 The application can be configured via environment variables (prefixed with `AUTOKORREKTUR_`):
 
-| Variable                                 | Description                            | Default           |
-|------------------------------------------|----------------------------------------|-------------------|
-| `AUTOKORREKTUR_REDIS_URL`                | Redis connection URL for rate limiting | `None`            |
-| `AUTOKORREKTUR_MAX_DAILY_REQUESTS`       | Max requests per device per day        | `10`              |
-| `AUTOKORREKTUR_MAX_UPLOAD_BYTES`         | Max total size of a single request     | `10485760` (10MB) |
-| `AUTOKORREKTUR_ENABLE_SDXL_LOAD`         | Whether to load the real SDXL model    | `False`           |
-| `AUTOKORREKTUR_STRICT_INTEGRITY_CHECK`   | Reject requests with invalid tokens    | `True`            |
-| `AUTOKORREKTUR_ALLOWED_INTEGRITY_TOKENS` | List of valid Play Integrity tokens    | `[]`              |
+| Variable                                       | Description                            | Default                                  |
+|------------------------------------------------|----------------------------------------|------------------------------------------|
+| `AUTOKORREKTUR_REDIS_URL`                      | Redis connection URL for rate limiting | `None`                                   |
+| `AUTOKORREKTUR_MAX_DAILY_REQUESTS`             | Max requests per device per day        | `10`                                     |
+| `AUTOKORREKTUR_MAX_UPLOAD_BYTES`               | Max total size of a single request     | `10485760` (10MB)                        |
+| `AUTOKORREKTUR_ENABLE_SDXL_LOAD`               | Whether to load the real SDXL model    | `False`                                  |
+| `AUTOKORREKTUR_STRICT_INTEGRITY_CHECK`         | Reject requests with invalid tokens    | `True`                                   |
+| `AUTOKORREKTUR_ALLOWED_INTEGRITY_TOKENS`       | List of valid Play Integrity tokens    | `[]`                                     |
+| `AUTOKORREKTUR_GOOGLE_APPLICATION_CREDENTIALS` | Path to Google Service Account JSON    | `None`                                   |
+| `AUTOKORREKTUR_ANDROID_PACKAGE_NAME`           | Expected Android app package name      | `de.konradvoelkel.android.autokorrektur` |
 
 ## Docker Container Deployment
 

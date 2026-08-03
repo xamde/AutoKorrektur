@@ -49,6 +49,7 @@ import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.core.content.edit
 
 /**
  * Main fragment for the AutoKorrektur app, now refactored to use MainViewModel and MainUiState.
@@ -297,7 +298,7 @@ class FirstFragment : Fragment() {
                         .setView(view)
                         .setPositiveButton(R.string.btn_accept) { _, _ ->
                             if (checkbox.isChecked) {
-                                prefs.edit().putBoolean("sdxl_consent", true).apply()
+                                prefs.edit { putBoolean("sdxl_consent", true) }
                             }
                         }
                         .setNegativeButton(R.string.cancel) { _, _ ->

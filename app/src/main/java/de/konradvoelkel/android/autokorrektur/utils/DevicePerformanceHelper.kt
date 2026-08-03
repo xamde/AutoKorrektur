@@ -25,6 +25,6 @@ object DevicePerformanceHelper {
      * Checks if Android Neural Networks API (NNAPI) is supported on this device.
      */
     fun isNnapiSupported(): Boolean {
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1
+        return true
     }
 }

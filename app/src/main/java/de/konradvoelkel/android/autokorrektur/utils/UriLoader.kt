@@ -5,7 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.graphics.Matrix
-import android.media.ExifInterface
+import androidx.exifinterface.media.ExifInterface
 import android.net.Uri
 import android.os.Build
 import java.io.File
@@ -101,21 +101,19 @@ class UriLoader(private val context: Context) {
     }
 
     private fun loadBitmapFromContentProvider(uri: Uri, maxMegapixels: Float): Bitmap {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            try {
-                val source = ImageDecoder.createSource(context.contentResolver, uri)
-                return ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
-                    val sampleSize =
-                        calculateInSampleSize(info.size.width, info.size.height, maxMegapixels)
-                    if (sampleSize > 1) {
-                        decoder.setTargetSampleSize(sampleSize)
-                    }
-                    decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
-                    decoder.isMutableRequired = true
+        try {
+            val source = ImageDecoder.createSource(context.contentResolver, uri)
+            return ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+                val sampleSize =
+                    calculateInSampleSize(info.size.width, info.size.height, maxMegapixels)
+                if (sampleSize > 1) {
+                    decoder.setTargetSampleSize(sampleSize)
                 }
-            } catch (e: Exception) {
-                AppLogger.warn("UriLoader: ImageDecoder failed for $uri, falling back. ${e.message}")
+                decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                decoder.isMutableRequired = true
             }
+        } catch (e: Exception) {
+            AppLogger.warn("UriLoader: ImageDecoder failed for $uri, falling back. ${e.message}")
         }
 
         context.contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->

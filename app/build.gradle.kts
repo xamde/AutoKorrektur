@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "de.konradvoelkel.android.autokorrektur"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "de.konradvoelkel.android.autokorrektur"
@@ -96,6 +96,7 @@ dependencies {
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.exifinterface)
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.navigation.fragment.ktx)
@@ -119,7 +120,7 @@ dependencies {
     androidTestImplementation(libs.mockkandroid)
 
     // CameraX
-    val cameraVersion = "1.3.4"
+    val cameraVersion = "1.6.1"
     implementation("androidx.camera:camera-core:$cameraVersion")
     implementation("androidx.camera:camera-camera2:$cameraVersion")
     implementation("androidx.camera:camera-lifecycle:$cameraVersion")

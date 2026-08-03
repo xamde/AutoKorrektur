@@ -11,6 +11,7 @@ import de.konradvoelkel.android.autokorrektur.ml.api.ServerSdxlApi
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
 import de.konradvoelkel.android.autokorrektur.ml.engine.YoloTFLiteEngine
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
+import androidx.core.net.toUri
 
 /**
  * Background WorkManager worker to process multiple queued vehicle photos sequentially.
@@ -59,7 +60,7 @@ class BatchProcessingWorker(
                     KEY_TOTAL_COUNT to imageUrisStr.size
                 ))
 
-                val uri = Uri.parse(uriStr)
+                val uri = uriStr.toUri()
                 AppLogger.info("BatchProcessingWorker processing image ${index + 1}/${imageUrisStr.size}: $uri")
 
                 val result = pipeline.processImage(
