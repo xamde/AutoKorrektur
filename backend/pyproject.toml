@@ -17,6 +17,7 @@ dependencies = [
     "python-multipart>=0.0.6",
     "httpx>=0.25.0",
     "icontract>=2.7.0",
+    "pydantic-settings>=2.0.0",
     "redis>=5.0.0",
     "pillow>=10.0.0",
 ]
@@ -38,7 +39,7 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "N", "UP"]
-ignore = ["B008"]
+ignore = ["B008", "E501"]
 
 [tool.mypy]
 python_version = "3.11"
