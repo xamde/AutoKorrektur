@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
+import de.konradvoelkel.android.autokorrektur.ml.engine.YoloTFLiteEngine
 import de.konradvoelkel.android.autokorrektur.ml.config.YoloConfig
 import de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
@@ -30,15 +31,15 @@ class NonCarOverMaskingTest : AndroidInstrumentedBaseTest() {
     private lateinit var imageProcessor: ImageProcessor
 
     @Before
-    fun setUp() {
+    fun setUp() = kotlinx.coroutines.runBlocking {
         assertTrue("OpenCV initialization failed", OpenCVLoader.initLocal())
-        yoloService = YoloServiceImpl(appContext)
+        yoloService = YoloServiceImpl(YoloTFLiteEngine(appContext))
         yoloService.initialize()
         imageProcessor = ImageProcessor(appContext)
     }
 
     @Test
-    fun testNonCarBackgroundRegions_areNotFalselyMasked() {
+    fun testNonCarBackgroundRegions_areNotFalselyMasked() = kotlinx.coroutines.runBlocking {
         val testImages = listOf(
             "sample_street_with_car.jpg",
             "sample_suburb_with_car.jpg",

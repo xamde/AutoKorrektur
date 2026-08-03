@@ -1,5 +1,6 @@
 package de.konradvoelkel.android.autokorrektur.ml.preprocess
 
+import de.konradvoelkel.android.autokorrektur.ml.ImageProcessingUtils
 import org.opencv.core.Core
 import org.opencv.core.Mat
 import org.opencv.core.Scalar

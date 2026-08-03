@@ -1,9 +1,9 @@
-package de.konradvoelkel.android.autokorrektur.ml.preprocess
+package de.konradvoelkel.android.autokorrektur.ml
 
 /**
  * Pure image-processing utilities that can be JVM-tested.
  */
-internal object ImageProcessingUtils {
+object ImageProcessingUtils {
     /**
      * Returns dimensions adjusted to be divisible by [stride].
      * The value rounds up when the remainder is >= stride/2, otherwise rounds down.
@@ -34,7 +34,7 @@ internal object ImageProcessingUtils {
     /**
      * Result values used when padding an image to a square and computing scaling ratios.
      */
-    internal data class PaddingRatios(
+    data class PaddingRatios(
         val xPad: Int,
         val yPad: Int,
         val xRatio: Float,

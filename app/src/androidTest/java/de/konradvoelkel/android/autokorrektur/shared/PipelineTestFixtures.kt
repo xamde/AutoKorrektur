@@ -5,6 +5,8 @@ import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
 import de.konradvoelkel.android.autokorrektur.ml.MiGanInference
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloService
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
+import de.konradvoelkel.android.autokorrektur.ml.engine.YoloTFLiteEngine
+import kotlinx.coroutines.runBlocking
 
 /**
  * Shared, lazily-initialized fixtures for pipeline instrumented tests.
@@ -28,8 +30,10 @@ object PipelineTestFixtures {
             synchronized(this) {
                 local = _yolo
                 if (local == null) {
-                    val y = YoloServiceImpl(appContext)
-                    y.initialize("yolo11s")
+                    val y = YoloServiceImpl(YoloTFLiteEngine(appContext))
+                    runBlocking {
+                        y.initialize("yolo11s")
+                    }
                     _yolo = y
                     local = y
                 }
@@ -45,7 +49,9 @@ object PipelineTestFixtures {
                 local = _migan
                 if (local == null) {
                     val m = MiGanInference(appContext)
-                    m.initialize()
+                    runBlocking {
+                        m.initialize()
+                    }
                     _migan = m
                     local = m
                 }

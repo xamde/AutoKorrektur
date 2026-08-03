@@ -1,11 +1,8 @@
 package de.konradvoelkel.android.autokorrektur
 
-import de.konradvoelkel.android.autokorrektur.BuildConfig
 import android.Manifest
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
-import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -13,7 +10,6 @@ import android.graphics.Canvas
 import android.graphics.ImageDecoder
 import android.graphics.Paint
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
@@ -32,120 +28,49 @@ import androidx.core.content.FileProvider
 import androidx.core.graphics.createBitmap
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
+import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.snackbar.Snackbar
 import de.konradvoelkel.android.autokorrektur.databinding.FragmentFirstBinding
-import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
-import de.konradvoelkel.android.autokorrektur.ml.MiGanInference
-import de.konradvoelkel.android.autokorrektur.ml.api.YoloService
-import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
-import de.konradvoelkel.android.autokorrektur.ml.config.YoloConfig
+import de.konradvoelkel.android.autokorrektur.ui.model.MainUiProperties
+import de.konradvoelkel.android.autokorrektur.ui.model.MainUiState
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
+import de.konradvoelkel.android.autokorrektur.utils.ImageExportManager
 import de.konradvoelkel.android.autokorrektur.utils.MaskOverlayUtils
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import org.opencv.android.Utils
 import org.opencv.core.Mat
-import org.opencv.imgproc.Imgproc
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 /**
- * Data class to store batch processing results for CSV export
+ * Main fragment for the AutoKorrektur app, now refactored to use MainViewModel and MainUiState.
  */
-data class BatchProcessingResult(
-    val originalImageName: String,
-    val processingTimeMs: Long,
-    val maskUpscale: Float,
-    val scoreThreshold: Float,
-    val downshift: Float,
-    val downscaleMp: String,
-    val segmentationModel: String,
-    val success: Boolean,
-    val errorMessage: String? = null
-)
-
-/**
- * Main fragment for the AutoKorrektur app, mimicking the web app functionality.
- */
-@SuppressLint("DefaultLocale,SetTextI18n")
 class FirstFragment : Fragment() {
 
     private var _binding: FragmentFirstBinding? = null
     private val binding get() = _binding!!
 
-    private var selectedImageUri: Uri? = null
-    private var selectedImageUris: MutableList<Uri> = mutableListOf()
-    private var resultImageUri: Uri? = null
-    private var processedBitmap: Bitmap? = null
-    private var processedBitmaps: MutableList<Bitmap> = mutableListOf()
-    private var photoFile: File? = null
-    private var batchProcessingResults: MutableList<BatchProcessingResult> = mutableListOf()
-    private var isProcessingBatch = false
-
-    // ML inference objects
-    private lateinit var staticPipeline: de.konradvoelkel.android.autokorrektur.pipeline.StaticImagePipeline
-    private var mlComponentsInitialized = false
+    private val viewModel: MainViewModel by activityViewModels()
+    private lateinit var exportManager: ImageExportManager
 
     // Activity result launcher for image selection
     private val selectImageLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        AppLogger.debug("Gallery selection result received with code: ${result.resultCode}")
-
-        when (result.resultCode) {
-            Activity.RESULT_OK -> {
-                val data = result.data
-                if (data != null) {
-                    val uri = data.data
-                    if (uri != null) {
-                        AppLogger.info("Gallery image selected successfully: $uri")
-                        try {
-                            selectedImageUri = uri
-                            displayImage(uri, "Original")
-                            binding.startInference.isEnabled = true
-                            AppLogger.debug("Gallery image displayed successfully")
-                        } catch (e: Exception) {
-                            AppLogger.error("Error displaying selected gallery image", e)
-                            Snackbar.make(
-                                binding.root,
-                                "Error displaying selected image: ${e.message}",
-                                Snackbar.LENGTH_LONG
-                            ).show()
-                        }
-                    } else {
-                        AppLogger.error("Gallery selection returned null URI")
-                        Snackbar.make(
-                            binding.root,
-                            "Failed to get image from gallery - no image data received",
-                            Snackbar.LENGTH_LONG
-                        ).show()
-                    }
-                } else {
-                    AppLogger.error("Gallery selection returned null data")
-                    Snackbar.make(
-                        binding.root,
-                        "Failed to get image from gallery - no data received",
-                        Snackbar.LENGTH_LONG
-                    ).show()
-                }
-            }
-
-            Activity.RESULT_CANCELED -> {
-                AppLogger.info("Gallery selection was canceled by user")
-            }
-
-            else -> {
-                AppLogger.error("Gallery selection failed with result code: ${result.resultCode}")
-                Snackbar.make(
-                    binding.root,
-                    "Failed to select image from gallery",
-                    Snackbar.LENGTH_LONG
-                ).show()
+        if (result.resultCode == Activity.RESULT_OK) {
+            val uri = result.data?.data
+            if (uri != null) {
+                viewModel.setSelectedImageUri(uri)
+            } else {
+                showSnackbar(getString(R.string.error_gallery_failed))
             }
         }
     }
@@ -155,10 +80,7 @@ class FirstFragment : Fragment() {
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            selectedImageUri?.let { uri ->
-                displayImage(uri, "Original")
-                binding.startInference.isEnabled = true
-            }
+            // Camera URI is already set in ViewModel via launchCamera()
         }
     }
 
@@ -169,28 +91,7 @@ class FirstFragment : Fragment() {
         if (isGranted) {
             launchCamera()
         } else {
-            AppLogger.warn("Camera permission denied by user")
-            Snackbar.make(
-                binding.root,
-                "Camera permission is required to take photos",
-                Snackbar.LENGTH_LONG
-            ).show()
-        }
-    }
-
-    // Permission request launcher for storage
-    private val storagePermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            launchGallery()
-        } else {
-            AppLogger.warn("Storage permission denied by user")
-            Snackbar.make(
-                binding.root,
-                "Storage permission is required to select photos",
-                Snackbar.LENGTH_LONG
-            ).show()
+            showSnackbar(getString(R.string.error_camera_permission_required))
         }
     }
 
@@ -199,29 +100,7 @@ class FirstFragment : Fragment() {
         ActivityResultContracts.GetMultipleContents()
     ) { uris ->
         if (uris.isNotEmpty()) {
-            selectedImageUris.clear()
-            selectedImageUris.addAll(uris)
-            AppLogger.info("Selected ${uris.size} images for batch processing")
-
-            // Display first few images as preview
-            clearImagesContainer()
-            uris.take(3).forEachIndexed { index, uri ->
-                displayImage(uri, "Image ${index + 1}")
-            }
-
-            if (uris.size > 3) {
-                Snackbar.make(
-                    binding.root,
-                    "Selected ${uris.size} images. Showing first 3 as preview.",
-                    Snackbar.LENGTH_LONG
-                ).show()
-            }
-
-            binding.startInference.isEnabled = true
-            binding.startInference.text =
-                getString(R.string.start_batch_processing_images, uris.size)
-        } else {
-            AppLogger.info("No images selected for batch processing")
+            viewModel.setSelectedImageUris(uris)
         }
     }
 
@@ -237,111 +116,155 @@ class FirstFragment : Fragment() {
         private const val TAG = "FirstFragment"
 
         init {
-            // This block is called only once when the class is first loaded.
-            // It's the recommended place to load native libraries.
             try {
-                // The modern and correct way to load the OpenCV library.
                 System.loadLibrary("opencv_java4")
-                // You can use your AppLogger here if it's accessible statically.
                 Log.d(TAG, "OpenCV native library loaded successfully.")
             } catch (e: UnsatisfiedLinkError) {
-                // This will catch errors if the .so file is missing.
                 Log.e(TAG, "Failed to load OpenCV native library!", e)
-                // Handle the error appropriately. Maybe show a dialog to the user.
             }
         }
     }
 
-    private val mainViewModel: MainViewModel by lazy {
-        androidx.lifecycle.ViewModelProvider(requireActivity())[MainViewModel::class.java]
-    }
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        // The OpenCV initialization is now handled in the companion object's init block.
-        // You can remove the old try-catch block for OpenCVLoader.initDebug().
-        AppLogger.debug("View created. OpenCV should be loaded.")
-
-        // Initialize ML inference objects
-        try {
-            AppLogger.debug("Creating ML inference objects")
-            staticPipeline = de.konradvoelkel.android.autokorrektur.pipeline.StaticImagePipeline(requireContext())
-            mlComponentsInitialized = false
-            AppLogger.info("ML inference pipeline instantiated")
-        } catch (e: Exception) {
-            AppLogger.error("Failed to create ML inference objects", e)
-            mlComponentsInitialized = false
-            Snackbar.make(
-                binding.root,
-                "Failed to initialize ML components: ${e.message}",
-                Snackbar.LENGTH_LONG
-            ).show()
-        }
-
+        exportManager = ImageExportManager(requireContext())
         setupUI()
-        restoreViewModelState()
+        observeViewModel()
     }
 
-    private fun restoreViewModelState() {
-        val origBmp = mainViewModel.originalBitmap
-        val procBmp = mainViewModel.processedBitmap
-        val procUri = mainViewModel.processedImageUri.value
+    private fun observeViewModel() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    viewModel.uiState.collectLatest { state ->
+                        handleUiState(state)
+                    }
+                }
+                launch {
+                    viewModel.properties.collectLatest { props ->
+                        updateUiFromProperties(props)
+                    }
+                }
+            }
+        }
+    }
 
-        if (origBmp != null && procBmp != null && procUri != null) {
-            processedBitmap = procBmp
-            selectedImageUri = mainViewModel.selectedImageUri.value
-            val safeOrig = de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.createScaledBitmapForDisplay(origBmp)
-            val safeProc = de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.createScaledBitmapForDisplay(procBmp)
-            binding.beforeAfterSliderView.setBitmaps(safeOrig, safeProc)
-            binding.beforeAfterSliderView.setSliderPosition(mainViewModel.sliderPosition)
-            binding.beforeAfterSliderView.visibility = View.VISIBLE
-            addImageToContainer(procUri, "Result (Restored)")
+    private fun handleUiState(state: MainUiState) {
+        when (state) {
+            is MainUiState.Idle -> {
+                updateInferenceButtonState(viewModel.properties.value)
+                binding.fileSelect.isEnabled = true
+                binding.batchMode.isEnabled = true
+            }
+
+            is MainUiState.Loading -> {
+                binding.startInference.isEnabled = false
+                binding.startInference.text =
+                    getString(R.string.loading_status, state.stage, state.percent)
+                binding.fileSelect.isEnabled = false
+                binding.batchMode.isEnabled = false
+            }
+
+            is MainUiState.Success -> {
+                val result = state.result
+                if (viewModel.properties.value.isBatchMode) {
+                    addImageToContainer(result.inpaintedBitmap!!, getString(R.string.label_result))
+                    if (viewModel.properties.value.batchProcessingResults.size == viewModel.properties.value.selectedImageUris.size) {
+                        finalizeBatchProcessing()
+                    }
+                } else {
+                    val safeOrig =
+                        de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.createScaledBitmapForDisplay(
+                            result.originalBitmap
+                        )
+                    val safeProc =
+                        de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.createScaledBitmapForDisplay(
+                            result.inpaintedBitmap!!
+                        )
+                    binding.beforeAfterSliderView.setBitmaps(safeOrig, safeProc)
+                    binding.beforeAfterSliderView.visibility = View.VISIBLE
+                    binding.imagesContainer.visibility = View.GONE
+                }
+                updateInferenceButtonState(viewModel.properties.value)
+                binding.fileSelect.isEnabled = true
+                binding.batchMode.isEnabled = true
+            }
+
+            is MainUiState.Error -> {
+                showSnackbar(state.message)
+                viewModel.clearState()
+            }
+        }
+    }
+
+    private fun updateUiFromProperties(props: MainUiProperties) {
+        if (props.isBatchMode) {
+            clearImagesContainer()
+            props.selectedImageUris.take(3).forEachIndexed { index, uri ->
+                displayImage(uri, getString(R.string.label_image_numbered, index + 1))
+            }
+            binding.fileSelect.text = getString(R.string.select_multiple_images)
+        } else {
+            clearImagesContainer()
+            props.selectedImageUri?.let { displayImage(it, getString(R.string.label_original)) }
+            binding.fileSelect.text = getString(R.string.select_image)
+        }
+        updateInferenceButtonState(props)
+        binding.beforeAfterSliderView.setSliderPosition(props.sliderPosition)
+    }
+
+    private fun updateInferenceButtonState(props: MainUiProperties) {
+        if (props.isBatchMode) {
+            binding.startInference.isEnabled = props.selectedImageUris.isNotEmpty()
+            binding.startInference.text = if (props.selectedImageUris.isNotEmpty()) {
+                getString(R.string.start_batch_processing_images, props.selectedImageUris.size)
+            } else {
+                getString(R.string.btn_start_batch_processing)
+            }
+        } else {
+            binding.startInference.isEnabled = props.selectedImageUri != null
+            binding.startInference.text = getString(R.string.start)
         }
     }
 
     private fun setupUI() {
-        // Setup file select button
         binding.fileSelect.setOnClickListener {
             if (binding.batchMode.isChecked) {
-                // Launch multiple image picker for batch processing
-                AppLogger.info("Launching multiple image selection for batch processing")
                 multipleImagePickerLauncher.launch("image/*")
             } else {
                 selectImage()
             }
         }
 
-        // Setup start inference button
         binding.startInference.setOnClickListener {
-            performOnnxInference()
+            viewModel.startInference(
+                downscaleMp = getDownscaleMpFromSpinner(),
+                maskUpscale = getMaskUpscaleFromSlider(),
+                scoreThreshold = getScoreThresholdFromSlider(),
+                useServerSdxl = binding.useSdxl.isChecked,
+                downshift = getDownshiftFromSlider(),
+                segModel = binding.segModel.selectedItem.toString()
+            )
         }
 
-        // Setup download button
         binding.download.setOnClickListener {
-            processedBitmap?.let { bitmap ->
-                // Save the processed image to gallery
-                val savedUri = saveImageToGallery(bitmap)
-                if (savedUri != null) {
-                    Snackbar.make(binding.root, "Image saved to gallery", Snackbar.LENGTH_SHORT)
-                        .show()
+            val state = viewModel.uiState.value
+            if (state is MainUiState.Success) {
+                state.result.inpaintedBitmap?.let { bitmap ->
+                    val savedUri = exportManager.saveImageToGallery(bitmap)
+                    if (savedUri != null) {
+                        showSnackbar(getString(R.string.msg_image_saved))
+                    }
                 }
-            } ?: run {
-                AppLogger.warn("Download attempted but no processed image available")
-                Snackbar.make(
-                    binding.root,
-                    "No processed image to download. Run inference first.",
-                    Snackbar.LENGTH_SHORT
-                ).show()
+            } else {
+                showSnackbar(getString(R.string.error_no_processed_image))
             }
         }
 
-        // Setup Instagram export button
         binding.exportInstagram.setOnClickListener {
             exportInstagramGraphic()
         }
 
-        // Setup Live AR Car Removal button
         binding.arLiveModeButton.setOnClickListener {
             if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
                 val intent = Intent(requireContext(), de.konradvoelkel.android.autokorrektur.ar.ArCameraActivity::class.java)
@@ -351,39 +274,17 @@ class FirstFragment : Fragment() {
             }
         }
 
-        // Setup options button
         binding.optionsButton.setOnClickListener {
             toggleOptionsPanel()
         }
 
-        // Setup sliders
         setupSliders()
-
-        // Setup spinners
         setupSpinners()
 
-        // Setup switches
         binding.batchMode.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                // Batch mode enabled
-                binding.startInference.isEnabled = selectedImageUris.isNotEmpty()
-                binding.startInference.text = if (selectedImageUris.isNotEmpty()) {
-                    "Start Batch Processing (${selectedImageUris.size} images)"
-                } else {
-                    "Start Batch Processing"
-                }
-                binding.fileSelect.text = getString(R.string.select_multiple_images)
-            } else {
-                // Single mode enabled
-                binding.startInference.isEnabled = selectedImageUri != null
-                binding.startInference.text = getString(R.string.start)
-                binding.fileSelect.text = getString(R.string.select_image)
-                // Clear batch selections when switching to single mode
-                selectedImageUris.clear()
-            }
+            viewModel.setBatchMode(isChecked)
         }
 
-        // Setup SDXL switch GDPR consent trigger
         binding.useSdxl.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 val prefs = requireContext().getSharedPreferences("autokorrektur_prefs", android.content.Context.MODE_PRIVATE)
@@ -392,14 +293,14 @@ class FirstFragment : Fragment() {
                     val view = android.view.LayoutInflater.from(requireContext()).inflate(R.layout.dialog_gdpr_consent, null)
                     val checkbox = view.findViewById<android.widget.CheckBox>(R.id.rememberChoiceCheckbox)
                     AlertDialog.Builder(requireContext())
-                        .setTitle("Premium Edit (Server SDXL)")
+                        .setTitle(R.string.premium_edit_title)
                         .setView(view)
-                        .setPositiveButton("Accept") { _, _ ->
+                        .setPositiveButton(R.string.btn_accept) { _, _ ->
                             if (checkbox.isChecked) {
                                 prefs.edit().putBoolean("sdxl_consent", true).apply()
                             }
                         }
-                        .setNegativeButton("Cancel") { _, _ ->
+                        .setNegativeButton(R.string.cancel) { _, _ ->
                             binding.useSdxl.isChecked = false
                         }
                         .show()
@@ -407,82 +308,60 @@ class FirstFragment : Fragment() {
             }
         }
 
-        // Setup continue mode switch
         binding.continueWithResult.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked && processedBitmap == null && !binding.batchMode.isChecked) {
-                Snackbar.make(
-                    binding.root,
-                    "No previous result available. Process an image first to enable continue mode.",
-                    Snackbar.LENGTH_LONG
-                ).show()
+            if (isChecked && viewModel.uiState.value !is MainUiState.Success && !binding.batchMode.isChecked) {
+                showSnackbar(getString(R.string.error_no_previous_result))
                 binding.continueWithResult.isChecked = false
             }
         }
     }
 
     private fun setupSliders() {
-        // Mask Upscale slider
         binding.maskUpscale.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 val value = (1 + progress * 0.01).toFloat()
                 binding.maskUpscaleVal.text = String.format("%.2f", value)
             }
-
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
-        // Mask Downshift slider
         binding.downshift.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 val value = progress * 0.001
                 binding.downshiftVal.text = String.format("%.3f", value)
             }
-
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
-        // Score Threshold slider
         binding.scoreThreshold.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 val value = progress * 0.01
                 binding.scoreThresholdVal.text = String.format("%.2f", value)
             }
-
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
     }
 
     private fun setupSpinners() {
-        // Downscale spinner
-        val downscaleOptions = arrayOf(
-            "No Scaling", "0.5 MP", "1 MP", "2 MP", "3 MP",
-            "4 MP", "5 MP", "6 MP", "7 MP", "8 MP", "9 MP", "10 MP"
-        )
-        val downscaleAdapter = ArrayAdapter(
+        val downscaleAdapter = ArrayAdapter.createFromResource(
             requireContext(),
-            android.R.layout.simple_spinner_item,
-            downscaleOptions
+            R.array.downscale_options,
+            android.R.layout.simple_spinner_item
         )
         downscaleAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.downscaleMP.adapter = downscaleAdapter
 
-        // Segmentation Model spinner
-        val segModelOptions = arrayOf("Yolo11-Nano", "Yolo11-Small", "Yolo11-Medium")
-        val segModelAdapter = ArrayAdapter(
+        val segModelAdapter = ArrayAdapter.createFromResource(
             requireContext(),
-            android.R.layout.simple_spinner_item,
-            segModelOptions
+            R.array.yolo_model_options,
+            android.R.layout.simple_spinner_item
         )
         segModelAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.segModel.adapter = segModelAdapter
-        binding.segModel.setSelection(1) // Default to Yolo11-Small
+        binding.segModel.setSelection(1)
     }
 
     private fun selectImage() {
@@ -491,1008 +370,191 @@ class FirstFragment : Fragment() {
             getString(R.string.choose_from_gallery),
             getString(R.string.cancel)
         )
-
         AlertDialog.Builder(requireContext())
             .setTitle(R.string.photo_selection_title)
             .setItems(options) { _, which ->
                 when (which) {
                     0 -> takePhoto()
                     1 -> chooseFromGallery()
-                    // Cancel does nothing
                 }
             }
             .show()
     }
 
     private fun takePhoto() {
-        when {
-            ContextCompat.checkSelfPermission(
+        if (ContextCompat.checkSelfPermission(
                 requireContext(),
                 Manifest.permission.CAMERA
-            ) == PackageManager.PERMISSION_GRANTED -> {
-                launchCamera()
-            }
-
-            else -> {
-                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-            }
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            launchCamera()
+        } else {
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
     private fun launchCamera() {
         try {
-            photoFile = createImageFile()
-            photoFile?.also {
-                selectedImageUri = FileProvider.getUriForFile(
-                    requireContext(),
-                    "${requireContext().packageName}.fileprovider",
-                    it
-                )
-                val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, selectedImageUri)
-                takePictureLauncher.launch(takePictureIntent)
+            val file = createImageFile()
+            val uri = FileProvider.getUriForFile(
+                requireContext(),
+                "${requireContext().packageName}.fileprovider",
+                file
+            )
+            viewModel.setSelectedImageUri(uri)
+            val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+                putExtra(MediaStore.EXTRA_OUTPUT, uri)
             }
+            takePictureLauncher.launch(takePictureIntent)
         } catch (ex: Exception) {
-            AppLogger.error("Error creating image file for camera", ex)
-            Snackbar.make(
-                binding.root,
-                "Error creating image file: ${ex.message}",
-                Snackbar.LENGTH_LONG
-            ).show()
+            AppLogger.error(getString(R.string.error_create_file_failed), ex)
+            showSnackbar(getString(R.string.error_create_file_message, ex.message))
         }
     }
 
-    private val pickVisualMediaLauncher = registerForActivityResult(
-        ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
+    private val pickVisualMediaLauncher =
+        registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) {
-            AppLogger.info("Zero-permission PickVisualMedia image selected: $uri")
-            selectedImageUri = uri
-            displayImage(uri, "Original")
-            binding.startInference.isEnabled = true
-        } else {
-            AppLogger.info("PickVisualMedia selection canceled by user")
+            viewModel.setSelectedImageUri(uri)
         }
     }
 
     private fun chooseFromGallery() {
         if (ActivityResultContracts.PickVisualMedia.isPhotoPickerAvailable(requireContext())) {
             pickVisualMediaLauncher.launch(
-                androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                androidx.activity.result.PickVisualMediaRequest(
+                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                )
             )
         } else {
-            val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-                type = "image/*"
-            }
+            val intent = Intent(Intent.ACTION_GET_CONTENT).apply { type = "image/*" }
             selectImageLauncher.launch(intent)
-        }
-    }
-
-    private fun launchGallery() {
-        try {
-            AppLogger.debug("Launching gallery picker")
-            val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-                type = "image/*"
-                addCategory(Intent.CATEGORY_OPENABLE)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            selectImageLauncher.launch(intent)
-            AppLogger.debug("Gallery picker launched successfully")
-        } catch (e: Exception) {
-            AppLogger.error("Error launching gallery picker", e)
-            Snackbar.make(
-                binding.root,
-                "Error opening gallery: ${e.message}",
-                Snackbar.LENGTH_LONG
-            ).show()
         }
     }
 
     private fun createImageFile(): File {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val storageDir = requireContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-        return File.createTempFile(
-            "JPEG_${timeStamp}_",
-            ".jpg",
-            storageDir
-        )
+        return File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir)
     }
 
-    // Decode a downscaled bitmap for preview display to avoid Canvas too-large issues
     private fun decodePreviewBitmap(uri: Uri, targetW: Int, targetH: Int): Bitmap {
         val source = ImageDecoder.createSource(requireContext().contentResolver, uri)
         return ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
             val srcW = info.size.width
             val srcH = info.size.height
-            // Compute scale to fit into target box while preserving aspect ratio
             val scale = kotlin.math.min(
                 targetW.toFloat() / srcW.toFloat(),
                 targetH.toFloat() / srcH.toFloat()
             ).coerceAtMost(1f)
-            val outW = kotlin.math.max(1, (srcW * scale).toInt())
-            val outH = kotlin.math.max(1, (srcH * scale).toInt())
-            // Prefer software allocation to reduce GPU memory pressure for previews
-            decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
-            decoder.isMutableRequired = false
-            decoder.setTargetSize(outW, outH)
+            decoder.setTargetSize(
+                kotlin.math.max(1, (srcW * scale).toInt()),
+                kotlin.math.max(1, (srcH * scale).toInt())
+            )
         }
     }
 
     private fun displayImage(uri: Uri, label: String) {
-        clearImagesContainer()
-
-        val imageView = ImageView(context)
-        imageView.layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            400
-        )
-        imageView.scaleType = ImageView.ScaleType.FIT_CENTER
-
-        // Decode a downscaled preview to avoid Canvas too-large crashes
-        val metrics = resources.displayMetrics
-        val targetW = metrics.widthPixels
-        val targetH = 400 // matches the fixed layout height in px
-        val preview = decodePreviewBitmap(uri, targetW, targetH)
-        imageView.setImageBitmap(preview)
-
-        val textView = TextView(context)
-        textView.text = label
-        textView.textAlignment = View.TEXT_ALIGNMENT_CENTER
-
-        val container = LinearLayout(context)
-        container.orientation = LinearLayout.VERTICAL
-        container.layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        )
-        container.addView(imageView)
-        container.addView(textView)
-
+        val imageView = ImageView(context).apply {
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 400)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            val preview = decodePreviewBitmap(uri, resources.displayMetrics.widthPixels, 400)
+            setImageBitmap(preview)
+        }
+        val textView = TextView(context).apply {
+            text = label
+            textAlignment = View.TEXT_ALIGNMENT_CENTER
+        }
+        val container = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            addView(imageView)
+            addView(textView)
+        }
         binding.imagesContainer.addView(container)
     }
 
-    private fun addImageToContainer(uri: Uri, @Suppress("SameParameterValue") label: String) {
-        val imageView = ImageView(context)
-        imageView.layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            400
-        )
-        imageView.scaleType = ImageView.ScaleType.FIT_CENTER
-
-        val metrics = resources.displayMetrics
-        val targetW = metrics.widthPixels
-        val targetH = 400
-        val preview = decodePreviewBitmap(uri, targetW, targetH)
-        imageView.setImageBitmap(preview)
-
-        val textView = TextView(context)
-        textView.text = label
-        textView.textAlignment = View.TEXT_ALIGNMENT_CENTER
-
-        val container = LinearLayout(context)
-        container.orientation = LinearLayout.VERTICAL
-        container.layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        )
-        container.addView(imageView)
-        container.addView(textView)
-
+    private fun addImageToContainer(bitmap: Bitmap, label: String) {
+        val imageView = ImageView(context).apply {
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 400)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            setImageBitmap(bitmap)
+        }
+        val textView = TextView(context).apply {
+            text = label
+            textAlignment = View.TEXT_ALIGNMENT_CENTER
+        }
+        val container = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            addView(imageView)
+            addView(textView)
+        }
         binding.imagesContainer.addView(container)
+    }
+
+    private fun showSnackbar(message: String) {
+        Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG).show()
     }
 
     private fun clearImagesContainer() {
         binding.imagesContainer.removeAllViews()
         binding.beforeAfterSliderView.visibility = View.GONE
-        mainViewModel.clearState()
+        binding.imagesContainer.visibility = View.VISIBLE
     }
 
     private fun toggleOptionsPanel() {
-        if (binding.optionsPanel.isVisible) {
-            binding.optionsPanel.visibility = View.GONE
-        } else {
-            binding.optionsPanel.visibility = View.VISIBLE
-        }
-    }
-
-    private fun performOnnxInference() {
-        AppLogger.info("Starting ONNX inference")
-
-        // Ensure staticPipeline object is instantiated
-        if (!::staticPipeline.isInitialized) {
-            try {
-                staticPipeline = de.konradvoelkel.android.autokorrektur.pipeline.StaticImagePipeline(requireContext())
-            } catch (e: Exception) {
-                AppLogger.error("Failed to create static pipeline", e)
-                Snackbar.make(binding.root, "Failed to create ML pipeline: ${e.message}", Snackbar.LENGTH_LONG).show()
-                return
-            }
-        }
-
-        // Route to batch or single processing based on mode
-        if (binding.batchMode.isChecked) {
-            if (selectedImageUris.isEmpty()) {
-                AppLogger.warn("No images selected for batch processing")
-                Snackbar.make(
-                    binding.root,
-                    "Please select images for batch processing first",
-                    Snackbar.LENGTH_SHORT
-                ).show()
-                return
-            }
-            performBatchProcessing()
-        } else {
-            // Check if an image is selected for single processing
-            if (selectedImageUri == null) {
-                AppLogger.warn("No image selected for inference")
-                Snackbar.make(binding.root, "Please select an image first", Snackbar.LENGTH_SHORT)
-                    .show()
-                return
-            }
-            performSingleImageInference()
-        }
-    }
-
-    private var activeInferenceJob: kotlinx.coroutines.Job? = null
-
-    private fun performSingleImageInference() {
-
-        // Cancel any previous inference job if running
-        activeInferenceJob?.cancel()
-        
-        val useSdxl = binding.useSdxl.isChecked
-        if (useSdxl) {
-            val prefs = requireContext().getSharedPreferences("autokorrektur_prefs", android.content.Context.MODE_PRIVATE)
-            val consentGiven = prefs.getBoolean("sdxl_consent", false)
-            if (!consentGiven) {
-                // Show GDPR dialog
-                val view = android.view.LayoutInflater.from(requireContext()).inflate(R.layout.dialog_gdpr_consent, null)
-                val checkbox = view.findViewById<android.widget.CheckBox>(R.id.rememberChoiceCheckbox)
-                
-                AlertDialog.Builder(requireContext())
-                    .setTitle("Premium Edit (Server SDXL)")
-                    .setView(view)
-                    .setPositiveButton("Accept") { _, _ ->
-                        if (checkbox.isChecked) {
-                            prefs.edit().putBoolean("sdxl_consent", true).apply()
-                        }
-                        startInferenceFlow(true)
-                    }
-                    .setNegativeButton("Cancel") { _, _ ->
-                        binding.useSdxl.isChecked = false
-                    }
-                    .show()
-            } else {
-                startInferenceFlow(true)
-            }
-        } else {
-            startInferenceFlow(false)
-        }
-    }
-
-    private fun startInferenceFlow(useServerSdxl: Boolean) {
-        // Disable the button and show processing state
-        binding.startInference.isEnabled = false
-        if (useServerSdxl) {
-            binding.startInference.text = "Uploading to Cloud... (~10s)"
-        } else {
-            binding.startInference.text = getString(R.string.processing)
-        }
-
-        // Clear the images container
-        clearImagesContainer()
-
-        // Display the original image or previous result based on continue mode
-        val inputUri = if (binding.continueWithResult.isChecked && resultImageUri != null) {
-            resultImageUri!!
-        } else {
-            selectedImageUri!!
-        }
-
-        val inputLabel = if (binding.continueWithResult.isChecked && resultImageUri != null) {
-            "Previous Result (Input)"
-        } else {
-            "Original"
-        }
-
-        displayImage(inputUri, inputLabel)
-
-        // Perform ONNX inference in background coroutine on Dispatchers.Default
-        activeInferenceJob = launchInferenceJob(useServerSdxl)
-    }
-
-    private fun launchInferenceJob(useServerSdxl: Boolean): kotlinx.coroutines.Job {
-        return viewLifecycleOwner.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.Default) {
-            try {
-                AppLogger.debug("Starting background inference coroutine")
-
-                selectedImageUri?.let { uri ->
-                    AppLogger.debug("Processing image URI: $uri")
-
-                    // Initialize ML inference objects if not already done
-                    try {
-                        if (!mlComponentsInitialized) {
-                            staticPipeline.initialize()
-                            mlComponentsInitialized = true
-                        }
-                    } catch (e: Exception) {
-                        throw Exception("Failed to initialize ML models: ${e.message}", e)
-                    }
-
-                    val downscaleMp = getDownscaleMpFromSpinner()
-                    val maskUpscale = getMaskUpscaleFromSlider()
-                    val scoreThreshold = getScoreThresholdFromSlider()
-                    
-                    val processingUri = if (binding.continueWithResult.isChecked && resultImageUri != null) {
-                        resultImageUri!!
-                    } else {
-                        uri
-                    }
-                    val pipelineResult = staticPipeline.processImage(
-                        uri = processingUri,
-                        downscaleMp = downscaleMp,
-                        maskUpscale = maskUpscale,
-                        scoreThreshold = scoreThreshold,
-                        useServerSdxl = useServerSdxl,
-                        onProgressUpdate = { stage, percent ->
-                            if (isAdded && !isDetached) {
-                                requireActivity().runOnUiThread {
-                                    binding.startInference.text = "$stage ($percent%)"
-                                }
-                            }
-                        },
-                        onMaskGenerated = { maskBitmap ->
-                            if (isAdded && !isDetached) {
-                                requireActivity().runOnUiThread {
-                                    try {
-                                        if (BuildConfig.DEBUG) {
-                                            AppLogger.saveDebugScreencap(requireContext(), maskBitmap, "generated_mask")
-                                        }
-                                        val basePhotoBitmap = try {
-                                            val resolver = requireContext().contentResolver
-                                            val sourceBitmap = if (
-                                                android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P
-                                            ) {
-                                                val source = ImageDecoder.createSource(resolver, processingUri)
-                                                ImageDecoder.decodeBitmap(source)
-                                            } else {
-                                                @Suppress("DEPRECATION")
-                                                MediaStore.Images.Media.getBitmap(resolver, processingUri)
-                                            }
-                                            sourceBitmap.copy(Bitmap.Config.ARGB_8888, true)
-                                        } catch (e: Exception) {
-                                            AppLogger.error("Failed to decode processing Uri bitmap", e)
-                                            Bitmap.createBitmap(
-                                                maskBitmap.width,
-                                                maskBitmap.height,
-                                                Bitmap.Config.ARGB_8888
-                                            )
-                                        }
-
-                                        MaskOverlayUtils.drawOverlayOnto(
-                                            baseBitmap = basePhotoBitmap,
-                                            maskBitmap = maskBitmap,
-                                            threshold = 128,
-                                            alpha = 140
-                                        )
-
-                                        val tempMaskFile = File(requireContext().cacheDir, "mask_image.jpg")
-                                        FileOutputStream(tempMaskFile).use { out ->
-                                            basePhotoBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
-                                        }
-                                        basePhotoBitmap.recycle()
-
-                                        val maskUri = FileProvider.getUriForFile(
-                                            requireContext(),
-                                            "${requireContext().packageName}.fileprovider",
-                                            tempMaskFile
-                                        )
-                                        displayImage(maskUri, "Mask Processed")
-                                    } catch (e: Exception) {
-                                        AppLogger.error("Error displaying mask", e)
-                                    }
-                                }
-                            }
-                        }
-                    )
-
-                    if (BuildConfig.DEBUG && pipelineResult.inpaintedBitmap != null) {
-                        AppLogger.saveDebugScreencap(requireContext(), pipelineResult.inpaintedBitmap, "inpainted_result")
-                    }
-                    
-                    if (pipelineResult.errorMessage != null) {
-                        throw Exception(pipelineResult.errorMessage)
-                    }
-                    
-                    if (isAdded && !isDetached) {
-                        requireActivity().runOnUiThread {
-                            try {
-                                processedBitmap = pipelineResult.inpaintedBitmap
-                                val tempFile = File(requireContext().cacheDir, "processed_image.jpg")
-                                val outputStream = FileOutputStream(tempFile)
-                                processedBitmap?.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                                outputStream.close()
-                                resultImageUri = FileProvider.getUriForFile(
-                                    requireContext(),
-                                    "${requireContext().packageName}.fileprovider",
-                                    tempFile
-                                )
-
-                                // Display the processed image & enable interactive Before/After split slider
-                                val origBmp = pipelineResult.originalBitmap
-                                val procBmp = processedBitmap
-                                if (procBmp != null) {
-                                    val safeOrig = de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.createScaledBitmapForDisplay(origBmp)
-                                    val safeProc = de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.createScaledBitmapForDisplay(procBmp)
-                                    binding.beforeAfterSliderView.setBitmaps(safeOrig, safeProc)
-                                    binding.beforeAfterSliderView.visibility = View.VISIBLE
-                                    mainViewModel.setSelectedImageUri(selectedImageUri)
-                                    mainViewModel.setProcessedResult(resultImageUri, safeOrig, safeProc)
-                                }
-
-                                binding.startInference.isEnabled = true
-                                binding.startInference.text = getString(R.string.start)
-
-                                Snackbar.make(
-                                    binding.root,
-                                    "ONNX inference completed successfully",
-                                    Snackbar.LENGTH_SHORT
-                                ).show()
-                                AppLogger.info("Inference completed successfully")
-                            } catch (e: Exception) {
-                                AppLogger.error("Error displaying result", e)
-                                binding.startInference.isEnabled = true
-                                binding.startInference.text = getString(R.string.start)
-                                Snackbar.make(
-                                    binding.root,
-                                    "Error displaying result: ${e.message}",
-                                    Snackbar.LENGTH_LONG
-                                ).show()
-                            }
-                        }
-                    } else {
-                        AppLogger.warn("Fragment not attached, skipping result display")
-                    }
-                } ?: run {
-                    AppLogger.error("selectedImageUri is null in background thread")
-                    if (isAdded && !isDetached) {
-                        requireActivity().runOnUiThread {
-                            if (!isAdded || isDetached) {
-                                AppLogger.warn("Fragment not attached, skipping null URI error display")
-                                return@runOnUiThread
-                            }
-                            binding.startInference.isEnabled = true
-                            binding.startInference.text = getString(R.string.start)
-                            Snackbar.make(binding.root, "No image selected", Snackbar.LENGTH_SHORT)
-                                .show()
-                        }
-                    } else {
-                        AppLogger.warn("Fragment not attached, skipping null URI error display")
-                    }
-                }
-            } catch (e: Exception) {
-                AppLogger.error("Error during inference", e)
-
-                // Handle errors on UI thread
-                if (isAdded && !isDetached) {
-                    requireActivity().runOnUiThread {
-                        if (!isAdded || isDetached) {
-                            AppLogger.warn("Fragment not attached, skipping error display")
-                            return@runOnUiThread
-                        }
-
-                        binding.startInference.isEnabled = true
-                        binding.startInference.text = getString(R.string.start)
-
-                        val errorMessages = when {
-                            e.message?.contains("Failed to create YOLO session") == true -> {
-                                Pair(
-                                    "YOLO Model Loading Failed",
-                                    "The YOLO model could not be loaded. This might be due to:\n• Corrupted model file\n• Insufficient memory\n• Incompatible model format\n\nCheck logcat for detailed error information.\n\nOriginal error: ${e.message}"
-                                )
-                            }
-
-                            e.message?.contains("Failed to create NMS session") == true -> {
-                                Pair(
-                                    "NMS Model Loading Failed",
-                                    "The NMS model could not be loaded. Check logcat for details.\n\nOriginal error: ${e.message}"
-                                )
-                            }
-
-                            e.message?.contains("Failed to create mask session") == true -> {
-                                Pair(
-                                    "Mask Model Loading Failed",
-                                    "The Mask model could not be loaded. Check logcat for details.\n\nOriginal error: ${e.message}"
-                                )
-                            }
-
-                            e.message?.contains("model") == true -> {
-                                Pair(
-                                    "Model Loading Failed",
-                                    "One or more ML models failed to load. Check logcat for detailed error information.\n\nOriginal error: ${e.message}"
-                                )
-                            }
-
-                            e.message?.contains("OpenCV") == true -> {
-                                Pair(
-                                    "OpenCV Error",
-                                    "OpenCV initialization failed. This might indicate a problem with image processing.\n\nOriginal error: ${e.message}"
-                                )
-                            }
-
-                            e.message?.contains("ONNX") == true -> {
-                                Pair(
-                                    "ONNX Runtime Error",
-                                    "ONNX Runtime encountered an error during model execution.\n\nOriginal error: ${e.message}"
-                                )
-                            }
-
-                            e.message?.contains("initialize") == true -> {
-                                Pair(
-                                    "Initialization Failed",
-                                    e.message ?: "Unknown initialization error"
-                                )
-                            }
-
-                            else -> {
-                                Pair(
-                                    "Inference Error",
-                                    "An error occurred during inference processing.\n\nOriginal error: ${e.message}"
-                                )
-                            }
-                        }
-
-                        val shortMessage = errorMessages.first
-                        val detailedMessage = errorMessages.second
-
-                        // Log the error details and show user-friendly message
-                        AppLogger.error("Inference error: $shortMessage - $detailedMessage")
-
-                        // Snackbar for detailed information
-                        Snackbar.make(
-                            binding.root,
-                            detailedMessage as CharSequence,
-                            Snackbar.LENGTH_INDEFINITE
-                        ).setAction("Dismiss") {
-                            // Snackbar will be dismissed
-                        }.show()
-                    }
-                } else {
-                    AppLogger.warn("Fragment not attached, skipping error display")
-                }
-            }
-        }
-    }
-
-
-    private fun performBatchProcessing() {
-        val useSdxl = binding.useSdxl.isChecked
-        if (useSdxl) {
-            val prefs = requireContext().getSharedPreferences("autokorrektur_prefs", android.content.Context.MODE_PRIVATE)
-            val consentGiven = prefs.getBoolean("sdxl_consent", false)
-            if (!consentGiven) {
-                val view = android.view.LayoutInflater.from(requireContext()).inflate(R.layout.dialog_gdpr_consent, null)
-                val checkbox = view.findViewById<android.widget.CheckBox>(R.id.rememberChoiceCheckbox)
-                
-                AlertDialog.Builder(requireContext())
-                    .setTitle("Premium Edit (Server SDXL)")
-                    .setView(view)
-                    .setPositiveButton("Accept") { _, _ ->
-                        if (checkbox.isChecked) {
-                            prefs.edit().putBoolean("sdxl_consent", true).apply()
-                        }
-                        startBatchInferenceFlow(true)
-                    }
-                    .setNegativeButton("Cancel") { _, _ ->
-                        binding.useSdxl.isChecked = false
-                    }
-                    .show()
-            } else {
-                startBatchInferenceFlow(true)
-            }
-        } else {
-            startBatchInferenceFlow(false)
-        }
-    }
-
-    private fun startBatchInferenceFlow(useServerSdxl: Boolean) {
-        AppLogger.info("Starting batch processing for ${selectedImageUris.size} images")
-
-        // Clear previous results
-        batchProcessingResults.clear()
-        processedBitmaps.clear()
-        isProcessingBatch = true
-
-        // Disable UI and show processing state
-        binding.startInference.isEnabled = false
-        binding.startInference.text = "Processing batch (0/${selectedImageUris.size})..."
-        binding.fileSelect.isEnabled = false
-        binding.batchMode.isEnabled = false
-
-        // Clear the images container
-        clearImagesContainer()
-
-        // Start batch processing in background thread
-        Thread {
-            try {
-                // Initialize ML inference objects
-                try {
-                    if (!mlComponentsInitialized) {
-                        kotlinx.coroutines.runBlocking {
-                            staticPipeline.initialize()
-                        }
-                        mlComponentsInitialized = true
-                    }
-                } catch (e: Exception) {
-                    throw Exception("Failed to initialize ML models: ${e.message}", e)
-                }
-
-                val downscaleMp = getDownscaleMpFromSpinner()
-                val maskUpscale = getMaskUpscaleFromSlider()
-                val scoreThreshold = getScoreThresholdFromSlider()
-                val downshift = getDownshiftFromSlider()
-                val segModel = binding.segModel.selectedItem.toString()
-
-                selectedImageUris.forEachIndexed { index, uri ->
-                    if (!isProcessingBatch) return@Thread
-                    val startTime = System.currentTimeMillis()
-                    val imageName = "Image_${index + 1}"
-                    if (isAdded && !isDetached) {
-                        requireActivity().runOnUiThread {
-                            binding.startInference.text = "Processing batch (${index + 1}/${selectedImageUris.size})..."
-                        }
-                    }
-                    try {
-                        val pipelineResult = kotlinx.coroutines.runBlocking {
-                            staticPipeline.processImage(uri, downscaleMp, maskUpscale, scoreThreshold, useServerSdxl)
-                        }
-                        if (pipelineResult.errorMessage != null) throw Exception(pipelineResult.errorMessage)
-                        val resultBitmap = pipelineResult.inpaintedBitmap!!
-                        processedBitmaps.add(resultBitmap)
-
-                        val processingTime = System.currentTimeMillis() - startTime
-
-                        // Record successful result
-                        batchProcessingResults.add(
-                            BatchProcessingResult(
-                                originalImageName = imageName,
-                                processingTimeMs = processingTime,
-                                maskUpscale = maskUpscale,
-                                scoreThreshold = scoreThreshold,
-                                downshift = downshift,
-                                downscaleMp = downscaleMp?.toString() ?: "No Scaling",
-                                segmentationModel = segModel,
-                                success = true
-                            )
-                        )
-
-                        AppLogger.debug("Successfully processed image ${index + 1} in ${processingTime}ms")
-
-                    } catch (e: Exception) {
-                        val processingTime = System.currentTimeMillis() - startTime
-                        AppLogger.error("Error processing image ${index + 1}: ${e.message}", e)
-
-                        // Record failed result
-                        batchProcessingResults.add(
-                            BatchProcessingResult(
-                                originalImageName = imageName,
-                                processingTimeMs = processingTime,
-                                maskUpscale = maskUpscale,
-                                scoreThreshold = scoreThreshold,
-                                downshift = downshift,
-                                downscaleMp = downscaleMp?.toString() ?: "No Scaling",
-                                segmentationModel = segModel,
-                                success = false,
-                                errorMessage = e.message
-                            )
-                        )
-                    }
-                }
-
-                // Update UI on completion
-                if (isAdded && !isDetached) {
-                    requireActivity().runOnUiThread {
-                        finalizeBatchProcessing()
-                    }
-                }
-
-            } catch (e: Exception) {
-                AppLogger.error("Batch processing failed", e)
-                if (isAdded && !isDetached) {
-                    requireActivity().runOnUiThread {
-                        binding.startInference.isEnabled = true
-                        binding.startInference.text = "Start Batch Processing"
-                        binding.fileSelect.isEnabled = true
-                        binding.batchMode.isEnabled = true
-                        isProcessingBatch = false
-
-                        Snackbar.make(
-                            binding.root,
-                            "Batch processing failed: ${e.message}",
-                            Snackbar.LENGTH_LONG
-                        ).show()
-                    }
-                }
-            }
-        }.start()
+        binding.optionsPanel.visibility =
+            if (binding.optionsPanel.isVisible) View.GONE else View.VISIBLE
     }
 
     private fun finalizeBatchProcessing() {
-        val successCount = batchProcessingResults.count { it.success }
-        val totalCount = batchProcessingResults.size
-
-        AppLogger.info("Batch processing completed: $successCount/$totalCount images processed successfully")
-
-        // Re-enable UI
-        binding.startInference.isEnabled = true
-        binding.startInference.text = "Start Batch Processing (${selectedImageUris.size} images)"
-        binding.fileSelect.isEnabled = true
-        binding.batchMode.isEnabled = true
-        isProcessingBatch = false
-
-        // Show results summary
-        val message =
-            "Batch processing completed!\n$successCount/$totalCount images processed successfully"
+        val results = viewModel.properties.value.batchProcessingResults
+        val successCount = results.count { it.success }
+        val message = getString(R.string.msg_batch_completed, successCount, results.size)
         Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG)
-            .setAction("Export CSV") {
-                exportBatchResultsToCSV()
-            }.show()
-
-        // Display first few processed images
-        processedBitmaps.take(3).forEachIndexed { index, bitmap ->
-            try {
-                val tempFile = File(requireContext().cacheDir, "batch_result_${index}.jpg")
-                val outputStream = FileOutputStream(tempFile)
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                outputStream.close()
-
-                val resultUri = FileProvider.getUriForFile(
-                    requireContext(),
-                    "${requireContext().packageName}.fileprovider",
-                    tempFile
-                )
-                displayImage(resultUri, "Result ${index + 1}")
-            } catch (e: Exception) {
-                AppLogger.error("Error displaying batch result ${index + 1}", e)
-            }
-        }
+            .setAction(R.string.btn_export_csv) { exportManager.exportBatchResultsToCSV(results) }
+            .show()
     }
 
-    private fun exportBatchResultsToCSV() {
-        if (batchProcessingResults.isEmpty()) {
-            Snackbar.make(binding.root, "No batch results to export", Snackbar.LENGTH_SHORT).show()
-            return
-        }
-
-        try {
-            val csvContent = StringBuilder()
-            csvContent.append("Image Name,Processing Time (ms),Mask Upscale,Score Threshold,Downshift,Downscale MP,Segmentation Model,Success,Error Message\n")
-
-            batchProcessingResults.forEach { result ->
-                csvContent.append("${result.originalImageName},")
-                csvContent.append("${result.processingTimeMs},")
-                csvContent.append("${result.maskUpscale},")
-                csvContent.append("${result.scoreThreshold},")
-                csvContent.append("${result.downshift},")
-                csvContent.append("${result.downscaleMp},")
-                csvContent.append("${result.segmentationModel},")
-                csvContent.append("${result.success},")
-                csvContent.append("${result.errorMessage ?: ""}\n")
-            }
-
-            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-            val fileName = "autokorrektur_batch_results_$timestamp.csv"
-
-            val csvFile = File(
-                requireContext().getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS),
-                fileName
-            )
-            csvFile.writeText(csvContent.toString())
-
-            AppLogger.info("CSV exported to: ${csvFile.absolutePath}")
-            Snackbar.make(binding.root, "CSV exported to: ${csvFile.name}", Snackbar.LENGTH_LONG)
-                .show()
-
-        } catch (e: Exception) {
-            AppLogger.error("Failed to export CSV", e)
-            Snackbar.make(binding.root, "Failed to export CSV: ${e.message}", Snackbar.LENGTH_LONG)
-                .show()
-        }
-    }
-
-    private fun createMaskOverlay(originalUri: Uri, maskMatrix: Mat) {
-        try {
-            AppLogger.debug("Creating mask overlay visualization")
-
-            // Load original image as bitmap using the recommended ImageDecoder
-            val source = ImageDecoder.createSource(requireContext().contentResolver, originalUri)
-            val originalBitmap = ImageDecoder.decodeBitmap(source)
-
-            // Create a mutable copy of the original bitmap
-            val overlayBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true)
-
-            // Convert mask to bitmap
-            val maskBitmap = createBitmap(maskMatrix.cols(), maskMatrix.rows())
-            Utils.matToBitmap(maskMatrix, maskBitmap)
-
-            // Build an overlay that is transparent everywhere except masked area (car)
-            val overlayMaskBitmap = MaskOverlayUtils
-                .createRedOverlayBitmap(
-                    maskBitmap,
-                    overlayBitmap.width,
-                    overlayBitmap.height,
-                    threshold = 128,
-                    alpha = 128
-                )
-
-            // Draw the overlay onto the original image
-            val overlayCanvas = Canvas(overlayBitmap)
-            val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-            overlayCanvas.drawBitmap(overlayMaskBitmap, 0f, 0f, paint)
-
-            // Recycle temporary bitmaps
-            overlayMaskBitmap.recycle()
-            maskBitmap.recycle()
-
-            // Save overlay image to temporary file
-            val tempOverlayFile = File(requireContext().cacheDir, "mask_overlay.jpg")
-            val overlayOutputStream = FileOutputStream(tempOverlayFile)
-            overlayBitmap.compress(Bitmap.CompressFormat.JPEG, 100, overlayOutputStream)
-            overlayOutputStream.close()
-
-            // Get URI for the overlay image
-            val overlayUri = FileProvider.getUriForFile(
-                requireContext(),
-                "${requireContext().packageName}.fileprovider",
-                tempOverlayFile
-            )
-
-            // Display the overlay image
-            displayImage(overlayUri, "Mask Overlay")
-
-            AppLogger.debug("Mask overlay created and displayed successfully")
-
-        } catch (e: Exception) {
-            AppLogger.error("Error creating mask overlay", e)
-            // Don't show error to user as this is an additional feature
-        }
-    }
-
-    /**
-     * Gets the downscale megapixels value from the spinner.
-     */
-    private fun getDownscaleMpFromSpinner(): Float? {
-        val selectedItem = binding.downscaleMP.selectedItem.toString()
-        return when (selectedItem) {
-            "No Scaling" -> null
-            "0.5 MP" -> 0.5f
-            "1 MP" -> 1.0f
-            "2 MP" -> 2.0f
-            "3 MP" -> 3.0f
-            "4 MP" -> 4.0f
-            "5 MP" -> 5.0f
-            "6 MP" -> 6.0f
-            "7 MP" -> 7.0f
-            "8 MP" -> 8.0f
-            "9 MP" -> 9.0f
-            "10 MP" -> 10.0f
-            else -> null
-        }
-    }
-
-    /**
-     * Gets the mask upscale factor from the slider.
-     */
-    private fun getMaskUpscaleFromSlider(): Float {
-        return (1 + binding.maskUpscale.progress * 0.01).toFloat()
-    }
-
-    /**
-     * Gets the score threshold from the slider.
-     */
-    private fun getScoreThresholdFromSlider(): Float {
-        return (binding.scoreThreshold.progress * 0.01).toFloat()
-    }
-
-    /**
-     * Gets the downshift factor from the slider.
-     */
-    private fun getDownshiftFromSlider(): Float {
-        return (binding.downshift.progress * 0.001).toFloat()
-    }
-
-    /**
-     * Saves the processed bitmap to the gallery
-     */
-    private fun saveImageToGallery(bitmap: Bitmap): Uri? {
-        try {
-            val filename = "AutoKorrektur_${System.currentTimeMillis()}.jpg"
-            var fos: OutputStream?
-            var imageUri: Uri?
-
-            // For Android 10 (Q) and above
-            val contentValues = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
-                put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
-            }
-
-            val contentResolver = requireContext().contentResolver
-            imageUri = contentResolver.insert(
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                contentValues
-            )
-            fos = imageUri?.let { contentResolver.openOutputStream(it) }
-
-            fos?.use {
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)
-                AppLogger.info("Image saved to gallery successfully")
-            }
-
-            return imageUri
-        } catch (e: Exception) {
-            AppLogger.error("Error saving image to gallery", e)
-            Snackbar.make(
-                binding.root,
-                "Error saving image: ${e.message}",
-                Snackbar.LENGTH_LONG
-            ).show()
-            return null
-        }
-    }
-
-    /**
-     * Generates an Instagram-sized Before/After comparison graphic and triggers share/save options.
-     */
     private fun exportInstagramGraphic() {
-        val afterBitmap = processedBitmap
-        val beforeUri = selectedImageUri
-
-        if (afterBitmap == null || beforeUri == null) {
-            Snackbar.make(
-                binding.root,
-                "Process an image first before exporting for Instagram",
-                Snackbar.LENGTH_SHORT
-            ).show()
+        val state = viewModel.uiState.value
+        if (state !is MainUiState.Success) {
+            showSnackbar(getString(R.string.error_export_instagram_no_image))
             return
         }
+        val afterBitmap = state.result.inpaintedBitmap ?: return
+        val beforeBitmap = state.result.originalBitmap
 
         try {
-            val beforeBitmap = de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.decodeSampledBitmapFromUri(
-                requireContext(),
-                beforeUri
-            )
-
-            val options = arrayOf(
-                "1:1 Square (Side-by-Side)",
-                "4:5 Feed Portrait (Stacked)",
-                "9:16 Story (Side-by-Side)"
-            )
-
+            val options = resources.getStringArray(R.array.instagram_formats)
             AlertDialog.Builder(requireContext())
-                .setTitle("Select Instagram Format")
+                .setTitle(R.string.dialog_instagram_format_title)
                 .setItems(options) { _, which ->
                     val (ratio, layout) = when (which) {
                         0 -> Pair(de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.AspectRatio.SQUARE_1_1, de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.LayoutStyle.SIDE_BY_SIDE)
                         1 -> Pair(de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.AspectRatio.PORTRAIT_4_5, de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.LayoutStyle.STACKED)
                         else -> Pair(de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.AspectRatio.STORY_9_16, de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.LayoutStyle.SIDE_BY_SIDE)
                     }
-
-                    val graphic = de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.createComparisonBitmap(
-                        beforeBitmap = beforeBitmap,
-                        afterBitmap = afterBitmap,
-                        ratio = ratio,
-                        layout = layout
-                    )
-
-                    // Prompt action: Share vs Save
+                    val graphic =
+                        de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.createComparisonBitmap(
+                            beforeBitmap,
+                            afterBitmap,
+                            ratio,
+                            layout
+                        )
                     val actionOptions = arrayOf(
                         getString(R.string.share_to_instagram),
                         getString(R.string.save_graphic)
                     )
-
                     AlertDialog.Builder(requireContext())
-                        .setTitle("Instagram Graphic Ready")
+                        .setTitle(R.string.dialog_instagram_ready_title)
                         .setItems(actionOptions) { _, actionWhich ->
                             when (actionWhich) {
                                 0 -> {
@@ -1502,13 +564,17 @@ class FirstFragment : Fragment() {
                                         putExtra(Intent.EXTRA_STREAM, shareUri)
                                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                     }
-                                    startActivity(Intent.createChooser(shareIntent, "Share Before/After Graphic"))
+                                    startActivity(
+                                        Intent.createChooser(
+                                            shareIntent,
+                                            getString(R.string.share_chooser_title)
+                                        )
+                                    )
                                 }
                                 1 -> {
-                                    val savedUri = saveImageToGallery(graphic)
-                                    if (savedUri != null) {
-                                        Snackbar.make(binding.root, "Instagram graphic saved to gallery!", Snackbar.LENGTH_SHORT).show()
-                                    }
+                                    if (exportManager.saveImageToGallery(graphic) != null) showSnackbar(
+                                        getString(R.string.msg_instagram_graphic_saved)
+                                    )
                                 }
                             }
                         }
@@ -1517,18 +583,25 @@ class FirstFragment : Fragment() {
                 .show()
         } catch (e: Exception) {
             AppLogger.error("Failed to generate Instagram comparison graphic", e)
-            Snackbar.make(binding.root, "Export error: ${e.message}", Snackbar.LENGTH_LONG).show()
+            showSnackbar(getString(R.string.error_export_message, e.message))
         }
     }
 
+    private fun getDownscaleMpFromSpinner(): Float? {
+        val selectedItem = binding.downscaleMP.selectedItem.toString()
+        val noScaling = resources.getStringArray(R.array.downscale_options)[0]
+        return when (selectedItem) {
+            noScaling -> null
+            else -> selectedItem.replace(" MP", "").toFloatOrNull()
+        }
+    }
+
+    private fun getMaskUpscaleFromSlider() = (1 + binding.maskUpscale.progress * 0.01).toFloat()
+    private fun getScoreThresholdFromSlider() = (binding.scoreThreshold.progress * 0.01).toFloat()
+    private fun getDownshiftFromSlider() = (binding.downshift.progress * 0.001).toFloat()
+
     override fun onDestroyView() {
         super.onDestroyView()
-
-        // Clean up ML inference objects
-        if (::staticPipeline.isInitialized) {
-            staticPipeline.close()
-        }
-
         _binding = null
     }
 }

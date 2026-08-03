@@ -45,7 +45,7 @@ class PortraitImageInstrumentedTest : AndroidInstrumentedBaseTest() {
     }
 
     @Test
-    fun testPortraitImage_loadsAndGeneratesValidMask() {
+    fun testPortraitImage_loadsAndGeneratesValidMask() = kotlinx.coroutines.runBlocking {
         val inputFile = cacheAsset("portraitcar.jpg", tempFiles)
         val inputUri = Uri.fromFile(inputFile)
 

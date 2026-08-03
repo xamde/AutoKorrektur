@@ -5,6 +5,11 @@ import android.net.Uri
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
+import de.konradvoelkel.android.autokorrektur.ml.MiGanInference
+import de.konradvoelkel.android.autokorrektur.ml.api.ServerSdxlApi
+import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
+import de.konradvoelkel.android.autokorrektur.ml.engine.YoloTFLiteEngine
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 
 /**
@@ -30,7 +35,12 @@ class BatchProcessingWorker(
         } else null
 
         AppLogger.info("BatchProcessingWorker starting batch for ${imageUrisStr.size} images")
-        val pipeline = StaticImagePipeline(applicationContext)
+        val pipeline = StaticImagePipeline(
+            ImageProcessor(applicationContext),
+            YoloServiceImpl(YoloTFLiteEngine(applicationContext)),
+            MiGanInference(applicationContext),
+            ServerSdxlApi(applicationContext)
+        )
 
         return try {
             pipeline.initialize()

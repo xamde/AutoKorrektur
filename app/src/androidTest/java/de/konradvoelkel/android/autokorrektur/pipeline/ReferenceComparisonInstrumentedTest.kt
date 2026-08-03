@@ -51,7 +51,7 @@ class ReferenceComparisonInstrumentedTest : AndroidInstrumentedBaseTest() {
     }
 
     @Test
-    fun testCarMaskMatchesReference() {
+    fun testCarMaskMatchesReference() = kotlinx.coroutines.runBlocking {
         val photoFile = cacheAsset("photo_with_car_1.png", tempFiles)
         val photoUri = Uri.fromFile(photoFile)
 
@@ -112,7 +112,7 @@ class ReferenceComparisonInstrumentedTest : AndroidInstrumentedBaseTest() {
     }
 
     @Test
-    fun testEndToEndMiGanOnExample2MatchesReferenceOutsideMask() {
+    fun testEndToEndMiGanOnExample2MatchesReferenceOutsideMask() = kotlinx.coroutines.runBlocking {
         // 1) Load input and process
         val inputFile = cacheAsset("example2.png", tempFiles)
         val inputUri = Uri.fromFile(inputFile)

@@ -47,7 +47,8 @@ class GeneratedSamplesInstrumentedTest : AndroidInstrumentedBaseTest() {
     }
 
     @Test
-    fun testStreetSample_detectsCarAndValidatesReferenceOutsideMask() {
+    fun testStreetSample_detectsCarAndValidatesReferenceOutsideMask() =
+        kotlinx.coroutines.runBlocking {
         val inputFile = cacheAsset("sample_street_with_car.jpg", tempFiles)
         val inputUri = Uri.fromFile(inputFile)
 
@@ -89,7 +90,8 @@ class GeneratedSamplesInstrumentedTest : AndroidInstrumentedBaseTest() {
     }
 
     @Test
-    fun testSuburbSample_detectsCarAndValidatesReferenceOutsideMask() {
+    fun testSuburbSample_detectsCarAndValidatesReferenceOutsideMask() =
+        kotlinx.coroutines.runBlocking {
         val inputFile = cacheAsset("sample_suburb_with_car.jpg", tempFiles)
         val inputUri = Uri.fromFile(inputFile)
 

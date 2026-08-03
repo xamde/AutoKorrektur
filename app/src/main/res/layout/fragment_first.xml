@@ -65,7 +65,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Premium Edit (Server SDXL)"
+                android:text="@string/premium_edit_title"
                 android:textSize="16sp" />
 
             <androidx.appcompat.widget.SwitchCompat

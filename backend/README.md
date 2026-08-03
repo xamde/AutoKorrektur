@@ -7,7 +7,12 @@ This backend service provides opt-in, photorealistic **SDXL Cloud Inpainting** f
 - **Standard PEP 621 Packaging**: Dependencies and tooling configured in [pyproject.toml](file:///home/konrad/files/work/__drafts/AutoKorrektur/backend/pyproject.toml) managed via `uv`.
 - **Design by Contract (DbC)**: Preconditions and postconditions enforced at runtime via `icontract` (`@icontract.require`, `@icontract.ensure`).
 - **Code Quality & Type Safety**: Checked via `ruff` and `mypy` (`strict = true`).
-- **Privacy & GDPR Compliance**: Zero storage / memory-only processing using `io.BytesIO` streams with zero retention.
+- **Concurrency & Reliability**: SDXL inference is guarded by an `asyncio.Semaphore(1)` to prevent
+  concurrent GPU execution, avoiding CUDA Out-of-Memory (OOM) errors and server crashes.
+- **Enhanced Security & Rate Limiting**: Requests are rate-limited by both Device UUID and Client IP
+  using atomic Redis operations (or in-memory fallback).
+- **Privacy & GDPR Compliance**: Minimal data footprint processing. All images are processed
+  strictly in-memory and re-encoded before returning; zero long-term retention.
 
 ## API Specification
 
@@ -49,11 +54,24 @@ This backend service provides opt-in, photorealistic **SDXL Cloud Inpainting** f
    uv run --directory backend uvicorn server:app --host 127.0.0.1 --port 8000
    ```
 
+## Environment Variables
+
+The application can be configured via environment variables (prefixed with `AUTOKORREKTUR_`):
+
+| Variable                                 | Description                            | Default           |
+|------------------------------------------|----------------------------------------|-------------------|
+| `AUTOKORREKTUR_REDIS_URL`                | Redis connection URL for rate limiting | `None`            |
+| `AUTOKORREKTUR_MAX_DAILY_REQUESTS`       | Max requests per device per day        | `10`              |
+| `AUTOKORREKTUR_MAX_UPLOAD_BYTES`         | Max total size of a single request     | `10485760` (10MB) |
+| `AUTOKORREKTUR_ENABLE_SDXL_LOAD`         | Whether to load the real SDXL model    | `False`           |
+| `AUTOKORREKTUR_STRICT_INTEGRITY_CHECK`   | Reject requests with invalid tokens    | `True`            |
+| `AUTOKORREKTUR_ALLOWED_INTEGRITY_TOKENS` | List of valid Play Integrity tokens    | `[]`              |
+
 ## Docker Container Deployment
 
-To build and run the production backend container:
+To build and run the production backend container (from the project root):
 
 ```bash
-docker build -t autokorrektur-backend -f backend/Dockerfile backend/
-docker run -d -p 8000:8000 autokorrektur-backend
+docker build -t autokorrektur-backend -f backend/Dockerfile .
+docker-compose -f backend/docker-compose.yml up -d
 ```

@@ -6,9 +6,13 @@ import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import android.content.Context
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
+import org.opencv.core.Rect
+import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -17,10 +21,13 @@ import java.nio.ByteBuffer
  * Handles Mi-GAN model inference for inpainting.
  * Equivalent to miGanInference.js in the web app.
  */
-class MiGanInference(private val context: Context) {
+class MiGanInference(private val context: Context) : InpaintingEngine {
 
     private val ortEnvironment = OrtEnvironment.getEnvironment()
+
+    @Volatile
     private var miGanSession: OrtSession? = null
+    private val lock = Any()
 
     companion object {
         private const val MODEL_INPUT_SIZE = 512
@@ -33,37 +40,42 @@ class MiGanInference(private val context: Context) {
      * @throws IOException If the model file cannot be loaded
      */
     @Throws(IOException::class)
-    fun initialize() {
-        if (miGanSession != null) return
+    override suspend fun initialize() = withContext(kotlinx.coroutines.Dispatchers.IO) {
+        synchronized(lock) {
+            if (miGanSession != null) return@withContext
 
-        AppLogger.debug("Initializing MiGanInference...")
+            AppLogger.debug("Initializing MiGanInference...")
 
-        val modelBytes = try {
-            context.assets.open("model/$MODEL_FILE").readBytes()
-        } catch (e: IOException) {
-            AppLogger.debug("Failed to load Mi-GAN model: ${e.message}")
-            throw IOException("Failed to load Mi-GAN model 'model/$MODEL_FILE': ${e.message}", e)
-        }
+            val modelBytes = try {
+                context.assets.open("model/$MODEL_FILE").use { it.readBytes() }
+            } catch (e: IOException) {
+                AppLogger.debug("Failed to load Mi-GAN model: ${e.message}")
+                throw IOException(
+                    "Failed to load Mi-GAN model 'model/$MODEL_FILE': ${e.message}",
+                    e
+                )
+            }
 
-        miGanSession = try {
-            if (de.konradvoelkel.android.autokorrektur.utils.DevicePerformanceHelper.isNnapiSupported()) {
-                try {
-                    val sessionOptions = OrtSession.SessionOptions().apply { addNnapi() }
-                    AppLogger.info("MiGanInference: Attempting NNAPI EP...")
-                    ortEnvironment.createSession(modelBytes, sessionOptions)
-                } catch (e: Exception) {
-                    AppLogger.warn("MiGanInference: Failed to initialize NNAPI EP, falling back to CPU: ${e.message}")
+            miGanSession = try {
+                if (de.konradvoelkel.android.autokorrektur.utils.DevicePerformanceHelper.isNnapiSupported()) {
+                    try {
+                        val sessionOptions = OrtSession.SessionOptions().apply { addNnapi() }
+                        AppLogger.info("MiGanInference: Attempting NNAPI EP...")
+                        ortEnvironment.createSession(modelBytes, sessionOptions)
+                    } catch (e: Exception) {
+                        AppLogger.warn("MiGanInference: Failed to initialize NNAPI EP, falling back to CPU: ${e.message}")
+                        ortEnvironment.createSession(modelBytes)
+                    }
+                } else {
                     ortEnvironment.createSession(modelBytes)
                 }
-            } else {
-                ortEnvironment.createSession(modelBytes)
+            } catch (e: Exception) {
+                AppLogger.debug("Failed to create Mi-GAN session: ${e.message}")
+                throw IOException("Failed to create Mi-GAN session: ${e.message}", e)
             }
-        } catch (e: Exception) {
-            AppLogger.debug("Failed to create Mi-GAN session: ${e.message}")
-            throw IOException("Failed to create Mi-GAN session: ${e.message}", e)
-        }
 
-        AppLogger.debug("MiGanInference initialized successfully.")
+            AppLogger.debug("MiGanInference initialized successfully.")
+        }
     }
 
     /**
@@ -74,95 +86,136 @@ class MiGanInference(private val context: Context) {
      * @return The inpainted image matrix (CV_8UC3)
      */
     @Throws(IOException::class)
-    fun inferMiGan(imageMat: Mat, maskMat: Mat): Mat {
-        initialize() // Ensure session is initialized
+    override suspend fun inferMiGan(imageMat: Mat, maskMat: Mat): Mat =
+        withContext(Dispatchers.Default) {
+            val session = miGanSession ?: run {
+                initialize()
+                miGanSession ?: throw IllegalStateException("Failed to initialize Mi-GAN session")
+            }
 
-        val processedImage = preprocessImage(imageMat)
-        val processedMask = preprocessMask(maskMat, processedImage)
+            val matsToRelease = mutableListOf<Mat>()
+            val tensorsToClose = mutableListOf<OnnxTensor>()
 
-        val origWidth = processedImage.cols()
-        val origHeight = processedImage.rows()
-        val maxSize = kotlin.math.max(origWidth, origHeight)
+            try {
+                val processedImage = preprocessImage(imageMat).also { matsToRelease.add(it) }
+                val processedMask =
+                    preprocessMask(maskMat, processedImage).also { matsToRelease.add(it) }
 
-        // 1. Pad image and mask to square (maxSize x maxSize) to preserve aspect ratio
-        val xPad = maxSize - origWidth
-        val yPad = maxSize - origHeight
+                val origWidth = processedImage.cols()
+                val origHeight = processedImage.rows()
+                val maxSize = kotlin.math.max(origWidth, origHeight)
 
-        val squareImage = Mat()
+                // 1. Prepare square inputs
+                val (resizedImage, resizedMask) = prepareSquareInputs(
+                    processedImage,
+                    processedMask,
+                    maxSize,
+                    matsToRelease
+                )
+
+                // 2. Run ONNX Session
+                val outputHWC = runOnnxSession(session, resizedImage, resizedMask, tensorsToClose)
+
+                // 3. Process output Mat
+                val unpaddedInpaintedMat =
+                    processOutputMat(outputHWC, maxSize, origWidth, origHeight, matsToRelease)
+
+                try {
+                    // 4. Blend result
+                    return@withContext blendResult(
+                        processedImage,
+                        processedMask,
+                        unpaddedInpaintedMat
+                    )
+                } finally {
+                    unpaddedInpaintedMat.release()
+                }
+            } finally {
+                matsToRelease.forEach { it.release() }
+                tensorsToClose.forEach { it.close() }
+            }
+        }
+
+    private fun prepareSquareInputs(
+        processedImage: Mat,
+        processedMask: Mat,
+        maxSize: Int,
+        matsToRelease: MutableList<Mat>
+    ): Pair<Mat, Mat> {
+        val xPad = maxSize - processedImage.cols()
+        val yPad = maxSize - processedImage.rows()
+
+        val squareImage = Mat().also { matsToRelease.add(it) }
         Core.copyMakeBorder(processedImage, squareImage, 0, yPad, 0, xPad, Core.BORDER_REFLECT_101)
 
-        val squareMask = Mat()
+        val squareMask = Mat().also { matsToRelease.add(it) }
         Core.copyMakeBorder(processedMask, squareMask, 0, yPad, 0, xPad, Core.BORDER_CONSTANT, org.opencv.core.Scalar(0.0))
 
-        // 2. Resize 1:1 square to 512x512
-        val modelInputSize =
-            org.opencv.core.Size(MODEL_INPUT_SIZE.toDouble(), MODEL_INPUT_SIZE.toDouble())
-        val resizedImage = Mat()
+        val modelInputSize = Size(MODEL_INPUT_SIZE.toDouble(), MODEL_INPUT_SIZE.toDouble())
+        val resizedImage = Mat().also { matsToRelease.add(it) }
         Imgproc.resize(squareImage, resizedImage, modelInputSize)
-        val resizedMask = Mat()
+        val resizedMask = Mat().also { matsToRelease.add(it) }
         Imgproc.resize(squareMask, resizedMask, modelInputSize, 0.0, 0.0, Imgproc.INTER_NEAREST)
 
-        squareImage.release()
-        squareMask.release()
+        return Pair(resizedImage, resizedMask)
+    }
 
+    private fun runOnnxSession(
+        session: OrtSession,
+        resizedImage: Mat,
+        resizedMask: Mat,
+        tensorsToClose: MutableList<OnnxTensor>
+    ): ByteArray {
         val imageArray = orderInCHWAsBytes(resizedImage)
         val maskArray = orderInCHWAsBytes(resizedMask)
 
-        val inputs = mapOf(
-            "image" to createTensor(
-                imageArray,
-                1,
-                3,
-                MODEL_INPUT_SIZE.toLong(),
-                MODEL_INPUT_SIZE.toLong()
-            ),
-            "mask" to createTensor(
-                maskArray,
-                1,
-                1,
-                MODEL_INPUT_SIZE.toLong(),
-                MODEL_INPUT_SIZE.toLong()
-            )
-        )
+        val imageTensor =
+            createTensor(imageArray, 1, 3, MODEL_INPUT_SIZE.toLong(), MODEL_INPUT_SIZE.toLong())
+                .also { tensorsToClose.add(it) }
+        val maskTensor =
+            createTensor(maskArray, 1, 1, MODEL_INPUT_SIZE.toLong(), MODEL_INPUT_SIZE.toLong())
+                .also { tensorsToClose.add(it) }
 
-        val outputs = miGanSession!!.run(inputs)
-        val outputTensor = outputs[0]
+        val inputs = mapOf("image" to imageTensor, "mask" to maskTensor)
 
-        val outputData = getOutputData(outputTensor)
-        val outputHWC = reorderToHWC(outputData, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE)
+        return session.run(inputs).use { outputs ->
+            val outputTensor = outputs[0]
+            val outputData = getOutputData(outputTensor)
+            reorderToHWC(outputData, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE)
+        }
+    }
 
-        val modelOutputMat = Mat(MODEL_INPUT_SIZE, MODEL_INPUT_SIZE, CvType.CV_8UC3)
+    private fun processOutputMat(
+        outputHWC: ByteArray,
+        maxSize: Int,
+        origWidth: Int,
+        origHeight: Int,
+        matsToRelease: MutableList<Mat>
+    ): Mat {
+        val modelOutputMat =
+            Mat(MODEL_INPUT_SIZE, MODEL_INPUT_SIZE, CvType.CV_8UC3).also { matsToRelease.add(it) }
         modelOutputMat.put(0, 0, outputHWC)
 
-        // 3. Resize 512x512 output back to maxSize x maxSize square
-        val squareResultMat = Mat()
+        val squareResultMat = Mat().also { matsToRelease.add(it) }
         Imgproc.resize(
             modelOutputMat,
             squareResultMat,
-            org.opencv.core.Size(maxSize.toDouble(), maxSize.toDouble())
+            Size(maxSize.toDouble(), maxSize.toDouble())
         )
 
-        // 4. Crop original unpadded dimensions (origWidth x origHeight)
-        val roi = org.opencv.core.Rect(0, 0, origWidth, origHeight)
-        val unpaddedInpainted = Mat(squareResultMat, roi).clone()
+        val roi = Rect(0, 0, origWidth, origHeight)
+        return Mat(squareResultMat, roi).clone()
+    }
 
-        // 5. Blend inpainted content into original image ONLY where the car is (carMask > 0)
+    private fun blendResult(processedImage: Mat, processedMask: Mat, unpaddedInpainted: Mat): Mat {
         val finalBlendedMat = processedImage.clone()
         val carMask = Mat()
-        Core.bitwise_not(processedMask, carMask)
-        unpaddedInpainted.copyTo(finalBlendedMat, carMask)
-        carMask.release()
-
-        // Clean up
-        inputs.values.forEach { it.close() }
-        resizedImage.release()
-        resizedMask.release()
-        modelOutputMat.release()
-        squareResultMat.release()
-        unpaddedInpainted.release()
-        processedImage.release()
-        processedMask.release()
-
+        try {
+            Core.bitwise_not(processedMask, carMask)
+            unpaddedInpainted.copyTo(finalBlendedMat, carMask)
+        } finally {
+            carMask.release()
+        }
         return finalBlendedMat
     }
 
@@ -241,21 +294,6 @@ class MiGanInference(private val context: Context) {
         }
     }
 
-    private fun createFloatTensor(
-        data: FloatArray,
-        batchSize: Long,
-        channels: Long,
-        height: Long,
-        width: Long
-    ): OnnxTensor {
-        val shape = longArrayOf(batchSize, channels, height, width)
-        val floatBuffer = java.nio.FloatBuffer.wrap(data)
-        return OnnxTensor.createTensor(
-            ortEnvironment,
-            floatBuffer,
-            shape
-        )
-    }
 
     private fun orderInCHWAsBytes(mat: Mat): ByteArray {
         val channels = ArrayList<Mat>()
@@ -370,8 +408,9 @@ class MiGanInference(private val context: Context) {
     /**
      * Releases resources used by the inference session.
      */
-    fun close() {
+    override fun close() {
         miGanSession?.close()
-        ortEnvironment.close()
+        miGanSession = null
+        // B2: Do NOT close ortEnvironment as it is a process-wide singleton
     }
 }

@@ -5,6 +5,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
+import de.konradvoelkel.android.autokorrektur.ml.engine.YoloTFLiteEngine
 import de.konradvoelkel.android.autokorrektur.ml.config.YoloConfig
 import de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest
 import org.junit.Assert.assertNotNull
@@ -27,8 +28,8 @@ class VehicleMaskSegmentationTest : AndroidInstrumentedBaseTest() {
     )
 
     @Test
-    fun testMaskSegmentationOnCorpusImages() {
-        val yoloService = YoloServiceImpl(appContext)
+    fun testMaskSegmentationOnCorpusImages() = kotlinx.coroutines.runBlocking {
+        val yoloService = YoloServiceImpl(YoloTFLiteEngine(appContext))
         yoloService.initialize("yolo11s", useFP16 = false)
 
         val imageProcessor = ImageProcessor(appContext)
@@ -77,8 +78,8 @@ class VehicleMaskSegmentationTest : AndroidInstrumentedBaseTest() {
     }
 
     @Test
-    fun testScoreThresholdSensitivity() {
-        val yoloService = YoloServiceImpl(appContext)
+    fun testScoreThresholdSensitivity() = kotlinx.coroutines.runBlocking {
+        val yoloService = YoloServiceImpl(YoloTFLiteEngine(appContext))
         yoloService.initialize("yolo11s", useFP16 = false)
 
         val testContext = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().context

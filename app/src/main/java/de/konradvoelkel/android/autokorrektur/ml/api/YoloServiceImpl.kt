@@ -2,12 +2,17 @@ package de.konradvoelkel.android.autokorrektur.ml.api
 
 import android.content.Context
 import de.konradvoelkel.android.autokorrektur.ml.config.YoloConfig
+import de.konradvoelkel.android.autokorrektur.ml.engine.YoloEngine
 import de.konradvoelkel.android.autokorrektur.ml.engine.YoloTFLiteEngine
 import de.konradvoelkel.android.autokorrektur.ml.mask.YoloMaskAssembler
 import de.konradvoelkel.android.autokorrektur.ml.model.Detection
 import de.konradvoelkel.android.autokorrektur.ml.model.YoloResult
 import de.konradvoelkel.android.autokorrektur.ml.post.YoloPostprocessor
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import org.opencv.core.CvType
 import org.opencv.core.Mat
 import org.opencv.core.Rect
@@ -20,22 +25,26 @@ import org.opencv.imgproc.Imgproc
  * This mirrors the legacy YoloInferenceTFLite behavior but with separated concerns.
  */
 class YoloServiceImpl(
-    private val context: Context
+    private val engine: YoloEngine
 ) : YoloService {
 
-    private val engine by lazy { YoloTFLiteEngine(context) }
+    @Volatile
     private var currentConfig: YoloConfig = YoloConfig()
+
+    private val mutex = Mutex()
 
     override val isInitialized: Boolean
         get() = engine.isInitialized
 
-    override fun initialize(modelName: String, useFP16: Boolean, config: YoloConfig) {
-        currentConfig = config
-        engine.initialize(modelName, useFP16)
+    override suspend fun initialize(modelName: String, useFP16: Boolean, config: YoloConfig) {
+        mutex.withLock {
+            currentConfig = config
+            engine.initialize(modelName, useFP16)
+        }
         AppLogger.debug("YoloServiceImpl initialized with ${modelName}, fp16=$useFP16")
     }
 
-    override fun infer(
+    override suspend fun infer(
         transformedMat: Mat,
         xRatio: Float,
         yRatio: Float,
@@ -54,7 +63,7 @@ class YoloServiceImpl(
         ).mask
     }
 
-    override fun inferDetailed(
+    override suspend fun inferDetailed(
         transformedMat: Mat,
         xRatio: Float,
         yRatio: Float,
@@ -62,142 +71,196 @@ class YoloServiceImpl(
         originalWidth: Int?,
         originalHeight: Int?,
         overrideConfig: YoloConfig?
-    ): YoloResult {
+    ): YoloResult = withContext(Dispatchers.Default) {
         if (!engine.isInitialized) {
             AppLogger.info("YoloServiceImpl inferDetailed called on uninitialized engine; auto-initializing default model...")
             initialize()
         }
 
-        val effectiveConfig = overrideConfig ?: currentConfig
+        val config = overrideConfig ?: currentConfig
+        val matsToRelease = mutableListOf<Mat>()
+        val warnings = mutableListOf<String>()
 
-        // 1) Ensure input type is CV_8UC3 RGB as expected by engine
-        var inputMat = transformedMat
         try {
-            if (transformedMat.type() != CvType.CV_8UC3) {
-                val tmp = Mat()
-                // If this is a normalized float Mat (CV_32FC3), scale back to 0..255 and cast to 8U.
-                // For other types, a direct convert will be attempted.
-                val scale = if (transformedMat.type() == CvType.CV_32FC3) 255.0 else 1.0
-                transformedMat.convertTo(tmp, CvType.CV_8UC3, scale)
-                inputMat = tmp
+            // 1) Ensure input format
+            val inputMat = ensureCorrectInputFormat(transformedMat, matsToRelease)
+
+            // 2) Run model
+            val raw = engine.run(inputMat)
+            val shapes = raw.shapes
+
+            // 3) Parse results
+            val kept = parseDetectionsAndApplyNMS(raw, config)
+            if (kept.isEmpty()) {
+                warnings.add("No vehicles detected in the image.")
             }
-        } catch (e: Exception) {
-            AppLogger.warn("Failed to convert input Mat to CV_8UC3: ${e.message}. Proceeding with original Mat.")
-            inputMat = transformedMat
+
+            // 4) Assemble mask
+            val protoShape = shapes.protoShape
+            val prototypes = YoloMaskAssembler.extractPrototypeMasks(raw.prototypes, protoShape)
+            val deinterleaved = try {
+                YoloMaskAssembler.deinterleavePrototypes(prototypes, protoShape)
+            } catch (e: Exception) {
+                AppLogger.warn("Deinterleave prototypes failed: ${e.message}")
+                warnings.add("Prototype extraction degraded: ${e.message}")
+                null
+            }
+
+            try {
+                val overlay = assembleFinalMask(
+                    kept,
+                    deinterleaved,
+                    prototypes,
+                    protoShape,
+                    shapes,
+                    upscaleFactor,
+                    warnings,
+                    matsToRelease
+                )
+
+                // 5) Final cropping and resizing
+                val resultMat = postProcessResultMask(
+                    overlay,
+                    shapes,
+                    xRatio,
+                    yRatio,
+                    originalWidth,
+                    originalHeight
+                )
+
+                YoloResult(mask = resultMat, detections = kept, warnings = warnings)
+            } finally {
+                deinterleaved?.forEach { it.release() }
+            }
+        } finally {
+            matsToRelease.forEach { it.release() }
         }
+    }
 
-        // 2) Run model
-        val raw = engine.run(inputMat)
+    private fun ensureCorrectInputFormat(
+        transformedMat: Mat,
+        matsToRelease: MutableList<Mat>
+    ): Mat {
+        return if (transformedMat.type() != CvType.CV_8UC3) {
+            val tmp = Mat().also { matsToRelease.add(it) }
+            val scale = if (transformedMat.type() == CvType.CV_32FC3) 255.0 else 1.0
+            transformedMat.convertTo(tmp, CvType.CV_8UC3, scale)
+            tmp
+        } else {
+            transformedMat
+        }
+    }
+
+    private fun parseDetectionsAndApplyNMS(
+        raw: de.konradvoelkel.android.autokorrektur.ml.model.RawOutputs,
+        config: YoloConfig
+    ): List<Detection> {
         val shapes = raw.shapes
+        val proposals = shapes.detShape.getOrNull(2) ?: 0
+        val features = shapes.detShape.getOrNull(1) ?: 0
+        val numClasses = config.labels.size
 
-        // 3) Parse detections from raw detection buffer
-        val features = shapes.detShape.getOrNull(1)
-            ?: error("Unexpected detections shape: ${shapes.detShape.joinToString()}")
-        val proposals = shapes.detShape.getOrNull(2)
-            ?: error("Unexpected detections shape: ${shapes.detShape.joinToString()}")
-        val numClasses = effectiveConfig.labels.size
-
-        val parsed: List<Detection> = YoloPostprocessor.parseDetections(
+        val parsed = YoloPostprocessor.parseDetections(
             buffer = raw.detections,
             numProposals = proposals,
             featuresPerProposal = features,
             numClasses = numClasses,
-            scoreThreshold = effectiveConfig.scoreThreshold,
-            allowedClassIndices = effectiveConfig.vehicleClassIndices
+            scoreThreshold = config.scoreThreshold,
+            allowedClassIndices = config.vehicleClassIndices
         )
-        val kept = YoloPostprocessor.applyNMS(
+        return YoloPostprocessor.applyNMS(
             detections = parsed,
-            iouThreshold = effectiveConfig.iouThreshold,
-            topAmountPerClass = effectiveConfig.topAmountPerClass,
+            iouThreshold = config.iouThreshold,
+            topAmountPerClass = config.topAmountPerClass,
             numClasses = numClasses
         )
+    }
 
-        // 4) Extract prototype masks and de-interleave once
-        val protoShape = shapes.protoShape
-        val prototypes = YoloMaskAssembler.extractPrototypeMasks(raw.prototypes, protoShape)
-        val deinterleaved = try {
-            YoloMaskAssembler.deinterleavePrototypes(prototypes, protoShape)
-        } catch (e: Exception) {
-            AppLogger.warn("Deinterleave prototypes failed, falling back to per-detection path: ${e.message}")
-            null
-        }
-
-        // Clamp upscale factor to prevent mask bleeding into building facades
+    private fun assembleFinalMask(
+        kept: List<Detection>,
+        deinterleaved: List<Mat>?,
+        prototypes: FloatArray,
+        protoShape: IntArray,
+        shapes: de.konradvoelkel.android.autokorrektur.ml.model.Shapes,
+        upscaleFactor: Float,
+        warnings: MutableList<String>,
+        matsToRelease: MutableList<Mat>
+    ): Mat {
         val tightUpscaleFactor = upscaleFactor.coerceIn(1.0f, 1.05f)
-
-        // 5) Prepare an overlay (white) CV_8UC1, subtract per-detection masks
-        val overlay = Mat(shapes.inputH, shapes.inputW, CvType.CV_8UC1)
+        val overlay =
+            Mat(shapes.inputH, shapes.inputW, CvType.CV_8UC1).also { matsToRelease.add(it) }
         overlay.setTo(Scalar(255.0))
-        if (deinterleaved != null) {
-            for (det in kept) {
-                try {
+
+        for (det in kept) {
+            try {
+                if (deinterleaved != null) {
                     YoloMaskAssembler.createDetectionMask(
-                        detection = det,
-                        overlayGray = overlay,
-                        upscaleFactor = tightUpscaleFactor,
-                        deinterleavedPrototypes = deinterleaved,
-                        inputWidth = shapes.inputW,
-                        inputHeight = shapes.inputH
+                        det,
+                        overlay,
+                        tightUpscaleFactor,
+                        deinterleaved,
+                        shapes.inputW,
+                        shapes.inputH
                     )
-                } catch (e: Exception) {
-                    AppLogger.warn("Mask assembly failed for one detection: ${e.message}")
-                }
-            }
-            // Release temporary prototype mats once
-            deinterleaved.forEach { it.release() }
-        } else {
-            for (det in kept) {
-                try {
+                } else {
                     YoloMaskAssembler.createDetectionMask(
-                        detection = det,
-                        overlayGray = overlay,
-                        upscaleFactor = tightUpscaleFactor,
-                        prototypeMasksData = prototypes,
-                        inputWidth = shapes.inputW,
-                        inputHeight = shapes.inputH,
-                        protoShape = protoShape
+                        det,
+                        overlay,
+                        tightUpscaleFactor,
+                        prototypes,
+                        shapes.inputW,
+                        shapes.inputH,
+                        protoShape
                     )
-                } catch (e: Exception) {
-                    AppLogger.warn("Mask assembly failed for one detection: ${e.message}")
                 }
+            } catch (e: Exception) {
+                val msg = "Mask assembly failed for detection at [${det.x}, ${det.y}]: ${e.message}"
+                AppLogger.warn(msg)
+                warnings.add(msg)
             }
         }
+        return overlay
+    }
 
-        // Optional: remove letterbox padding and/or resize back to original
-        var maskMat = overlay
+    private fun postProcessResultMask(
+        overlay: Mat,
+        shapes: de.konradvoelkel.android.autokorrektur.ml.model.Shapes,
+        xRatio: Float,
+        yRatio: Float,
+        originalWidth: Int?,
+        originalHeight: Int?
+    ): Mat {
+        var resultMat = overlay.clone()
         try {
-            val hasOriginal =
-                (originalWidth != null && originalHeight != null && originalWidth > 0 && originalHeight > 0)
             val contentW =
                 kotlin.math.max(1, kotlin.math.min(shapes.inputW, (shapes.inputW / xRatio).toInt()))
             val contentH =
                 kotlin.math.max(1, kotlin.math.min(shapes.inputH, (shapes.inputH / yRatio).toInt()))
 
             if (contentW != shapes.inputW || contentH != shapes.inputH) {
-                val roi = Rect(0, 0, contentW, contentH)
-                val cropped = Mat(maskMat, roi).clone()
-                if (maskMat !== cropped) maskMat.release()
-                maskMat = cropped
+                val cropped = Mat(resultMat, Rect(0, 0, contentW, contentH)).clone()
+                resultMat.release()
+                resultMat = cropped
             }
 
-            if (hasOriginal) {
+            if (originalWidth != null && originalHeight != null && originalWidth > 0 && originalHeight > 0) {
                 val resized = Mat()
                 Imgproc.resize(
-                    maskMat,
+                    resultMat,
                     resized,
                     Size(originalWidth.toDouble(), originalHeight.toDouble()),
                     0.0,
                     0.0,
                     Imgproc.INTER_NEAREST
                 )
-                if (maskMat !== resized) maskMat.release()
-                maskMat = resized
+                resultMat.release()
+                resultMat = resized
             }
+            return resultMat
         } catch (e: Exception) {
-            AppLogger.warn("YoloServiceImpl post-crop/resize failed: ${e.message}")
+            resultMat.release()
+            throw e
         }
-
-        return YoloResult(mask = maskMat, detections = kept)
     }
 
     override fun close() {

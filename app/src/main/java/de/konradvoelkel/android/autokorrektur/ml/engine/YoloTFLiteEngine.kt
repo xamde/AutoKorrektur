@@ -8,6 +8,8 @@ import de.konradvoelkel.android.autokorrektur.ml.errors.ShapeMismatchException
 import de.konradvoelkel.android.autokorrektur.ml.model.RawOutputs
 import de.konradvoelkel.android.autokorrektur.ml.model.Shapes
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.opencv.core.CvType
 import org.opencv.core.Mat
 import org.opencv.imgproc.Imgproc
@@ -19,12 +21,13 @@ import java.nio.ByteOrder
  * TFLite engine that owns the Interpreter, shapes, and reusable I/O buffers.
  * It accepts a preprocessed RGB Mat (HxWx3, 8UC3) matching the model input size.
  */
-class YoloTFLiteEngine(private val context: Context) {
+class YoloTFLiteEngine(private val context: Context) : YoloEngine {
 
     private val isDebugBuild: Boolean by lazy {
         (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
     }
 
+    @Volatile
     private var interpreter: Interpreter? = null
 
     // Discovered shapes
@@ -42,18 +45,19 @@ class YoloTFLiteEngine(private val context: Context) {
     // Synchronization lock for lifecycle and run serialization
     private val lock = Any()
 
-    val isInitialized: Boolean
+    override val isInitialized: Boolean
         get() = interpreter != null
 
-    val isClosed: Boolean
+    override val isClosed: Boolean
         get() = interpreter == null
 
     @Throws(ModelLoadException::class)
-    fun initialize(modelName: String = "yolo11s", useFP16: Boolean = false) {
+    override suspend fun initialize(modelName: String, useFP16: Boolean) =
+        withContext(Dispatchers.IO) {
         synchronized(lock) {
             if (isInitialized) {
                 AppLogger.debug("YoloTFLiteEngine already initialized")
-                return
+                return@withContext
             }
             val modelFile = if (useFP16) {
                 "model/${modelName}-seg_saved_model/${modelName}-seg_float16.tflite"
@@ -61,11 +65,11 @@ class YoloTFLiteEngine(private val context: Context) {
                 "model/${modelName}-seg_saved_model/${modelName}-seg_float32.tflite"
             }
             try {
-                val afd = context.assets.openFd(modelFile)
-                val inputStream = afd.createInputStream()
-                val modelBytes = inputStream.readBytes()
-                inputStream.close()
-                afd.close()
+                val modelBytes = context.assets.openFd(modelFile).use { afd ->
+                    afd.createInputStream().use { inputStream ->
+                        inputStream.readBytes()
+                    }
+                }
 
                 val modelBuffer = ByteBuffer.allocateDirect(modelBytes.size)
                 modelBuffer.order(ByteOrder.nativeOrder())
@@ -140,7 +144,7 @@ class YoloTFLiteEngine(private val context: Context) {
         outputPrototypes!!.rewind()
     }
 
-    fun shapes(): Shapes = Shapes(
+    override fun shapes(): Shapes = Shapes(
         inputH = inputH,
         inputW = inputW,
         inputC = inputC,
@@ -152,7 +156,7 @@ class YoloTFLiteEngine(private val context: Context) {
      * Run inference for a preprocessed RGB Mat sized to inputW x inputH (8UC3).
      */
     @Throws(InferenceException::class)
-    fun run(rgbMat: Mat): RawOutputs {
+    override fun run(rgbMat: Mat): RawOutputs {
         synchronized(lock) {
             try {
                 if (!isInitialized) {
@@ -191,12 +195,20 @@ class YoloTFLiteEngine(private val context: Context) {
 
                 interpreter!!.runForMultipleInputsOutputs(inputs, outputs)
 
-                // Duplicate read-only views to return without disturbing internal positions
-                val detCopy = outputDetections!!.duplicate().order(ByteOrder.nativeOrder())
-                detCopy.rewind()
-                val protoCopy = outputPrototypes!!.duplicate().order(ByteOrder.nativeOrder())
-                protoCopy.rewind()
-                return RawOutputs(detCopy, protoCopy, shapes())
+                // B6: Return real copies to avoid aliasing with internal reusable buffers
+                val detResult = ByteBuffer.allocateDirect(outputDetections!!.capacity())
+                    .order(ByteOrder.nativeOrder())
+                outputDetections!!.rewind()
+                detResult.put(outputDetections!!)
+                detResult.rewind()
+
+                val protoResult = ByteBuffer.allocateDirect(outputPrototypes!!.capacity())
+                    .order(ByteOrder.nativeOrder())
+                outputPrototypes!!.rewind()
+                protoResult.put(outputPrototypes!!)
+                protoResult.rewind()
+
+                return RawOutputs(detResult, protoResult, shapes())
             } catch (e: Exception) {
                 val matType = try {
                     CvType.typeToString(rgbMat.type())
@@ -221,7 +233,7 @@ class YoloTFLiteEngine(private val context: Context) {
         }
     }
 
-    fun close() {
+    override fun close() {
         synchronized(lock) {
             try {
                 interpreter?.close()

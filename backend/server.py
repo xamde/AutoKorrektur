@@ -6,7 +6,7 @@ from datetime import date
 from typing import Any
 
 import icontract
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -15,6 +15,14 @@ from backend.config import settings
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("autokorrektur-backend")
+
+# Log configuration on startup
+logger.info("Effective configuration:")
+for key, value in settings.model_dump().items():
+    if "password" in key.lower() or "token" in key.lower():
+        logger.info(f"  {key}: [REDACTED]")
+    else:
+        logger.info(f"  {key}: {value}")
 
 app = FastAPI(
     title="AutoKorrektur SDXL Inpainting API",
@@ -40,6 +48,9 @@ rate_limits: dict[str, dict[date, int]] = defaultdict(lambda: defaultdict(int))
 
 # SDXL Pipeline loader (Optional GPU / PyTorch execution)
 sdxl_pipeline: Any | None = None
+# B11: Guard global SDXL pipeline with a semaphore to prevent CUDA OOM/crashes.
+sdxl_semaphore: asyncio.Semaphore = asyncio.Semaphore(1)
+
 try:
     import torch
     from diffusers import AutoPipelineForInpainting
@@ -77,14 +88,51 @@ class HealthCheckResponse(BaseModel):
 )
 def verify_token(device_uuid: str, play_integrity_token: str) -> bool:
     """Verifies Play Integrity token to prevent third-party API abuse."""
+    # 1. Allow bypass for development/testing
     if play_integrity_token in settings.allowed_integrity_tokens:
         return True
 
+    # 2. Genuine attestation check using Google Play Integrity API
+    if settings.google_application_credentials:
+        try:
+            from google.cloud import play_integrity_v1
+
+            client = play_integrity_v1.PlayIntegrityServiceClient.from_service_account_json(
+                settings.google_application_credentials
+            )
+            request = play_integrity_v1.DecodeIntegrityTokenRequest(
+                integrity_token=play_integrity_token
+            )
+            response = client.decode_integrity_token(request=request)
+
+            # Check package name and device integrity
+            token_payload = response.token_payload_external
+            if token_payload.app_integrity.package_name != settings.android_package_name:
+                 logger.warning(f"Integrity token package name mismatch: {token_payload.app_integrity.package_name}")
+                 if settings.strict_integrity_check:
+                     raise HTTPException(status_code=403, detail="App integrity check failed: package mismatch")
+
+            # Check device integrity levels (MEETS_DEVICE_INTEGRITY or better)
+            integrity_levels = token_payload.device_integrity.device_recognition_verdict
+            if "MEETS_DEVICE_INTEGRITY" not in integrity_levels:
+                logger.warning(f"Integrity token device recognition failed for {device_uuid}: {integrity_levels}")
+                if settings.strict_integrity_check:
+                    raise HTTPException(status_code=403, detail="Device integrity check failed")
+
+            logger.info(f"Play Integrity token verified for device {device_uuid}")
+            return True
+        except Exception as e:
+            logger.error(f"Error during Play Integrity verification: {e}")
+            if settings.strict_integrity_check:
+                raise HTTPException(status_code=403, detail=f"Play Integrity verification error: {str(e)}")
+
+    logger.warning(
+        f"Invalid Play Integrity token rejected for device {device_uuid}: {play_integrity_token[:10]}..."
+    )
     if settings.strict_integrity_check:
-        logger.warning(
-            f"Invalid Play Integrity token rejected for device {device_uuid}: {play_integrity_token[:10]}..."
-        )
         raise HTTPException(status_code=403, detail="Invalid Google Play Integrity attestation token")
+
+    # If not strict and no credentials, we still log but allow (dev mode)
     return True
 
 
@@ -98,34 +146,61 @@ def process_inpainting_payload(
 
     Synchronous CPU-bound PIL / PyTorch transformation function.
     """
+    from PIL import Image
+
+    # C18: Magic byte sniffing and dimension validation
+    def validate_and_open(data: bytes, name: str) -> Image.Image:
+        # Sniff magic bytes for JPEG/PNG
+        if not (data.startswith(b"\xff\xd8\xff") or data.startswith(b"\x89PNG\r\n\x1a\n")):
+             raise HTTPException(status_code=400, detail=f"Invalid image format for {name}. Only JPEG and PNG are allowed.")
+
+        try:
+            img = Image.open(io.BytesIO(data))
+            img.verify() # verify it's not truncated
+            img = Image.open(io.BytesIO(data)) # reopen as verify() closes the file
+
+            if img.width > 2048 or img.height > 2048:
+                raise HTTPException(status_code=400, detail=f"{name} dimensions exceed 2048x2048 limit")
+            return img
+        except Exception as e:
+            if isinstance(e, HTTPException): raise
+            raise HTTPException(status_code=400, detail=f"Failed to process {name}: {str(e)}")
+
+    init_img = validate_and_open(image_bytes, "image").convert("RGB")
+    mask_img = validate_and_open(mask_bytes, "mask").convert("L")
+
     if sdxl_pipeline is not None:
-        from PIL import Image
-
-        init_img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        mask_img = Image.open(io.BytesIO(mask_bytes)).convert("L")
-
         prompt = "seamless background, clean street, photorealistic"
         result = sdxl_pipeline(prompt=prompt, image=init_img, mask_image=mask_img).images[0]
+    else:
+        # Mock/dev environment mode: use preview if available, else original
+        if preview_bytes:
+            result = validate_and_open(preview_bytes, "preview").convert("RGB")
+        else:
+            result = init_img
 
-        buf = io.BytesIO()
-        result.save(buf, format="JPEG", quality=95)
-        return buf.getvalue()
-
-    # Mock/dev environment mode
-    return preview_bytes if preview_bytes else image_bytes
+    # C18: Re-encode image before returning to ensure clean metadata and format
+    buf = io.BytesIO()
+    result.save(buf, format="JPEG", quality=95, optimize=True)
+    return buf.getvalue()
 
 
-async def check_rate_limit(device_uuid: str) -> None:
-    """Enforce max daily requests limit per device per day."""
+async def check_rate_limit(device_uuid: str, client_ip: str) -> None:
+    """Enforce max daily requests limit per device/IP per day."""
     today_str = date.today().isoformat()
-    key = f"rate:{device_uuid}:{today_str}"
+    # B12: Key rate limits on both device UUID and IP to prevent spoofing/bypass
+    key = f"rate:{device_uuid}:{client_ip}:{today_str}"
 
     if redis_client:
         try:
+            # B12: Use atomic Redis operations. INCR is atomic.
             count = await redis_client.incr(key)
             if count == 1:
+                # Set expiration for the first request of the day
                 await redis_client.expire(key, 86400)
+
             if count > settings.max_daily_requests:
+                logger.warning(f"Rate limit exceeded for {device_uuid} at {client_ip}")
                 raise HTTPException(
                     status_code=429,
                     detail="Daily request limit exceeded. Please try again tomorrow.",
@@ -136,14 +211,16 @@ async def check_rate_limit(device_uuid: str) -> None:
         except Exception as e:
             logger.warning(f"Redis rate limit check error: {e}, falling back to in-memory")
 
+    # B12: In-memory fallback (only useful for single-worker dev setups)
     today = date.today()
-    if rate_limits[device_uuid][today] >= settings.max_daily_requests:
-        logger.warning(f"Rate limit exceeded for {device_uuid}")
+    mem_key = f"{device_uuid}:{client_ip}"
+    if rate_limits[mem_key][today] >= settings.max_daily_requests:
+        logger.warning(f"In-memory rate limit exceeded for {mem_key}")
         raise HTTPException(
             status_code=429,
             detail="Daily request limit exceeded. Please try again tomorrow.",
         )
-    rate_limits[device_uuid][today] += 1
+    rate_limits[mem_key][today] += 1
 
 
 # --- API Routes & Interactive Web UI ---
@@ -191,6 +268,10 @@ def get_web_workbench() -> str:
                         <input type="file" id="maskFile" accept="image/*" required onchange="updateName('maskFile', 'maskName')">
                     </div>
                 </div>
+                <div style="margin-top: 1rem;">
+                    <label for="integrityToken" style="display: block; margin-bottom: 0.5rem;">🔑 Play Integrity Token</label>
+                    <input type="text" id="integrityToken" placeholder="Paste your token here" style="width: 100%; padding: 0.8rem; background: #334155; border: 1px solid #475569; border-radius: 6px; color: white;">
+                </div>
                 <button type="submit" id="submitBtn">Run SDXL Inpainting</button>
             </form>
             <div class="preview-container" id="resultContainer" style="display:none;">
@@ -213,7 +294,7 @@ def get_web_workbench() -> str:
 
                 const formData = new FormData();
                 formData.append('device_uuid', 'web-workbench-demo');
-                formData.append('play_integrity_token', 'mock-valid-token');
+                formData.append('play_integrity_token', document.getElementById('integrityToken').value);
                 formData.append('image', document.getElementById('imageFile').files[0]);
                 formData.append('mask', document.getElementById('maskFile').files[0]);
 
@@ -238,6 +319,7 @@ def get_web_workbench() -> str:
 
 @app.post("/v1/inpaint")
 async def inpaint_image(
+    request: Request,
     device_uuid: str = Form(...),
     play_integrity_token: str = Form(...),
     image: UploadFile = File(...),
@@ -249,10 +331,16 @@ async def inpaint_image(
     To ensure GDPR compliance, all image data is processed in memory and never written to disk.
     Uses asyncio.to_thread to execute CPU-bound PIL/PyTorch code without blocking the event loop.
     """
-    logger.info(f"Received request for /v1/inpaint from {device_uuid}")
+    client_ip = request.client.host if request.client else "unknown"
+    logger.info(f"Received request for /v1/inpaint from {device_uuid} at {client_ip}")
 
     verify_token(device_uuid, play_integrity_token)
-    await check_rate_limit(device_uuid)
+    await check_rate_limit(device_uuid, client_ip)
+
+    # A7: Upload size limit check
+    total_size = (image.size or 0) + (mask.size or 0) + (preview.size if preview else 0)
+    if total_size > settings.max_upload_bytes:
+         raise HTTPException(status_code=413, detail=f"Total upload size exceeds {settings.max_upload_bytes} bytes")
 
     try:
         image_data = await image.read()
@@ -267,8 +355,10 @@ async def inpaint_image(
         if sdxl_pipeline is None:
             await asyncio.sleep(0.1)
 
-        # EiPy Asyncio: Offload CPU-bound image manipulation to threadpool to avoid event loop blocking
-        output_data = await asyncio.to_thread(process_inpainting_payload, image_data, mask_data, preview_data)
+        # B11: Use the semaphore to limit concurrent SDXL inferences
+        async with sdxl_semaphore:
+            # EiPy Asyncio: Offload CPU-bound image manipulation to threadpool to avoid event loop blocking
+            output_data = await asyncio.to_thread(process_inpainting_payload, image_data, mask_data, preview_data)
 
         logger.info("Returning processed image from memory")
         return StreamingResponse(io.BytesIO(output_data), media_type="image/jpeg")

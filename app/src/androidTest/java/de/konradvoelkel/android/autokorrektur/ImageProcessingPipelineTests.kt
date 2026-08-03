@@ -7,6 +7,8 @@ import androidx.test.platform.app.InstrumentationRegistry
 import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloService
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
+import de.konradvoelkel.android.autokorrektur.ml.engine.YoloTFLiteEngine
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.AfterClass
 import org.junit.Assert.assertEquals
@@ -42,11 +44,13 @@ class ImageProcessingPipelineTests :
         fun beforeAll() {
             de.konradvoelkel.android.autokorrektur.shared.AndroidTestUtils.initOpenCV()
             val ctx = InstrumentationRegistry.getInstrumentation().targetContext
-            sharedYolo = YoloServiceImpl(ctx)
-            sharedYolo.initialize("yolo11s")
+            sharedYolo = YoloServiceImpl(YoloTFLiteEngine(ctx))
             sharedImageProcessor = ImageProcessor(ctx)
             sharedMiGan = de.konradvoelkel.android.autokorrektur.ml.MiGanInference(ctx)
-            sharedMiGan.initialize()
+            runBlocking {
+                sharedYolo.initialize("yolo11s")
+                sharedMiGan.initialize()
+            }
         }
 
         @AfterClass
@@ -132,7 +136,7 @@ class ImageProcessingPipelineTests :
     }
 
     @Test
-    fun testCarDetectionOnExampleImage() {
+    fun testCarDetectionOnExampleImage() = kotlinx.coroutines.runBlocking {
         val tempFile = cacheAsset("image_1_with_car_640x640.png", tempFiles)
         val fileUri = Uri.fromFile(tempFile)
 
@@ -168,7 +172,7 @@ class ImageProcessingPipelineTests :
     }
 
     @Test
-    fun testNoCarDetectionOnResultImage() {
+    fun testNoCarDetectionOnResultImage() = kotlinx.coroutines.runBlocking {
         val tempFile = cacheAsset("image_1_without_car_640x640.png", tempFiles)
         val fileUri = Uri.fromFile(tempFile)
 
@@ -204,7 +208,7 @@ class ImageProcessingPipelineTests :
     }
 
     @Test
-    fun testYoloMaskCreationProperties() {
+    fun testYoloMaskCreationProperties() = kotlinx.coroutines.runBlocking {
         val tempFile = cacheAsset("image_1_with_car_640x640.png", tempFiles)
         val fileUri = Uri.fromFile(tempFile)
 
@@ -233,7 +237,7 @@ class ImageProcessingPipelineTests :
     }
 
     @Test
-    fun testCarDetectionMaskIsSensible() {
+    fun testCarDetectionMaskIsSensible() = kotlinx.coroutines.runBlocking {
         val tempFile = cacheAsset("image_1_with_car_640x640.png", tempFiles)
         val fileUri = Uri.fromFile(tempFile)
 
@@ -269,7 +273,7 @@ class ImageProcessingPipelineTests :
     }
 
     @Test
-    fun testCarMaskMatchesReference() {
+    fun testCarMaskMatchesReference() = kotlinx.coroutines.runBlocking {
         val photoFile = cacheAsset("photo_with_car_1.png", tempFiles)
         val photoUri = Uri.fromFile(photoFile)
 
@@ -362,7 +366,7 @@ class ImageProcessingPipelineTests :
     }
 
     @Test
-    fun testMiGanRemovesCarAndKeepsBackground() {
+    fun testMiGanRemovesCarAndKeepsBackground() = kotlinx.coroutines.runBlocking {
         // Load input photo and reference mask
         val photoFile = cacheAsset("photo_with_car_1.png", tempFiles)
         val photoUri = Uri.fromFile(photoFile)
@@ -504,7 +508,7 @@ class ImageProcessingPipelineTests :
     }
 
     @Test
-    fun testEndToEndMiGanOnExample2MatchesReferenceOutsideMask() {
+    fun testEndToEndMiGanOnExample2MatchesReferenceOutsideMask() = kotlinx.coroutines.runBlocking {
         // 1) Load input and process
         val inputFile = cacheAsset("example2.png", tempFiles)
         val inputUri = Uri.fromFile(inputFile)

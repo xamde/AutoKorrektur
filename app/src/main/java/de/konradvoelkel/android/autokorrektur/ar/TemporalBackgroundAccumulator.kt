@@ -26,34 +26,37 @@ class TemporalBackgroundAccumulator {
      */
     @Synchronized
     fun accumulateAndBlend(frameMat: Mat, maskMat: Mat): Mat {
-        if (frameMat.empty()) return frameMat
+        if (frameMat.empty()) return frameMat.clone()
 
         val width = frameMat.cols()
         val height = frameMat.rows()
 
         // 1. Create binary non-vehicle mask (cleanMask = 255 - maskMat)
         val cleanMask = Mat()
-        Core.bitwise_not(maskMat, cleanMask)
+        try {
+            Core.bitwise_not(maskMat, cleanMask)
 
-        // 2. Initialize or resize background accumulation buffer
-        var bg = backgroundMat
-        if (bg == null || bg.cols() != width || bg.rows() != height || bg.type() != frameMat.type()) {
-            bg?.release()
-            bg = frameMat.clone()
-            backgroundMat = bg
+            // 2. Initialize or resize background accumulation buffer
+            var bg = backgroundMat
+            if (bg == null || bg.cols() != width || bg.rows() != height || bg.type() != frameMat.type()) {
+                bg?.release()
+                bg = frameMat.clone()
+                backgroundMat = bg
+            }
+
+            // 3. Update background buffer with new un-masked pixels
+            frameMat.copyTo(bg, cleanMask)
+
+            // 4. Create blended output frame
+            val outputMat = frameMat.clone()
+
+            // 5. Replace vehicle pixels in outputMat with accumulated background
+            bg.copyTo(outputMat, maskMat)
+
+            return outputMat
+        } finally {
+            cleanMask.release()
         }
-
-        // 3. Update background buffer with new un-masked pixels
-        frameMat.copyTo(bg, cleanMask)
-
-        // 4. Create blended output frame
-        val outputMat = frameMat.clone()
-
-        // 5. Replace vehicle pixels in outputMat with accumulated background
-        bg.copyTo(outputMat, maskMat)
-
-        cleanMask.release()
-        return outputMat
     }
 
     /**

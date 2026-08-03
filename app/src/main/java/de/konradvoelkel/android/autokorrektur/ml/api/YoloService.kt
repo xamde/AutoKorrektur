@@ -8,7 +8,7 @@ import org.opencv.core.Mat
 interface YoloService {
     val isInitialized: Boolean
 
-    fun initialize(
+    suspend fun initialize(
         modelName: String = "yolo11s",
         useFP16: Boolean = false,
         config: YoloConfig = YoloConfig()
@@ -19,7 +19,7 @@ interface YoloService {
      * The returned Mat contains 255 for background and lower values for masked areas (subtractive mask),
      * matching the legacy pipeline behavior.
      */
-    fun infer(
+    suspend fun infer(
         transformedMat: Mat,
         xRatio: Float,
         yRatio: Float,
@@ -32,7 +32,7 @@ interface YoloService {
      * Runs inference and returns both the subtractive mask and the kept detections.
      * Optional per-call [overrideConfig] can tweak thresholds/classes; when null the initialized config is used.
      */
-    fun inferDetailed(
+    suspend fun inferDetailed(
         transformedMat: Mat,
         xRatio: Float,
         yRatio: Float,

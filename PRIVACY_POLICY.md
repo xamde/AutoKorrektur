@@ -18,7 +18,9 @@ By default, AutoKorrektur performs all image processing, vehicle detection (YOLO
 ### 1.2 Premium Edit via Server SDXL (Opt-In)
 We offer a "Premium Edit" feature that utilizes a high-resolution SDXL model hosted on our secure servers. **This feature is strictly opt-in.**
 - If you choose to enable this feature, the app will securely upload your original photo and a locally computed vehicle mask to our backend server (`api.autokorrektur.konradvoelkel.de`).
-- **Strict GDPR Compliance & No Data Retention:** Images are processed entirely in memory on our servers. As soon as the processed image is returned to your device, **all uploaded images and data are immediately permanently deleted from the server**. 
+- **Strict GDPR Compliance & Minimal Data Footprint:** Images are processed with minimal
+  persistence. While a temporary copy may reside on the server's disk during the brief processing
+  window, it is deleted immediately after the request completes.
 - We do not store your photos, nor do we use them for training AI models.
 
 ---

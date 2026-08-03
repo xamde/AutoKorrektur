@@ -6,6 +6,7 @@ import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
 import de.konradvoelkel.android.autokorrektur.ml.MiGanInference
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloService
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
+import de.konradvoelkel.android.autokorrektur.ml.engine.YoloTFLiteEngine
 import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Before
@@ -28,8 +29,8 @@ class ImageUiParityTests :
     private val tempFiles = mutableListOf<File>()
 
     @Before
-    fun setup() {
-        yolo = YoloServiceImpl(appContext)
+    fun setup() = kotlinx.coroutines.runBlocking {
+        yolo = YoloServiceImpl(YoloTFLiteEngine(appContext))
         yolo.initialize("yolo11s")
         imageProcessor = ImageProcessor(appContext)
         migan = MiGanInference(appContext)
@@ -45,7 +46,7 @@ class ImageUiParityTests :
 
 
     @Test
-    fun testUiPathUsesOriginalImageSizeForMiGan() {
+    fun testUiPathUsesOriginalImageSizeForMiGan() = kotlinx.coroutines.runBlocking {
         // Use example2, which is already covered elsewhere, to compare two inpainting paths
         val inputFile = cacheAsset("example2.png", tempFiles)
         val inputUri = Uri.fromFile(inputFile)

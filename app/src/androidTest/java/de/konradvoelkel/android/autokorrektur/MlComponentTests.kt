@@ -6,6 +6,7 @@ import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
 import de.konradvoelkel.android.autokorrektur.ml.MiGanInference
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloService
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
+import de.konradvoelkel.android.autokorrektur.ml.engine.YoloTFLiteEngine
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -29,10 +30,10 @@ class MlComponentTests :
     }
 
     @Test
-    fun testYoloServiceInstantiationAndInitialization() {
+    fun testYoloServiceInstantiationAndInitialization() = kotlinx.coroutines.runBlocking {
         var yoloInference: YoloService? = null
         try {
-            yoloInference = YoloServiceImpl(appContext)
+            yoloInference = YoloServiceImpl(YoloTFLiteEngine(appContext))
             assertNotNull("YoloService should not be null", yoloInference)
             yoloInference.initialize("yolo11s")
         } catch (e: Exception) {
@@ -43,7 +44,7 @@ class MlComponentTests :
     }
 
     @Test
-    fun testMiGanInferenceInstantiationAndInitialization() {
+    fun testMiGanInferenceInstantiationAndInitialization() = kotlinx.coroutines.runBlocking {
         var miGanInference: MiGanInference? = null
         try {
             miGanInference = MiGanInference(appContext)
@@ -58,9 +59,9 @@ class MlComponentTests :
     }
 
     @Test
-    fun testYoloServiceModels() {
+    fun testYoloServiceModels() = kotlinx.coroutines.runBlocking {
         try {
-            val yoloService = YoloServiceImpl(appContext)
+            val yoloService = YoloServiceImpl(YoloTFLiteEngine(appContext))
             assertNotNull("YoloService should not be null", yoloService)
 
             try {

@@ -1,0 +1,90 @@
+<resources>
+    <string name="app_name">AutoKorrektur</string>
+    <string name="action_settings">Einstellungen</string>
+    <string name="first_fragment_label">AutoKorrektur</string>
+    <string name="next">Weiter</string>
+    <string name="previous">Zurück</string>
+
+    <string name="select_image">Bild auswählen</string>
+    <string name="start">Start</string>
+    <string name="download">Herunterladen</string>
+    <string name="options">Optionen</string>
+    <string name="live_ar_car_removal">Live AR Auto-Entfernung (30 FPS)</string>
+
+    <string name="photo_selection_title">Foto auswählen</string>
+    <string name="take_photo">Foto aufnehmen</string>
+    <string name="choose_from_gallery">Aus Galerie wählen</string>
+    <string name="cancel">Abbrechen</string>
+
+    <string name="multiple_images">Mehrere Bilder</string>
+    <string name="evaluation_mode">Evaluierungsmodus</string>
+    <string name="continue_with_result">Mit Ergebnis fortfahren</string>
+    <string name="mask_upscale">Masken-Skalierung</string>
+    <string name="mask_downshift">Masken-Verschiebung</string>
+    <string name="score_threshold">Konfidenz-Schwellenwert</string>
+    <string name="downscale">Skalierung auf max. Bildgröße</string>
+    <string name="segmentation_model">Segmentierungsmodell</string>
+    <string name="start_batch_processing_images">Batch-Verarbeitung starten (%1$d Bilder)</string>
+    <string name="select_multiple_images">Mehrere Bilder auswählen</string>
+    <string name="start_btn">Start</string>
+    <string name="select_image_btn">Bild auswählen</string>
+    <string name="processing">Verarbeitung...</string>
+    <string name="export_instagram">Für Instagram exportieren</string>
+    <string name="share_to_instagram">Grafik teilen</string>
+    <string name="save_graphic">Grafik speichern</string>
+
+    <string name="error_gallery_failed">Bild konnte nicht aus der Galerie geladen werden</string>
+    <string name="error_camera_permission_required">Kamera-Berechtigung wird benötigt, um Fotos aufzunehmen</string>
+    <string name="label_result">Ergebnis</string>
+    <string name="label_image_numbered">Bild %1$d</string>
+    <string name="label_original">Original</string>
+    <string name="loading_status">%1$s (%2$d%%)</string>
+    <string name="btn_start_batch_processing">Batch-Verarbeitung starten</string>
+    <string name="msg_image_saved">Bild in Galerie gespeichert</string>
+    <string name="error_no_processed_image">Kein verarbeitetes Bild zum Herunterladen vorhanden. Führen Sie zuerst die Inferenz aus.</string>
+    <string name="premium_edit_title">Premium-Bearbeitung (Server SDXL)</string>
+    <string name="btn_accept">Akzeptieren</string>
+    <string name="error_no_previous_result">Kein vorheriges Ergebnis verfügbar. Verarbeiten Sie zuerst ein Bild.</string>
+    <string name="error_create_file_failed">Fehler beim Erstellen der Bilddatei für die Kamera</string>
+    <string name="error_create_file_message">Fehler beim Erstellen der Bilddatei: %1$s</string>
+    <string name="msg_batch_completed">Batch-Verarbeitung abgeschlossen!\n%1$d/%2$d Bilder erfolgreich verarbeitet</string>
+    <string name="btn_export_csv">CSV exportieren</string>
+    <string name="error_export_instagram_no_image">Verarbeiten Sie zuerst ein Bild, bevor Sie es für Instagram exportieren</string>
+    <string name="dialog_instagram_format_title">Instagram-Format auswählen</string>
+    <string name="instagram_format_square">1:1 Quadrat (Nebeneinander)</string>
+    <string name="instagram_format_portrait">4:5 Feed Porträt (Übereinander)</string>
+    <string name="instagram_format_story">9:16 Story (Nebeneinander)</string>
+    <string name="dialog_instagram_ready_title">Instagram-Grafik bereit</string>
+    <string name="share_chooser_title">Vorher/Nachher Grafik teilen</string>
+    <string name="error_export_message">Exportfehler: %1$s</string>
+    <string name="msg_instagram_graphic_saved">Instagram-Grafik in Galerie gespeichert!</string>
+    <string name="msg_ar_reset">AR-Hintergrundspeicher zurückgesetzt</string>
+    <string name="msg_ar_captured">AR-Foto aufgenommen!</string>
+
+    <string-array name="downscale_options">
+        <item>Keine Skalierung</item>
+        <item>0.5 MP</item>
+        <item>1 MP</item>
+        <item>2 MP</item>
+        <item>3 MP</item>
+        <item>4 MP</item>
+        <item>5 MP</item>
+        <item>6 MP</item>
+        <item>7 MP</item>
+        <item>8 MP</item>
+        <item>9 MP</item>
+        <item>10 MP</item>
+    </string-array>
+
+    <string-array name="yolo_model_options">
+        <item>Yolo11-Nano</item>
+        <item>Yolo11-Small</item>
+        <item>Yolo11-Medium</item>
+    </string-array>
+
+    <string-array name="instagram_formats">
+        <item>1:1 Quadrat (Nebeneinander)</item>
+        <item>4:5 Feed Porträt (Übereinander)</item>
+        <item>9:16 Story (Nebeneinander)</item>
+    </string-array>
+</resources>
