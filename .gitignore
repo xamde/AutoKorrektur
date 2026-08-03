@@ -34,3 +34,10 @@ opencv-sdk
 /.kotlin/sessions/
 /.idea/markdown.xml
 /.idea/migrations.xml
+
+# Python virtual environments & caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/

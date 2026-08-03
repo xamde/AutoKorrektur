@@ -26,6 +26,9 @@ class YoloServiceImpl(
     private val engine by lazy { YoloTFLiteEngine(context) }
     private var currentConfig: YoloConfig = YoloConfig()
 
+    override val isInitialized: Boolean
+        get() = engine.isInitialized
+
     override fun initialize(modelName: String, useFP16: Boolean, config: YoloConfig) {
         currentConfig = config
         engine.initialize(modelName, useFP16)
@@ -60,7 +63,10 @@ class YoloServiceImpl(
         originalHeight: Int?,
         overrideConfig: YoloConfig?
     ): YoloResult {
-        require(engine.isInitialized) { "YoloService used before initialize()" }
+        if (!engine.isInitialized) {
+            AppLogger.info("YoloServiceImpl inferDetailed called on uninitialized engine; auto-initializing default model...")
+            initialize()
+        }
 
         val effectiveConfig = overrideConfig ?: currentConfig
 

@@ -19,6 +19,9 @@ import org.opencv.imgproc.Imgproc
  */
 object YoloMaskAssembler {
 
+    private const val MORPH_KERNEL_SIZE_PX = 3.0
+    private const val OPENCV_BYTE_SCALE = 255.0
+
     /**
      * Extracts prototype masks (float32) from a raw ByteBuffer according to the
      * provided prototype tensor shape [1, H, W, C]. The buffer must contain
@@ -127,11 +130,7 @@ object YoloMaskAssembler {
         weighted.release()
         AppLogger.debug("Used $nonZeroCoeffs non-zero coefficients out of $numPrototypesChannels")
 
-        // Sigmoid and threshold
-        applySigmoid(combinedProtoMask)
-        Imgproc.threshold(combinedProtoMask, combinedProtoMask, 0.4, 1.0, Imgproc.THRESH_BINARY)
-
-        // Resize to bbox size in model input pixels, scaled by upscaleFactor
+        // 1. Upscale continuous linear logits to high resolution FIRST (prevents blocky binary staircase edges)
         val targetWidth = (boxW * inputWidth * upscaleFactor).toInt().coerceAtLeast(1)
         val targetHeight = (boxH * inputHeight * upscaleFactor).toInt().coerceAtLeast(1)
         val resizedMask = Mat()
@@ -141,12 +140,26 @@ object YoloMaskAssembler {
             Size(targetWidth.toDouble(), targetHeight.toDouble()),
             0.0,
             0.0,
-            Imgproc.INTER_LINEAR
+            Imgproc.INTER_CUBIC
         )
+        combinedProtoMask.release()
+
+        // 2. Apply Sigmoid on high-resolution continuous probabilities
+        applySigmoid(resizedMask)
+
+        // 3. High-resolution thresholding
+        Imgproc.threshold(resizedMask, resizedMask, 0.4, 1.0, Imgproc.THRESH_BINARY)
+
+        // 4. Morphological closing to fill glare holes and smooth vehicle contour
+        val kernel = Imgproc.getStructuringElement(
+            Imgproc.MORPH_ELLIPSE,
+            Size(MORPH_KERNEL_SIZE_PX, MORPH_KERNEL_SIZE_PX)
+        )
+        Imgproc.morphologyEx(resizedMask, resizedMask, Imgproc.MORPH_CLOSE, kernel)
+        kernel.release()
 
         // Convert to 8-bit for overlay
-        resizedMask.convertTo(resizedMask, CvType.CV_8UC1, 255.0)
-        combinedProtoMask.release()
+        resizedMask.convertTo(resizedMask, CvType.CV_8UC1, OPENCV_BYTE_SCALE)
         return resizedMask
     }
 

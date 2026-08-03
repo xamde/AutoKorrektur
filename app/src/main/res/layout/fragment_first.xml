@@ -48,19 +48,45 @@
             app:layout_constraintTop_toBottomOf="@id/beforeAfterSliderView"
             app:layout_constraintWidth_percent="0.7" />
 
+        <!-- Premium Edit Switch -->
+        <LinearLayout
+            android:id="@+id/premiumEditContainer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/fileSelect"
+            app:layout_constraintWidth_percent="0.7">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Premium Edit (Server SDXL)"
+                android:textSize="16sp" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/useSdxl"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
         <!-- Start Inference Button -->
         <Button
             android:id="@+id/startInference"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="16dp"
             android:enabled="false"
             android:text="@string/start"
             app:icon="@android:drawable/ic_media_play"
             app:iconGravity="textStart"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/fileSelect"
+            app:layout_constraintTop_toBottomOf="@id/premiumEditContainer"
             app:layout_constraintWidth_percent="0.7" />
 
         <!-- Download Button -->
@@ -181,6 +207,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content" />
                 </LinearLayout>
+
+
 
                 <!-- Mask Upscale Slider -->
                 <TextView

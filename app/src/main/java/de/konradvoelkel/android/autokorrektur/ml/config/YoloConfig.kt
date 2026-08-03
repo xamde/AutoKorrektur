@@ -7,7 +7,7 @@ package de.konradvoelkel.android.autokorrektur.ml.config
  */
 data class YoloConfig(
     val scoreThreshold: Float = 0.6f,
-    val iouThreshold: Float = 0.9f,
+    val iouThreshold: Float = 0.45f,
     val topAmountPerClass: Int = 100,
     val vehicleClassIndices: IntArray = intArrayOf(2, 3, 5, 7),
     val labels: Array<String> = DEFAULT_LABELS
