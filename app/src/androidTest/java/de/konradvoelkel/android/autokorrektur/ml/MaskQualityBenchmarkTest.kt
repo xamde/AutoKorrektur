@@ -6,6 +6,7 @@ import android.graphics.Color
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
+import de.konradvoelkel.android.autokorrektur.ml.engine.YoloTFLiteEngine
 import de.konradvoelkel.android.autokorrektur.ml.config.YoloConfig
 import de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
@@ -38,9 +39,9 @@ class MaskQualityBenchmarkTest : AndroidInstrumentedBaseTest() {
     private lateinit var imageProcessor: ImageProcessor
 
     @Before
-    fun setUp() {
+    fun setUp() = kotlinx.coroutines.runBlocking {
         assertTrue("OpenCV initialization failed", OpenCVLoader.initLocal())
-        yoloService = YoloServiceImpl(appContext)
+        yoloService = YoloServiceImpl(YoloTFLiteEngine(appContext))
         yoloService.initialize()
         imageProcessor = ImageProcessor(appContext)
     }
@@ -54,7 +55,8 @@ class MaskQualityBenchmarkTest : AndroidInstrumentedBaseTest() {
     )
 
     @Test
-    fun benchmarkSegmentationMaskQuality_calculatesQuantitativeIoUAndDice() {
+    fun benchmarkSegmentationMaskQuality_calculatesQuantitativeIoUAndDice() =
+        kotlinx.coroutines.runBlocking {
         val benchmarkSamples = listOf(
             Pair("photo_with_car_1.png", "photo_with_car_1_mask.png")
         )

@@ -56,7 +56,7 @@ class MiGanInpaintingInstrumentedTest : AndroidInstrumentedBaseTest() {
     }
 
     @Test
-    fun testMiGanRemovesCarAndKeepsBackground() {
+    fun testMiGanRemovesCarAndKeepsBackground() = kotlinx.coroutines.runBlocking {
         // Load input photo and reference mask
         val photoFile = cacheAsset("photo_with_car_1.png", tempFiles)
         val photoUri = Uri.fromFile(photoFile)

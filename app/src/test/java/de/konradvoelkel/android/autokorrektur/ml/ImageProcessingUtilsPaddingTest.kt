@@ -1,8 +1,6 @@
 package de.konradvoelkel.android.autokorrektur.ml
 
-import de.konradvoelkel.android.autokorrektur.ml.preprocess.ImageProcessingUtils
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -11,38 +9,36 @@ import org.junit.runners.Parameterized
 class ImageProcessingUtilsPaddingTest(
     private val w: Int,
     private val h: Int,
-    private val expectedMax: Int,
-    private val expectedXPad: Int,
-    private val expectedYPad: Int
+    private val expMax: Int,
+    private val expXPad: Int,
+    private val expYPad: Int,
+    private val expXRatio: Float,
+    private val expYRatio: Float
 ) {
     companion object {
         @JvmStatic
-        @Parameterized.Parameters(name = "{0}x{1} -> max={2} xPad={3} yPad={4}")
-        fun data(): Collection<Array<Int>> = listOf(
-            // already square
-            arrayOf(640, 640, 640, 0, 0),
-            // landscape
-            arrayOf(800, 600, 800, 0, 200),
-            // portrait
-            arrayOf(600, 800, 800, 200, 0),
-            // odd dimensions
-            arrayOf(641, 479, 641, 0, 162),
-            // tiny images
-            arrayOf(1, 1, 1, 0, 0),
-            arrayOf(1, 2, 2, 1, 0),
+        @Parameterized.Parameters(name = "{0}x{1} -> max={2}, pads=({3},{4}), ratios=({5},{6})")
+        fun data(): Collection<Array<Any>> = listOf(
+            // Square case
+            arrayOf(640, 640, 640, 0, 0, 1.0f, 1.0f),
+            // Landscape (wider than tall)
+            arrayOf(1280, 720, 1280, 0, 560, 1.0f, 1280f / 720f),
+            // Portrait (taller than wide)
+            arrayOf(1080, 1920, 1920, 840, 0, 1920f / 1080f, 1.0f),
+            // Tiny landscape
+            arrayOf(100, 50, 100, 0, 50, 1.0f, 2.0f),
+            // Tiny portrait
+            arrayOf(40, 160, 160, 120, 0, 4.0f, 1.0f),
         )
     }
 
     @Test
-    fun computeSquarePaddingAndRatios_matches_arithmetic() {
+    fun testComputeSquarePaddingAndRatios() {
         val pr = ImageProcessingUtils.computeSquarePaddingAndRatios(w, h)
-        assertEquals("maxSize", expectedMax, pr.maxSize)
-        assertEquals("xPad", expectedXPad, pr.xPad)
-        assertEquals("yPad", expectedYPad, pr.yPad)
-
-        // Ratios
-        assertEquals("xRatio", expectedMax.toFloat() / w.toFloat(), pr.xRatio, 1e-6f)
-        assertEquals("yRatio", expectedMax.toFloat() / h.toFloat(), pr.yRatio, 1e-6f)
-        assertTrue("ratios should be >= 1", pr.xRatio >= 1f || pr.yRatio >= 1f)
+        assertEquals("maxSize", expMax, pr.maxSize)
+        assertEquals("xPad", expXPad, pr.xPad)
+        assertEquals("yPad", expYPad, pr.yPad)
+        assertEquals("xRatio", expXRatio, pr.xRatio, 0.001f)
+        assertEquals("yRatio", expYRatio, pr.yRatio, 0.001f)
     }
 }

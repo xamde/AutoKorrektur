@@ -14,19 +14,18 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.TimeUnit
 
-class ServerSdxlApi(private val context: Context) {
-    
-    // In production, configure to use HTTPS and proper domain
-    // For local emulator testing against local server, we use 10.0.2.2
-    private val serverUrl = "http://10.0.2.2:8000/v1/inpaint"
-
-    private val client = OkHttpClient.Builder()
+class ServerSdxlApi(
+    private val context: Context,
+    private val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
         .build()
+) : ServerInpainter {
 
-    suspend fun processWithSdxl(
+    private var serverUrl = de.konradvoelkel.android.autokorrektur.BuildConfig.BACKEND_URL
+
+    override suspend fun processWithSdxl(
         originalBitmap: Bitmap, 
         maskBitmap: Bitmap, 
         previewBitmap: Bitmap

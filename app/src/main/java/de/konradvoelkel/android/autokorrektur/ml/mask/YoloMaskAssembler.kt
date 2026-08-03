@@ -51,23 +51,23 @@ object YoloMaskAssembler {
         val prototypeHeight = protoShape[1]
         val prototypeWidth = protoShape[2]
         val numPrototypesChannels = protoShape[3]
-        require(prototypeMasksData.size == numPrototypesChannels * prototypeHeight * prototypeWidth) {
-            "Prototype data size mismatch: expected ${numPrototypesChannels * prototypeHeight * prototypeWidth}, got ${prototypeMasksData.size}"
+        val pixelsPerChannel = prototypeHeight * prototypeWidth
+        require(prototypeMasksData.size == numPrototypesChannels * pixelsPerChannel) {
+            "Prototype data size mismatch: expected ${numPrototypesChannels * pixelsPerChannel}, got ${prototypeMasksData.size}"
         }
-        val prototypeMats =
-            List(numPrototypesChannels) { Mat(prototypeHeight, prototypeWidth, CvType.CV_32FC1) }
-        for (y in 0 until prototypeHeight) {
-            for (x in 0 until prototypeWidth) {
-                val base =
-                    (y * prototypeWidth * numPrototypesChannels) + (x * numPrototypesChannels)
-                for (c in 0 until numPrototypesChannels) {
-                    val value = prototypeMasksData[base + c]
-                    prototypeMats[c].put(y, x, value.toDouble())
-                }
+
+        // B8: Optimize by reducing JNI calls. Build one FloatArray per channel and put all at once.
+        return List(numPrototypesChannels) { c ->
+            val channelData = FloatArray(pixelsPerChannel)
+            for (i in 0 until pixelsPerChannel) {
+                channelData[i] = prototypeMasksData[i * numPrototypesChannels + c]
             }
+            val mat = Mat(prototypeHeight, prototypeWidth, CvType.CV_32FC1)
+            mat.put(0, 0, channelData)
+            mat
         }
-        return prototypeMats
     }
+
 
     /**
      * Apply a sigmoid element-wise on a CV_32F Mat in-place.
@@ -96,8 +96,6 @@ object YoloMaskAssembler {
         inputHeight: Int
     ): Mat {
         if (prototypeMats.isEmpty()) return Mat()
-        val prototypeHeight = prototypeMats[0].rows()
-        val prototypeWidth = prototypeMats[0].cols()
         val numPrototypesChannels = prototypeMats.size
 
         if (maskCoefficients.size != numPrototypesChannels) {
@@ -105,34 +103,48 @@ object YoloMaskAssembler {
             return Mat()
         }
 
-        // Crop area in prototype grid corresponding to the detection bbox
-        val cropX = (boxX * prototypeWidth).toInt().coerceIn(0, prototypeWidth - 1)
-        val cropY = (boxY * prototypeHeight).toInt().coerceIn(0, prototypeHeight - 1)
-        val cropW =
-            (boxW * prototypeWidth).toInt().coerceAtLeast(1).coerceAtMost(prototypeWidth - cropX)
-        val cropH =
-            (boxH * prototypeHeight).toInt().coerceAtLeast(1).coerceAtMost(prototypeHeight - cropY)
-        val cropRect = Rect(cropX, cropY, cropW, cropH)
-        AppLogger.debug("Cropping prototypes: x=$cropX, y=$cropY, w=$cropW, h=$cropH (from ${prototypeWidth}x${prototypeHeight})")
+        val combinedProtoMask =
+            cropAndWeightPrototypes(maskCoefficients, prototypeMats, boxX, boxY, boxW, boxH)
 
-        val combinedProtoMask = Mat.zeros(cropH, cropW, CvType.CV_32FC1)
+        val targetWidth = (boxW * inputWidth * upscaleFactor).toInt().coerceAtLeast(1)
+        val targetHeight = (boxH * inputHeight * upscaleFactor).toInt().coerceAtLeast(1)
+
+        return postProcessMask(combinedProtoMask, targetWidth, targetHeight)
+    }
+
+    private fun cropAndWeightPrototypes(
+        maskCoefficients: FloatArray,
+        prototypeMats: List<Mat>,
+        boxX: Float,
+        boxY: Float,
+        boxW: Float,
+        boxH: Float
+    ): Mat {
+        val prototypeHeight = prototypeMats[0].rows()
+        val prototypeWidth = prototypeMats[0].cols()
+        val numPrototypesChannels = prototypeMats.size
+
+        // D1.1: Use pure math helper
+        val cp =
+            YoloMaskMath.calculateCropRect(boxX, boxY, boxW, boxH, prototypeWidth, prototypeHeight)
+        val cropRect = Rect(cp.x, cp.y, cp.width, cp.height)
+
+        val combinedProtoMask = Mat.zeros(cropRect.height, cropRect.width, CvType.CV_32FC1)
         val weighted = Mat()
-        var nonZeroCoeffs = 0
         for (i in 0 until numPrototypesChannels) {
             val coeff = maskCoefficients[i]
             if (coeff == 0f) continue
-            nonZeroCoeffs++
             val cropped = Mat(prototypeMats[i], cropRect)
             Core.multiply(cropped, Scalar(coeff.toDouble()), weighted)
             Core.add(combinedProtoMask, weighted, combinedProtoMask)
             cropped.release()
         }
         weighted.release()
-        AppLogger.debug("Used $nonZeroCoeffs non-zero coefficients out of $numPrototypesChannels")
+        return combinedProtoMask
+    }
 
-        // 1. Upscale continuous linear logits to high resolution FIRST (prevents blocky binary staircase edges)
-        val targetWidth = (boxW * inputWidth * upscaleFactor).toInt().coerceAtLeast(1)
-        val targetHeight = (boxH * inputHeight * upscaleFactor).toInt().coerceAtLeast(1)
+    private fun postProcessMask(combinedProtoMask: Mat, targetWidth: Int, targetHeight: Int): Mat {
+        // 1. Upscale continuous linear logits to high resolution FIRST
         val resizedMask = Mat()
         Imgproc.resize(
             combinedProtoMask,
@@ -216,64 +228,20 @@ object YoloMaskAssembler {
         inputHeight: Int,
         protoShape: IntArray
     ) {
-        val boxX = detection.x
-        val boxY = detection.y
-        val boxW = detection.width
-        val boxH = detection.height
-
         val maskMat = assembleMaskFromPrototypes(
             detection.maskCoefficients,
             prototypeMasksData,
-            boxX, boxY, boxW, boxH,
+            detection.x, detection.y, detection.width, detection.height,
             upscaleFactor,
             inputWidth,
             inputHeight,
             protoShape
         )
 
-        if (maskMat.empty()) {
-            AppLogger.debug("assembleMaskFromPrototypes returned empty mask. Skipping application.")
-            return
-        }
-
-        val upscaledMaskWidth = maskMat.cols().toDouble()
-        val upscaledMaskHeight = maskMat.rows().toDouble()
-
-        val xModel = (boxX * inputWidth).toInt()
-        val yModel = (boxY * inputHeight).toInt()
-        val wModel = (boxW * inputWidth).toInt()
-        val hModel = (boxH * inputHeight).toInt()
-
-        val targetX = xModel + (wModel / 2.0) - (upscaledMaskWidth / 2.0)
-        val targetY = yModel + (hModel / 2.0) - (upscaledMaskHeight / 2.0)
-
-        val roiRect = Rect(
-            kotlin.math.max(0, targetX.toInt()),
-            kotlin.math.max(0, targetY.toInt()),
-            kotlin.math.min(
-                upscaledMaskWidth.toInt(),
-                inputWidth - kotlin.math.max(0, targetX.toInt())
-            ),
-            kotlin.math.min(
-                upscaledMaskHeight.toInt(),
-                inputHeight - kotlin.math.max(0, targetY.toInt())
-            )
-        )
-
-        val maskRoiRect = Rect(
-            0, 0,
-            kotlin.math.min(upscaledMaskWidth.toInt(), roiRect.width),
-            kotlin.math.min(upscaledMaskHeight.toInt(), roiRect.height)
-        )
-
-        if (roiRect.width > 0 && roiRect.height > 0) {
-            val dstRoi = Mat(overlayGray, roiRect)
-            val srcMaskRoi = Mat(maskMat, maskRoiRect)
-            Core.subtract(dstRoi, srcMaskRoi, dstRoi)
-            dstRoi.release()
-            srcMaskRoi.release()
+        if (!maskMat.empty()) {
+            applyMaskToOverlay(detection, maskMat, overlayGray, inputWidth, inputHeight)
         } else {
-            AppLogger.debug("Warning: ROI for mask placement is invalid or out of bounds. Skipping mask application for this detection.")
+            AppLogger.debug("assembleMaskFromPrototypes returned empty mask. Skipping application.")
         }
         maskMat.release()
     }
@@ -287,64 +255,50 @@ object YoloMaskAssembler {
         inputWidth: Int,
         inputHeight: Int
     ) {
-        val boxX = detection.x
-        val boxY = detection.y
-        val boxW = detection.width
-        val boxH = detection.height
-
         val maskMat = assembleMaskFromPrototypes(
             detection.maskCoefficients,
             deinterleavedPrototypes,
-            boxX, boxY, boxW, boxH,
+            detection.x, detection.y, detection.width, detection.height,
             upscaleFactor,
             inputWidth,
             inputHeight
         )
 
-        if (maskMat.empty()) {
+        if (!maskMat.empty()) {
+            applyMaskToOverlay(detection, maskMat, overlayGray, inputWidth, inputHeight)
+        } else {
             AppLogger.debug("assembleMaskFromPrototypes returned empty mask. Skipping application.")
-            return
         }
+        maskMat.release()
+    }
 
-        val upscaledMaskWidth = maskMat.cols().toDouble()
-        val upscaledMaskHeight = maskMat.rows().toDouble()
+    private fun applyMaskToOverlay(
+        detection: Detection,
+        maskMat: Mat,
+        overlayGray: Mat,
+        inputWidth: Int,
+        inputHeight: Int
+    ) {
+        val upscaledMaskWidth = maskMat.cols()
+        val upscaledMaskHeight = maskMat.rows()
 
-        val xModel = (boxX * inputWidth).toInt()
-        val yModel = (boxY * inputHeight).toInt()
-        val wModel = (boxW * inputWidth).toInt()
-        val hModel = (boxH * inputHeight).toInt()
-
-        val targetX = xModel + (wModel / 2.0) - (upscaledMaskWidth / 2.0)
-        val targetY = yModel + (hModel / 2.0) - (upscaledMaskHeight / 2.0)
-
-        val roiRect = Rect(
-            kotlin.math.max(0, targetX.toInt()),
-            kotlin.math.max(0, targetY.toInt()),
-            kotlin.math.min(
-                upscaledMaskWidth.toInt(),
-                inputWidth - kotlin.math.max(0, targetX.toInt())
-            ),
-            kotlin.math.min(
-                upscaledMaskHeight.toInt(),
-                inputHeight - kotlin.math.max(0, targetY.toInt())
-            )
+        // D1.1: Use pure math helper
+        val p = YoloMaskMath.calculatePlacement(
+            detection.x, detection.y, detection.width, detection.height,
+            upscaledMaskWidth, upscaledMaskHeight, inputWidth, inputHeight
         )
 
-        val maskRoiRect = Rect(
-            0, 0,
-            kotlin.math.min(upscaledMaskWidth.toInt(), roiRect.width),
-            kotlin.math.min(upscaledMaskHeight.toInt(), roiRect.height)
-        )
-
-        if (roiRect.width > 0 && roiRect.height > 0) {
+        if (p.dst.width > 0 && p.dst.height > 0) {
+            val roiRect = Rect(p.dst.x, p.dst.y, p.dst.width, p.dst.height)
+            val maskRoiRect = Rect(p.src.x, p.src.y, p.src.width, p.src.height)
+            
             val dstRoi = Mat(overlayGray, roiRect)
             val srcMaskRoi = Mat(maskMat, maskRoiRect)
             Core.subtract(dstRoi, srcMaskRoi, dstRoi)
             dstRoi.release()
             srcMaskRoi.release()
         } else {
-            AppLogger.debug("Warning: ROI for mask placement is invalid or out of bounds. Skipping mask application for this detection.")
+            AppLogger.debug("Warning: ROI for mask placement is invalid or out of bounds.")
         }
-        maskMat.release()
     }
 }

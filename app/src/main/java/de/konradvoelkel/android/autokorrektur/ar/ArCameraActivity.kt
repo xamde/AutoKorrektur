@@ -9,10 +9,14 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import com.google.android.material.snackbar.Snackbar
+import de.konradvoelkel.android.autokorrektur.R
 import de.konradvoelkel.android.autokorrektur.databinding.ActivityArCameraBinding
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloService
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
+import de.konradvoelkel.android.autokorrektur.ml.engine.YoloTFLiteEngine
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import org.opencv.android.Utils
 import org.opencv.core.CvType
 import org.opencv.core.Mat
@@ -35,12 +39,14 @@ class ArCameraActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         cameraExecutor = Executors.newSingleThreadExecutor()
-        yoloInference = YoloServiceImpl(this)
+        yoloInference = YoloServiceImpl(YoloTFLiteEngine(this))
 
-        try {
-            yoloInference.initialize(modelName = "yolo11n", useFP16 = false)
-        } catch (e: Exception) {
-            AppLogger.error("Failed to initialize YOLO for AR camera", e)
+        lifecycleScope.launch {
+            try {
+                yoloInference.initialize(modelName = "yolo11n", useFP16 = false)
+            } catch (e: Exception) {
+                AppLogger.error("Failed to initialize YOLO for AR camera", e)
+            }
         }
 
         binding.backButton.setOnClickListener {
@@ -49,42 +55,47 @@ class ArCameraActivity : AppCompatActivity() {
 
         binding.resetArButton.setOnClickListener {
             accumulator.reset()
-            Snackbar.make(binding.root, "AR Background Memory Reset", Snackbar.LENGTH_SHORT).show()
+            Snackbar.make(binding.root, R.string.msg_ar_reset, Snackbar.LENGTH_SHORT).show()
         }
 
         binding.captureArButton.setOnClickListener {
-            Snackbar.make(binding.root, "AR Photo Captured!", Snackbar.LENGTH_SHORT).show()
+            Snackbar.make(binding.root, R.string.msg_ar_captured, Snackbar.LENGTH_SHORT).show()
         }
 
         startCamera()
     }
 
+    private var cameraProvider: ProcessCameraProvider? = null
+
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
 
         cameraProviderFuture.addListener({
-            val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
-
-            val preview = Preview.Builder()
-                .build()
-                .also {
-                    it.setSurfaceProvider(binding.cameraPreview.surfaceProvider)
-                }
-
-            val imageAnalyzer = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build()
-                .also {
-                    it.setAnalyzer(cameraExecutor) { imageProxy ->
-                        imageProxy.close()
-                    }
-                }
-
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+            if (isDestroyed || isFinishing) return@addListener
 
             try {
-                cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(
+                val provider: ProcessCameraProvider = cameraProviderFuture.get()
+                cameraProvider = provider
+
+                val preview = Preview.Builder()
+                    .build()
+                    .also {
+                        it.setSurfaceProvider(binding.cameraPreview.surfaceProvider)
+                    }
+
+                val imageAnalyzer = ImageAnalysis.Builder()
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .build()
+                    .also {
+                        it.setAnalyzer(cameraExecutor) { imageProxy ->
+                            imageProxy.close()
+                        }
+                    }
+
+                val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+                provider.unbindAll()
+                provider.bindToLifecycle(
                     this, cameraSelector, preview, imageAnalyzer
                 )
             } catch (exc: Exception) {
@@ -95,11 +106,12 @@ class ArCameraActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        super.onDestroy()
         cameraExecutor.shutdown()
+        cameraProvider?.unbindAll()
         accumulator.reset()
         if (::yoloInference.isInitialized) {
             yoloInference.close()
         }
+        super.onDestroy()
     }
 }

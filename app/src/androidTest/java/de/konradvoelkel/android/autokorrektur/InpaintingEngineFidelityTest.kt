@@ -17,14 +17,14 @@ import org.junit.runner.RunWith
 class InpaintingEngineFidelityTest : AndroidInstrumentedBaseTest() {
 
     @Test
-    fun testUnmaskedPixelInvarianceInMiGan() {
+    fun testUnmaskedPixelInvarianceInMiGan() = kotlinx.coroutines.runBlocking {
         var miGan: MiGanInference? = null
         try {
             miGan = MiGanInference(appContext)
             miGan.initialize()
         } catch (e: Exception) {
             // If model missing in specific runner, gracefully skip
-            return
+            return@runBlocking
         }
 
         val width = 512

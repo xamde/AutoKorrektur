@@ -9,5 +9,6 @@ import org.opencv.core.Mat
  */
 data class YoloResult(
     val mask: Mat,
-    val detections: List<Detection>
+    val detections: List<Detection>,
+    val warnings: List<String> = emptyList()
 )

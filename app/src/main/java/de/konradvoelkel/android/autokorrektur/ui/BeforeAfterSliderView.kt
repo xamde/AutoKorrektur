@@ -53,6 +53,18 @@ class BeforeAfterSliderView @JvmOverloads constructor(
 
     private val bitmapPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
 
+    // Cached objects for onDraw to avoid GC churn
+    private val viewRect = RectF()
+    private val textBounds = Rect()
+    private val srcCrop = Rect()
+    private val handleText = "⮜ ⮞"
+
+    init {
+        isFocusable = true
+        isFocusableInTouchMode = true
+        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_YES
+    }
+
     /**
      * Sets the Before (original with car) and After (processed car-free) bitmaps.
      */
@@ -77,17 +89,44 @@ class BeforeAfterSliderView @JvmOverloads constructor(
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-                sliderPosition = (event.x / width.toFloat()).coerceIn(0f, 1f)
+                updateSliderPosition(event.x)
                 parent?.requestDisallowInterceptTouchEvent(true)
-                invalidate()
                 return true
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 parent?.requestDisallowInterceptTouchEvent(false)
+                performClick()
                 return true
             }
         }
         return super.onTouchEvent(event)
+    }
+
+    override fun performClick(): Boolean {
+        super.performClick()
+        return true
+    }
+
+    private fun updateSliderPosition(x: Float) {
+        sliderPosition = (x / width.toFloat()).coerceIn(0f, 1f)
+        contentDescription = "Before/After slider at ${(sliderPosition * 100).toInt()}%"
+        invalidate()
+    }
+
+    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        return when (keyCode) {
+            android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                setSliderPosition(sliderPosition - 0.05f)
+                true
+            }
+
+            android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                setSliderPosition(sliderPosition + 0.05f)
+                true
+            }
+
+            else -> super.onKeyDown(keyCode, event)
+        }
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -98,7 +137,7 @@ class BeforeAfterSliderView @JvmOverloads constructor(
 
         if (before == null || after == null || width <= 0 || height <= 0) return
 
-        val viewRect = RectF(0f, 0f, width.toFloat(), height.toFloat())
+        viewRect.set(0f, 0f, width.toFloat(), height.toFloat())
         val splitX = width * sliderPosition
 
         // 1. Draw After Bitmap across full view bounds
@@ -120,12 +159,10 @@ class BeforeAfterSliderView @JvmOverloads constructor(
         canvas.drawCircle(splitX, handleCenterY, handleRadius, handleBorderPaint)
 
         // Draw left/right arrows inside handle thumb ("< >")
-        val text = "⮜ ⮞"
-        val textBounds = Rect()
-        textPaint.getTextBounds(text, 0, text.length, textBounds)
+        textPaint.getTextBounds(handleText, 0, handleText.length, textBounds)
         val textX = splitX - (textBounds.width() / 2f)
         val textY = handleCenterY + (textBounds.height() / 2f) - 2f
-        canvas.drawText(text, textX, textY, textPaint)
+        canvas.drawText(handleText, textX, textY, textPaint)
     }
 
     private fun drawCenterCropBitmap(canvas: Canvas, bitmap: Bitmap, destRect: RectF) {
@@ -134,15 +171,32 @@ class BeforeAfterSliderView @JvmOverloads constructor(
         val srcAspect = srcW / srcH
         val destAspect = destRect.width() / destRect.height()
 
-        val srcCrop: Rect = if (srcAspect > destAspect) {
+        if (srcAspect > destAspect) {
             val cropW = srcH * destAspect
             val left = (srcW - cropW) / 2f
-            Rect(left.toInt(), 0, (left + cropW).toInt(), srcH.toInt())
+            srcCrop.set(left.toInt(), 0, (left + cropW).toInt(), srcH.toInt())
         } else {
             val cropH = srcW / destAspect
             val top = (srcH - cropH) / 2f
-            Rect(0, top.toInt(), srcW.toInt(), (top + cropH).toInt())
+            srcCrop.set(0, top.toInt(), srcW.toInt(), (top + cropH).toInt())
         }
         canvas.drawBitmap(bitmap, srcCrop, destRect, bitmapPaint)
+    }
+
+    override fun onSaveInstanceState(): android.os.Parcelable {
+        val bundle = android.os.Bundle()
+        bundle.putParcelable("superState", super.onSaveInstanceState())
+        bundle.putFloat("sliderPosition", sliderPosition)
+        return bundle
+    }
+
+    override fun onRestoreInstanceState(state: android.os.Parcelable?) {
+        var viewState = state
+        if (viewState is android.os.Bundle) {
+            sliderPosition = viewState.getFloat("sliderPosition", 0.5f)
+            @Suppress("DEPRECATION")
+            viewState = viewState.getParcelable("superState")
+        }
+        super.onRestoreInstanceState(viewState)
     }
 }

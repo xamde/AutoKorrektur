@@ -8,15 +8,22 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - REDIS_URL=redis://redis:6379/0
-      - ENABLE_SDXL_LOAD=false
-      - STRICT_INTEGRITY_CHECK=false
+      - AUTOKORREKTUR_REDIS_URL=redis://redis:6379/0
+      - AUTOKORREKTUR_ENABLE_SDXL_LOAD=false
+      - AUTOKORREKTUR_STRICT_INTEGRITY_CHECK=false
     depends_on:
       - redis
+    networks:
+      - autokorrektur-net
     restart: always
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    command: redis-server --requirepass ${REDIS_PASSWORD:-autokorrektur_secret}
+    networks:
+      - autokorrektur-net
     restart: always
+
+networks:
+  autokorrektur-net:
+    driver: bridge

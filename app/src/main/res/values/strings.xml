@@ -37,4 +37,59 @@
     <string name="export_instagram">Export for Instagram</string>
     <string name="share_to_instagram">Share graphic</string>
     <string name="save_graphic">Save graphic</string>
+
+    <string name="error_gallery_failed">Failed to get image from gallery</string>
+    <string name="error_camera_permission_required">Camera permission is required to take photos</string>
+    <string name="label_result">Result</string>
+    <string name="label_image_numbered">Image %1$d</string>
+    <string name="label_original">Original</string>
+    <string name="loading_status">%1$s (%2$d%%)</string>
+    <string name="btn_start_batch_processing">Start Batch Processing</string>
+    <string name="msg_image_saved">Image saved to gallery</string>
+    <string name="error_no_processed_image">No processed image to download. Run inference first.</string>
+    <string name="premium_edit_title">Premium Edit (Server SDXL)</string>
+    <string name="btn_accept">Accept</string>
+    <string name="error_no_previous_result">No previous result available. Process an image first.</string>
+    <string name="error_create_file_failed">Error creating image file for camera</string>
+    <string name="error_create_file_message">Error creating image file: %1$s</string>
+    <string name="msg_batch_completed">Batch processing completed!\n%1$d/%2$d images processed successfully</string>
+    <string name="btn_export_csv">Export CSV</string>
+    <string name="error_export_instagram_no_image">Process an image first before exporting for Instagram</string>
+    <string name="dialog_instagram_format_title">Select Instagram Format</string>
+    <string name="instagram_format_square">1:1 Square (Side-by-Side)</string>
+    <string name="instagram_format_portrait">4:5 Feed Portrait (Stacked)</string>
+    <string name="instagram_format_story">9:16 Story (Side-by-Side)</string>
+    <string name="dialog_instagram_ready_title">Instagram Graphic Ready</string>
+    <string name="share_chooser_title">Share Before/After Graphic</string>
+    <string name="error_export_message">Export error: %1$s</string>
+    <string name="msg_instagram_graphic_saved">Instagram graphic saved to gallery!</string>
+    <string name="msg_ar_reset">AR Background Memory Reset</string>
+    <string name="msg_ar_captured">AR Photo Captured!</string>
+
+    <string-array name="downscale_options">
+        <item>No Scaling</item>
+        <item>0.5 MP</item>
+        <item>1 MP</item>
+        <item>2 MP</item>
+        <item>3 MP</item>
+        <item>4 MP</item>
+        <item>5 MP</item>
+        <item>6 MP</item>
+        <item>7 MP</item>
+        <item>8 MP</item>
+        <item>9 MP</item>
+        <item>10 MP</item>
+    </string-array>
+
+    <string-array name="yolo_model_options">
+        <item>Yolo11-Nano</item>
+        <item>Yolo11-Small</item>
+        <item>Yolo11-Medium</item>
+    </string-array>
+
+    <string-array name="instagram_formats">
+        <item>1:1 Square (Side-by-Side)</item>
+        <item>4:5 Feed Portrait (Stacked)</item>
+        <item>9:16 Story (Side-by-Side)</item>
+    </string-array>
 </resources>

@@ -91,7 +91,7 @@ class YoloMaskInstrumentedTest : AndroidInstrumentedBaseTest() {
     }
 
     @Test
-    fun testCarDetectionOnExampleImage() {
+    fun testCarDetectionOnExampleImage() = kotlinx.coroutines.runBlocking {
         val tempFile = cacheAsset("image_1_with_car_640x640.png", tempFiles)
         val fileUri = Uri.fromFile(tempFile)
 
@@ -125,7 +125,7 @@ class YoloMaskInstrumentedTest : AndroidInstrumentedBaseTest() {
     }
 
     @Test
-    fun testNoCarDetectionOnResultImage() {
+    fun testNoCarDetectionOnResultImage() = kotlinx.coroutines.runBlocking {
         val tempFile = cacheAsset("image_1_without_car_640x640.png", tempFiles)
         val fileUri = Uri.fromFile(tempFile)
 
@@ -159,7 +159,7 @@ class YoloMaskInstrumentedTest : AndroidInstrumentedBaseTest() {
     }
 
     @Test
-    fun testYoloMaskCreationProperties() {
+    fun testYoloMaskCreationProperties() = kotlinx.coroutines.runBlocking {
         val tempFile = cacheAsset("image_1_with_car_640x640.png", tempFiles)
         val fileUri = Uri.fromFile(tempFile)
 
@@ -188,7 +188,7 @@ class YoloMaskInstrumentedTest : AndroidInstrumentedBaseTest() {
     }
 
     @Test
-    fun testCarDetectionMaskIsSensible() {
+    fun testCarDetectionMaskIsSensible() = kotlinx.coroutines.runBlocking {
         val tempFile = cacheAsset("image_1_with_car_640x640.png", tempFiles)
         val fileUri = Uri.fromFile(tempFile)
 

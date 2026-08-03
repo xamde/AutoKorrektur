@@ -13,6 +13,9 @@ open class AndroidInstrumentedBaseTest {
     protected val appContext: Context
         get() = InstrumentationRegistry.getInstrumentation().targetContext
 
+    protected val testContext: Context
+        get() = InstrumentationRegistry.getInstrumentation().context
+
     /**
      * Convenience helper to copy an asset into the app's cache directory.
      * This delegates to the canonical implementation in AndroidTestUtils and can optionally

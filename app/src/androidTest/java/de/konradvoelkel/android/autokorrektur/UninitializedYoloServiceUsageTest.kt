@@ -3,9 +3,15 @@ package de.konradvoelkel.android.autokorrektur
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
+import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
+import de.konradvoelkel.android.autokorrektur.ml.MiGanInference
+import de.konradvoelkel.android.autokorrektur.ml.api.ServerSdxlApi
+import de.konradvoelkel.android.autokorrektur.ml.api.YoloService
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
+import de.konradvoelkel.android.autokorrektur.ml.engine.YoloTFLiteEngine
 import de.konradvoelkel.android.autokorrektur.pipeline.StaticImagePipeline
 import de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -22,8 +28,8 @@ import org.junit.runner.RunWith
 class UninitializedYoloServiceUsageTest : AndroidInstrumentedBaseTest() {
 
     @Test
-    fun testUninitializedYoloServiceImplAutoInitializesOnInfer() {
-        val yoloService = YoloServiceImpl(appContext)
+    fun testUninitializedYoloServiceImplAutoInitializesOnInfer() = kotlinx.coroutines.runBlocking {
+        val yoloService = YoloServiceImpl(YoloTFLiteEngine(appContext))
 
         // 1. Assert isInitialized is false before calling initialize()
         assertFalse("YoloService.isInitialized must be false upon creation", yoloService.isInitialized)
@@ -42,7 +48,11 @@ class UninitializedYoloServiceUsageTest : AndroidInstrumentedBaseTest() {
 
     @Test
     fun testStaticPipelineAutoInitializationWhenUninitialized() {
-        val pipeline = StaticImagePipeline(appContext)
+        val yoloService = YoloServiceImpl(YoloTFLiteEngine(appContext))
+        val miGan = MiGanInference(appContext)
+        val imageProcessor = ImageProcessor(appContext)
+        val sdxl = ServerSdxlApi(appContext)
+        val pipeline = StaticImagePipeline(imageProcessor, yoloService, miGan, sdxl)
         assertFalse("Pipeline should not be initialized immediately upon construction", pipeline.isInitialized)
 
         // Copy a test photo to cache
@@ -77,17 +87,18 @@ class UninitializedYoloServiceUsageTest : AndroidInstrumentedBaseTest() {
             assertNotNull("FirstFragment must be attached", fragment)
 
             testFile = cacheAsset("sample_street_with_car.jpg")
-            fragment?.javaClass?.getDeclaredField("selectedImageUri")?.apply {
-                isAccessible = true
-                set(fragment, android.net.Uri.fromFile(testFile))
-            }
-
-            val method = fragment?.javaClass?.getDeclaredMethod("performOnnxInference")
-            method?.isAccessible = true
-            method?.invoke(fragment)
+            val viewModel =
+                androidx.lifecycle.ViewModelProvider(activity).get(MainViewModel::class.java)
+            viewModel.setSelectedImageUri(android.net.Uri.fromFile(testFile))
         }
 
+        // Use Espresso to click the startInference button
+        androidx.test.espresso.Espresso.onView(
+            androidx.test.espresso.matcher.ViewMatchers.withId(R.id.startInference)
+        ).perform(androidx.test.espresso.action.ViewActions.click())
+
         // Verify that the Snackbar "ML components not initialized. Please restart the app." does NOT exist
+        // This Snackbar was used in older versions of FirstFragment; we ensure it's not shown anymore.
         androidx.test.espresso.Espresso.onView(
             androidx.test.espresso.matcher.ViewMatchers.withText("ML components not initialized. Please restart the app.")
         ).check(androidx.test.espresso.assertion.ViewAssertions.doesNotExist())

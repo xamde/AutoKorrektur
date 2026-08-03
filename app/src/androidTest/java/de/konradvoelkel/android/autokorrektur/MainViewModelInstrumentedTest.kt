@@ -1,5 +1,7 @@
 package de.konradvoelkel.android.autokorrektur
 
+import android.app.Application
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
 import org.junit.Assert.assertEquals
@@ -11,24 +13,24 @@ import org.junit.runner.RunWith
 @SmallTest
 class MainViewModelInstrumentedTest {
 
+    private val application = ApplicationProvider.getApplicationContext<Application>()
+
     @Test
     fun viewModel_initialState_isEmpty() {
-        val viewModel = MainViewModel()
-        assertNull(viewModel.selectedImageUri.value)
-        assertNull(viewModel.processedImageUri.value)
-        assertNull(viewModel.processedBitmap)
-        assertEquals(0.5f, viewModel.sliderPosition, 0.001f)
+        val viewModel = MainViewModel(application)
+        val properties = viewModel.properties.value
+        assertNull(properties.selectedImageUri)
+        assertEquals(0.5f, properties.sliderPosition, 0.001f)
     }
 
     @Test
     fun viewModel_clearState_resetsAllFields() {
-        val viewModel = MainViewModel()
-        viewModel.sliderPosition = 0.75f
+        val viewModel = MainViewModel(application)
+        viewModel.setSliderPosition(0.75f)
         viewModel.clearState()
 
-        assertNull(viewModel.selectedImageUri.value)
-        assertNull(viewModel.processedImageUri.value)
-        assertNull(viewModel.processedBitmap)
-        assertEquals(0.5f, viewModel.sliderPosition, 0.001f)
+        val properties = viewModel.properties.value
+        assertNull(properties.selectedImageUri)
+        assertEquals(0.5f, properties.sliderPosition, 0.001f)
     }
 }

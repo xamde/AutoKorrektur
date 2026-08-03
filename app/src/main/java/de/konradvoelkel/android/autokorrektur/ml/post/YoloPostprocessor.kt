@@ -19,10 +19,7 @@ object YoloPostprocessor {
     private const val NUM_BBOX_COORDS = 4
     private const val NUM_MASK_COEFFS = 32
     private const val BYTES_PER_FLOAT = 4
-    private const val DEFAULT_SCORE_THRESHOLD = 0.6f
     private const val MIN_UNION_EPSILON = 0.000001f
-
-    private val DEFAULT_ALLOWED_CLASSES = intArrayOf(2, 3, 5, 7)
 
     private data class NormalizedBox(
         val x: Float,
@@ -43,8 +40,8 @@ object YoloPostprocessor {
         numProposals: Int,
         @Suppress("UNUSED_PARAMETER") featuresPerProposal: Int,
         numClasses: Int,
-        scoreThreshold: Float = DEFAULT_SCORE_THRESHOLD,
-        allowedClassIndices: IntArray = DEFAULT_ALLOWED_CLASSES
+        scoreThreshold: Float,
+        allowedClassIndices: IntArray
     ): List<Detection> {
         val detections = mutableListOf<Detection>()
         buffer.rewind()
@@ -126,9 +123,9 @@ object YoloPostprocessor {
      */
     fun applyNMS(
         detections: List<Detection>,
-        iouThreshold: Float = 0.9f,
-        topAmountPerClass: Int = 100,
-        numClasses: Int = 80
+        iouThreshold: Float,
+        topAmountPerClass: Int,
+        numClasses: Int
     ): List<Detection> {
         if (detections.isEmpty()) return emptyList()
 
