@@ -20,6 +20,7 @@ dependencies = [
     "pydantic-settings>=2.0.0",
     "redis>=5.0.0",
     "pillow>=10.0.0",
+    "numpy>=2.4.6",
 ]
 
 [project.optional-dependencies]
@@ -35,14 +36,14 @@ packages = ["."]
 
 [tool.ruff]
 line-length = 110
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "N", "UP"]
 ignore = ["B008", "E501"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 strict = true
 ignore_missing_imports = true
 
