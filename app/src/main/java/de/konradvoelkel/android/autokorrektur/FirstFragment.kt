@@ -1,5 +1,6 @@
 package de.konradvoelkel.android.autokorrektur
 
+import de.konradvoelkel.android.autokorrektur.BuildConfig
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -87,9 +88,7 @@ class FirstFragment : Fragment() {
     private var isProcessingBatch = false
 
     // ML inference objects
-    private lateinit var imageProcessor: ImageProcessor
-    private lateinit var yoloInference: YoloService
-    private lateinit var miGanInference: MiGanInference
+    private lateinit var staticPipeline: de.konradvoelkel.android.autokorrektur.pipeline.StaticImagePipeline
     private var mlComponentsInitialized = false
 
     // Activity result launcher for image selection
@@ -267,11 +266,9 @@ class FirstFragment : Fragment() {
         // Initialize ML inference objects
         try {
             AppLogger.debug("Creating ML inference objects")
-            imageProcessor = ImageProcessor(requireContext())
-            yoloInference = YoloServiceImpl(requireContext())
-            miGanInference = MiGanInference(requireContext())
-            mlComponentsInitialized = true
-            AppLogger.info("ML inference objects created successfully")
+            staticPipeline = de.konradvoelkel.android.autokorrektur.pipeline.StaticImagePipeline(requireContext())
+            mlComponentsInitialized = false
+            AppLogger.info("ML inference pipeline instantiated")
         } catch (e: Exception) {
             AppLogger.error("Failed to create ML inference objects", e)
             mlComponentsInitialized = false
@@ -383,6 +380,30 @@ class FirstFragment : Fragment() {
                 binding.fileSelect.text = getString(R.string.select_image)
                 // Clear batch selections when switching to single mode
                 selectedImageUris.clear()
+            }
+        }
+
+        // Setup SDXL switch GDPR consent trigger
+        binding.useSdxl.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                val prefs = requireContext().getSharedPreferences("autokorrektur_prefs", android.content.Context.MODE_PRIVATE)
+                val consentGiven = prefs.getBoolean("sdxl_consent", false)
+                if (!consentGiven) {
+                    val view = android.view.LayoutInflater.from(requireContext()).inflate(R.layout.dialog_gdpr_consent, null)
+                    val checkbox = view.findViewById<android.widget.CheckBox>(R.id.rememberChoiceCheckbox)
+                    AlertDialog.Builder(requireContext())
+                        .setTitle("Premium Edit (Server SDXL)")
+                        .setView(view)
+                        .setPositiveButton("Accept") { _, _ ->
+                            if (checkbox.isChecked) {
+                                prefs.edit().putBoolean("sdxl_consent", true).apply()
+                            }
+                        }
+                        .setNegativeButton("Cancel") { _, _ ->
+                            binding.useSdxl.isChecked = false
+                        }
+                        .show()
+                }
             }
         }
 
@@ -677,15 +698,15 @@ class FirstFragment : Fragment() {
     private fun performOnnxInference() {
         AppLogger.info("Starting ONNX inference")
 
-        // Check if ML components are initialized
-        if (!mlComponentsInitialized) {
-            AppLogger.error("ML components not initialized")
-            Snackbar.make(
-                binding.root,
-                "ML components not initialized. Please restart the app.",
-                Snackbar.LENGTH_LONG
-            ).show()
-            return
+        // Ensure staticPipeline object is instantiated
+        if (!::staticPipeline.isInitialized) {
+            try {
+                staticPipeline = de.konradvoelkel.android.autokorrektur.pipeline.StaticImagePipeline(requireContext())
+            } catch (e: Exception) {
+                AppLogger.error("Failed to create static pipeline", e)
+                Snackbar.make(binding.root, "Failed to create ML pipeline: ${e.message}", Snackbar.LENGTH_LONG).show()
+                return
+            }
         }
 
         // Route to batch or single processing based on mode
@@ -718,10 +739,45 @@ class FirstFragment : Fragment() {
 
         // Cancel any previous inference job if running
         activeInferenceJob?.cancel()
+        
+        val useSdxl = binding.useSdxl.isChecked
+        if (useSdxl) {
+            val prefs = requireContext().getSharedPreferences("autokorrektur_prefs", android.content.Context.MODE_PRIVATE)
+            val consentGiven = prefs.getBoolean("sdxl_consent", false)
+            if (!consentGiven) {
+                // Show GDPR dialog
+                val view = android.view.LayoutInflater.from(requireContext()).inflate(R.layout.dialog_gdpr_consent, null)
+                val checkbox = view.findViewById<android.widget.CheckBox>(R.id.rememberChoiceCheckbox)
+                
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Premium Edit (Server SDXL)")
+                    .setView(view)
+                    .setPositiveButton("Accept") { _, _ ->
+                        if (checkbox.isChecked) {
+                            prefs.edit().putBoolean("sdxl_consent", true).apply()
+                        }
+                        startInferenceFlow(true)
+                    }
+                    .setNegativeButton("Cancel") { _, _ ->
+                        binding.useSdxl.isChecked = false
+                    }
+                    .show()
+            } else {
+                startInferenceFlow(true)
+            }
+        } else {
+            startInferenceFlow(false)
+        }
+    }
 
+    private fun startInferenceFlow(useServerSdxl: Boolean) {
         // Disable the button and show processing state
         binding.startInference.isEnabled = false
-        binding.startInference.text = getString(R.string.processing)
+        if (useServerSdxl) {
+            binding.startInference.text = "Uploading to Cloud... (~10s)"
+        } else {
+            binding.startInference.text = getString(R.string.processing)
+        }
 
         // Clear the images container
         clearImagesContainer()
@@ -742,10 +798,10 @@ class FirstFragment : Fragment() {
         displayImage(inputUri, inputLabel)
 
         // Perform ONNX inference in background coroutine on Dispatchers.Default
-        activeInferenceJob = launchInferenceJob()
+        activeInferenceJob = launchInferenceJob(useServerSdxl)
     }
 
-    private fun launchInferenceJob(): kotlinx.coroutines.Job {
+    private fun launchInferenceJob(useServerSdxl: Boolean): kotlinx.coroutines.Job {
         return viewLifecycleOwner.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.Default) {
             try {
                 AppLogger.debug("Starting background inference coroutine")
@@ -755,171 +811,100 @@ class FirstFragment : Fragment() {
 
                     // Initialize ML inference objects if not already done
                     try {
-                        AppLogger.debug("Checking if YOLO inference needs initialization")
-                        // Pass segmentation model choice to initialize
-                        val segModel = binding.segModel.selectedItem.toString().lowercase()
-                        val useFP16 = segModel.contains("fp16")
-                        val modelName = when {
-                            segModel.contains("small") -> "yolo11s"
-                            segModel.contains("nano") -> "yolo11n"
-                            segModel.contains("medium") -> "yolo11m"
-                            else -> "yolo11s" // Default
+                        if (!mlComponentsInitialized) {
+                            staticPipeline.initialize()
+                            mlComponentsInitialized = true
                         }
-                        yoloInference.initialize(modelName = modelName, useFP16 = useFP16)
-                        AppLogger.debug("YOLO inference initialized successfully with model: $modelName, useFP16: $useFP16")
-
-                        AppLogger.debug("Checking if Mi-GAN inference needs initialization")
-                        miGanInference.initialize()
-                        AppLogger.debug("Mi-GAN inference initialized successfully")
-
-                        AppLogger.info("All ML inference objects initialized successfully")
-                    } catch (e: IOException) {
-                        AppLogger.error("IOException during ML initialization", e)
-                        throw Exception("Failed to load ML models from assets: ${e.message}", e)
-                    } catch (e: RuntimeException) {
-                        AppLogger.error("RuntimeException during ML initialization", e)
-                        throw Exception("Runtime error during ML initialization: ${e.message}", e)
                     } catch (e: Exception) {
-                        AppLogger.error("Unexpected exception during ML initialization", e)
                         throw Exception("Failed to initialize ML models: ${e.message}", e)
                     }
 
-                    // Get UI parameters
                     val downscaleMp = getDownscaleMpFromSpinner()
                     val maskUpscale = getMaskUpscaleFromSlider()
                     val scoreThreshold = getScoreThresholdFromSlider()
-                    val downshift = getDownshiftFromSlider() // This is now unused, kept for logging consistency
-
-                    AppLogger.debug("Parameters - downscaleMp: $downscaleMp, maskUpscale: $maskUpscale, scoreThreshold: $scoreThreshold, downshift: $downshift")
-
-                    // Step 1: Process input image
-                    AppLogger.debug("Step 1: Processing input image")
-                    // Determine input URI based on continue mode
-                    val processingUri =
-                        if (binding.continueWithResult.isChecked && resultImageUri != null) {
-                            resultImageUri!!
-                        } else {
-                            uri
-                        }
-
-                    val processedImage = try {
-                        imageProcessor.processInputImage(
-                            imageUri = processingUri,
-                            modelWidth = 640,  // YOLO model input width
-                            modelHeight = 640, // YOLO model input height
-                            downscaleMp = downscaleMp
-                        )
-                    } catch (e: Exception) {
-                        AppLogger.error("Error processing input image", e)
-                        throw Exception("Failed to process input image: ${e.message}", e)
+                    
+                    val processingUri = if (binding.continueWithResult.isChecked && resultImageUri != null) {
+                        resultImageUri!!
+                    } else {
+                        uri
                     }
-                    AppLogger.debug("Input image processed successfully")
+                    val pipelineResult = staticPipeline.processImage(
+                        uri = processingUri,
+                        downscaleMp = downscaleMp,
+                        maskUpscale = maskUpscale,
+                        scoreThreshold = scoreThreshold,
+                        useServerSdxl = useServerSdxl,
+                        onMaskGenerated = { maskBitmap ->
+                            if (isAdded && !isDetached) {
+                                requireActivity().runOnUiThread {
+                                    try {
+                                        if (BuildConfig.DEBUG) {
+                                            AppLogger.saveDebugScreencap(requireContext(), maskBitmap, "generated_mask")
+                                        }
+                                        val basePhotoBitmap = try {
+                                            val resolver = requireContext().contentResolver
+                                            val sourceBitmap = if (
+                                                android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P
+                                            ) {
+                                                val source = ImageDecoder.createSource(resolver, processingUri)
+                                                ImageDecoder.decodeBitmap(source)
+                                            } else {
+                                                @Suppress("DEPRECATION")
+                                                MediaStore.Images.Media.getBitmap(resolver, processingUri)
+                                            }
+                                            sourceBitmap.copy(Bitmap.Config.ARGB_8888, true)
+                                        } catch (e: Exception) {
+                                            AppLogger.error("Failed to decode processing Uri bitmap", e)
+                                            Bitmap.createBitmap(
+                                                maskBitmap.width,
+                                                maskBitmap.height,
+                                                Bitmap.Config.ARGB_8888
+                                            )
+                                        }
 
-                    // Step 2: Run YOLO inference to get segmentation mask
-                    AppLogger.debug("Step 2: Running YOLO inference")
-                    val maskMat = try {
-                        val config = YoloConfig(scoreThreshold = scoreThreshold)
-                        // Note: downshiftFactor is deprecated and no longer used
-                        val result = yoloInference.inferDetailed(
-                            transformedMat = processedImage.transformedMat,
-                            xRatio = processedImage.xRatio,
-                            yRatio = processedImage.yRatio,
-                            upscaleFactor = maskUpscale,
-                            originalWidth = processedImage.originalMat.cols(),
-                            originalHeight = processedImage.originalMat.rows(),
-                            overrideConfig = config
-                        )
-                        result.mask
-                    } catch (e: Exception) {
-                        AppLogger.error("Error during YOLO inference", e)
-                        throw Exception("YOLO inference failed: ${e.message}", e)
-                    }
-                    AppLogger.debug("YOLO inference completed successfully")
+                                        MaskOverlayUtils.drawOverlayOnto(
+                                            baseBitmap = basePhotoBitmap,
+                                            maskBitmap = maskBitmap,
+                                            threshold = 128,
+                                            alpha = 140
+                                        )
 
-                    // Display the mask on UI thread
-                    if (isAdded && !isDetached) {
-                        requireActivity().runOnUiThread {
-                            try {
-                                if (!isAdded || isDetached) {
-                                    AppLogger.warn("Fragment not attached, skipping mask display")
-                                    return@runOnUiThread
+                                        val tempMaskFile = File(requireContext().cacheDir, "mask_image.jpg")
+                                        FileOutputStream(tempMaskFile).use { out ->
+                                            basePhotoBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+                                        }
+                                        basePhotoBitmap.recycle()
+
+                                        val maskUri = FileProvider.getUriForFile(
+                                            requireContext(),
+                                            "${requireContext().packageName}.fileprovider",
+                                            tempMaskFile
+                                        )
+                                        displayImage(maskUri, "Mask Processed")
+                                    } catch (e: Exception) {
+                                        AppLogger.error("Error displaying mask", e)
+                                    }
                                 }
-
-                                AppLogger.debug("Creating mask bitmap")
-                                val maskBitmap = createBitmap(maskMat.cols(), maskMat.rows())
-                                Utils.matToBitmap(maskMat, maskBitmap)
-
-                                val tempMaskFile = File(requireContext().cacheDir, "mask_image.jpg")
-                                val maskOutputStream = FileOutputStream(tempMaskFile)
-                                maskBitmap.compress(
-                                    Bitmap.CompressFormat.JPEG,
-                                    100,
-                                    maskOutputStream
-                                )
-                                maskOutputStream.close()
-
-                                val maskUri = FileProvider.getUriForFile(
-                                    requireContext(),
-                                    "${requireContext().packageName}.fileprovider",
-                                    tempMaskFile
-                                )
-                                displayImage(maskUri, "Mask Processed")
-
-                                // Create and display mask overlay on original image
-                                createMaskOverlay(processingUri, maskMat)
-
-                                AppLogger.debug("Mask displayed successfully")
-                            } catch (e: Exception) {
-                                AppLogger.error("Error displaying mask", e)
                             }
                         }
-                    } else {
-                        AppLogger.warn("Fragment not attached, skipping mask display")
-                    }
+                    )
 
-                    // Step 3: Run Mi-GAN inference for inpainting
-                    AppLogger.debug("Step 3: Running Mi-GAN inference")
-                    val resultMat = try {
-                        // IMPORTANT: Run Mi-GAN on the original-sized image to match the mask dimensions
-                        // Using transformedMat here would misalign with the mask and produce artifacts.
-                        miGanInference.inferMiGan(
-                            imageMat = processedImage.originalMat,
-                            maskMat = maskMat
-                        )
-                    } catch (e: Exception) {
-                        AppLogger.error("Error during Mi-GAN inference", e)
-                        throw Exception("Mi-GAN inference failed: ${e.message}", e)
+                    if (BuildConfig.DEBUG && pipelineResult.inpaintedBitmap != null) {
+                        AppLogger.saveDebugScreencap(requireContext(), pipelineResult.inpaintedBitmap, "inpainted_result")
                     }
-                    AppLogger.debug("Mi-GAN inference completed successfully")
-
-                    // Convert result to bitmap and display on UI thread
+                    
+                    if (pipelineResult.errorMessage != null) {
+                        throw Exception(pipelineResult.errorMessage)
+                    }
+                    
                     if (isAdded && !isDetached) {
                         requireActivity().runOnUiThread {
                             try {
-                                if (!isAdded || isDetached) {
-                                    AppLogger.warn("Fragment not attached, skipping result display")
-                                    return@runOnUiThread
-                                }
-
-                                AppLogger.debug("Creating result bitmap")
-                                val rgbaMat = Mat()
-                                Imgproc.cvtColor(resultMat, rgbaMat, Imgproc.COLOR_RGB2RGBA)
-                                processedBitmap = createBitmap(rgbaMat.cols(), rgbaMat.rows())
-                                Utils.matToBitmap(rgbaMat, processedBitmap!!)
-                                rgbaMat.release()
-
-                                // Create a temporary file to display the processed image
-                                val tempFile =
-                                    File(requireContext().cacheDir, "processed_image.jpg")
+                                processedBitmap = pipelineResult.inpaintedBitmap
+                                val tempFile = File(requireContext().cacheDir, "processed_image.jpg")
                                 val outputStream = FileOutputStream(tempFile)
-                                processedBitmap?.compress(
-                                    Bitmap.CompressFormat.JPEG,
-                                    100,
-                                    outputStream
-                                )
+                                processedBitmap?.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
                                 outputStream.close()
-
-                                // Get URI for the processed image
                                 resultImageUri = FileProvider.getUriForFile(
                                     requireContext(),
                                     "${requireContext().packageName}.fileprovider",
@@ -927,15 +912,15 @@ class FirstFragment : Fragment() {
                                 )
 
                                 // Display the processed image & enable interactive Before/After split slider
-                                val origBmp = processedImage.originalBitmap
+                                val origBmp = pipelineResult.originalBitmap
                                 val procBmp = processedBitmap
-                                if (origBmp != null && procBmp != null) {
+                                if (procBmp != null) {
                                     val safeOrig = de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.createScaledBitmapForDisplay(origBmp)
                                     val safeProc = de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.createScaledBitmapForDisplay(procBmp)
                                     binding.beforeAfterSliderView.setBitmaps(safeOrig, safeProc)
                                     binding.beforeAfterSliderView.visibility = View.VISIBLE
                                     mainViewModel.setSelectedImageUri(selectedImageUri)
-                                    mainViewModel.setProcessedResult(resultImageUri, origBmp, procBmp)
+                                    mainViewModel.setProcessedResult(resultImageUri, safeOrig, safeProc)
                                 }
 
                                 binding.startInference.isEnabled = true
@@ -1074,6 +1059,36 @@ class FirstFragment : Fragment() {
 
 
     private fun performBatchProcessing() {
+        val useSdxl = binding.useSdxl.isChecked
+        if (useSdxl) {
+            val prefs = requireContext().getSharedPreferences("autokorrektur_prefs", android.content.Context.MODE_PRIVATE)
+            val consentGiven = prefs.getBoolean("sdxl_consent", false)
+            if (!consentGiven) {
+                val view = android.view.LayoutInflater.from(requireContext()).inflate(R.layout.dialog_gdpr_consent, null)
+                val checkbox = view.findViewById<android.widget.CheckBox>(R.id.rememberChoiceCheckbox)
+                
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Premium Edit (Server SDXL)")
+                    .setView(view)
+                    .setPositiveButton("Accept") { _, _ ->
+                        if (checkbox.isChecked) {
+                            prefs.edit().putBoolean("sdxl_consent", true).apply()
+                        }
+                        startBatchInferenceFlow(true)
+                    }
+                    .setNegativeButton("Cancel") { _, _ ->
+                        binding.useSdxl.isChecked = false
+                    }
+                    .show()
+            } else {
+                startBatchInferenceFlow(true)
+            }
+        } else {
+            startBatchInferenceFlow(false)
+        }
+    }
+
+    private fun startBatchInferenceFlow(useServerSdxl: Boolean) {
         AppLogger.info("Starting batch processing for ${selectedImageUris.size} images")
 
         // Clear previous results
@@ -1095,83 +1110,37 @@ class FirstFragment : Fragment() {
             try {
                 // Initialize ML inference objects
                 try {
-                    // Pass segmentation model choice to initialize
-                    val segModel = binding.segModel.selectedItem.toString().lowercase()
-                    val useFP16 = segModel.contains("fp16")
-                    val modelName = when {
-                        segModel.contains("small") -> "yolo11s"
-                        segModel.contains("nano") -> "yolo11n"
-                        segModel.contains("medium") -> "yolo11m"
-                        else -> "yolo11s" // Default
+                    if (!mlComponentsInitialized) {
+                        kotlinx.coroutines.runBlocking {
+                            staticPipeline.initialize()
+                        }
+                        mlComponentsInitialized = true
                     }
-                    yoloInference.initialize(modelName = modelName, useFP16 = useFP16)
-                    miGanInference.initialize()
-                    AppLogger.info("ML inference objects initialized for batch processing with model: $modelName, useFP16: $useFP16")
                 } catch (e: Exception) {
-                    AppLogger.error("Failed to initialize ML objects for batch processing", e)
                     throw Exception("Failed to initialize ML models: ${e.message}", e)
                 }
 
-                // Get UI parameters once for all images
                 val downscaleMp = getDownscaleMpFromSpinner()
                 val maskUpscale = getMaskUpscaleFromSlider()
                 val scoreThreshold = getScoreThresholdFromSlider()
                 val downshift = getDownshiftFromSlider()
                 val segModel = binding.segModel.selectedItem.toString()
 
-                AppLogger.debug("Batch parameters - downscaleMp: $downscaleMp, maskUpscale: $maskUpscale, scoreThreshold: $scoreThreshold, downshift: $downshift, segModel: $segModel")
-
-                // Process each image
                 selectedImageUris.forEachIndexed { index, uri ->
-                    if (!isProcessingBatch) {
-                        AppLogger.info("Batch processing cancelled")
-                        return@Thread
-                    }
-
+                    if (!isProcessingBatch) return@Thread
                     val startTime = System.currentTimeMillis()
                     val imageName = "Image_${index + 1}"
-
-                    // Update progress on UI thread
                     if (isAdded && !isDetached) {
                         requireActivity().runOnUiThread {
-                            binding.startInference.text =
-                                "Processing batch (${index + 1}/${selectedImageUris.size})..."
+                            binding.startInference.text = "Processing batch (${index + 1}/${selectedImageUris.size})..."
                         }
                     }
-
                     try {
-                        AppLogger.debug("Processing image ${index + 1}/${selectedImageUris.size}: $uri")
-
-                        // Step 1: Process input image
-                        val processedImage = imageProcessor.processInputImage(
-                            imageUri = uri,
-                            modelWidth = 640,
-                            modelHeight = 640,
-                            downscaleMp = downscaleMp
-                        )
-
-                        // Step 2: Run YOLO inference
-                        val config = YoloConfig(scoreThreshold = scoreThreshold)
-                        val result = yoloInference.inferDetailed(
-                            transformedMat = processedImage.transformedMat,
-                            xRatio = processedImage.xRatio,
-                            yRatio = processedImage.yRatio,
-                            upscaleFactor = maskUpscale,
-                            originalWidth = processedImage.originalMat.cols(),
-                            originalHeight = processedImage.originalMat.rows(),
-                            overrideConfig = config
-                        )
-                        val maskMat = result.mask
-
-                        // Step 3: Run Mi-GAN inference
-                        val resultMat = miGanInference.inferMiGan(
-                            imageMat = processedImage.transformedMat,
-                            maskMat = maskMat
-                        )
-
-                        // Convert result to bitmap
-                        val resultBitmap = createBitmap(resultMat.cols(), resultMat.rows())
-                        Utils.matToBitmap(resultMat, resultBitmap)
+                        val pipelineResult = kotlinx.coroutines.runBlocking {
+                            staticPipeline.processImage(uri, downscaleMp, maskUpscale, scoreThreshold, useServerSdxl)
+                        }
+                        if (pipelineResult.errorMessage != null) throw Exception(pipelineResult.errorMessage)
+                        val resultBitmap = pipelineResult.inpaintedBitmap!!
                         processedBitmaps.add(resultBitmap)
 
                         val processingTime = System.currentTimeMillis() - startTime
@@ -1549,11 +1518,8 @@ class FirstFragment : Fragment() {
         super.onDestroyView()
 
         // Clean up ML inference objects
-        if (::yoloInference.isInitialized) {
-            yoloInference.close()
-        }
-        if (::miGanInference.isInitialized) {
-            miGanInference.close()
+        if (::staticPipeline.isInitialized) {
+            staticPipeline.close()
         }
 
         _binding = null

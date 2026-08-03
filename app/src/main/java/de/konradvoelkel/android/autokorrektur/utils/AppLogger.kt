@@ -162,6 +162,28 @@ object AppLogger {
     }
 
     /**
+     * Save a debug screencap / image artifact for playtesting inspection.
+     */
+    fun saveDebugScreencap(context: Context, bitmap: android.graphics.Bitmap, stageName: String): File? {
+        return try {
+            val debugDir = File(context.getExternalFilesDir(null), "debug_screencaps")
+            if (!debugDir.exists()) {
+                debugDir.mkdirs()
+            }
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.getDefault()).format(Date())
+            val file = File(debugDir, "screencap_${timestamp}_${stageName}.jpg")
+            java.io.FileOutputStream(file).use { out ->
+                bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 95, out)
+            }
+            info("Saved debug screencap: ${file.absolutePath}")
+            file
+        } catch (e: Exception) {
+            error("Failed to save debug screencap: ${e.message}", e)
+            null
+        }
+    }
+
+    /**
      * Get log file content as string (for debugging or sharing)
      */
     fun getLogContent(): String? {

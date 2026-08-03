@@ -46,7 +46,18 @@ class MiGanInference(private val context: Context) {
         }
 
         miGanSession = try {
-            ortEnvironment.createSession(modelBytes)
+            if (de.konradvoelkel.android.autokorrektur.utils.DevicePerformanceHelper.isNnapiSupported()) {
+                try {
+                    val sessionOptions = OrtSession.SessionOptions().apply { addNnapi() }
+                    AppLogger.info("MiGanInference: Attempting NNAPI EP...")
+                    ortEnvironment.createSession(modelBytes, sessionOptions)
+                } catch (e: Exception) {
+                    AppLogger.warn("MiGanInference: Failed to initialize NNAPI EP, falling back to CPU: ${e.message}")
+                    ortEnvironment.createSession(modelBytes)
+                }
+            } else {
+                ortEnvironment.createSession(modelBytes)
+            }
         } catch (e: Exception) {
             AppLogger.debug("Failed to create Mi-GAN session: ${e.message}")
             throw IOException("Failed to create Mi-GAN session: ${e.message}", e)
@@ -135,9 +146,12 @@ class MiGanInference(private val context: Context) {
         val roi = org.opencv.core.Rect(0, 0, origWidth, origHeight)
         val unpaddedInpainted = Mat(squareResultMat, roi).clone()
 
-        // 5. Blend inpainted content into original image ONLY where maskMat > 0
+        // 5. Blend inpainted content into original image ONLY where the car is (carMask > 0)
         val finalBlendedMat = processedImage.clone()
-        unpaddedInpainted.copyTo(finalBlendedMat, processedMask)
+        val carMask = Mat()
+        Core.bitwise_not(processedMask, carMask)
+        unpaddedInpainted.copyTo(finalBlendedMat, carMask)
+        carMask.release()
 
         // Clean up
         inputs.values.forEach { it.close() }

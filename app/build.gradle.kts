@@ -18,7 +18,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -35,6 +36,7 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
     packaging {
         jniLibs {
@@ -57,7 +59,8 @@ dependencies {
     implementation(libs.androidx.navigation.ui.ktx)
     implementation(libs.onnxruntime.android)
     implementation(libs.tensorflow.lite)
-    // Unit tests
+    implementation(libs.opencv)
+    implementation(libs.okhttp)
     testImplementation(libs.junit)
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockk)
@@ -66,9 +69,6 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.espresso.intents)
-
-    // OpenCV
-    implementation(libs.opencv)
 
     // CameraX
     val cameraVersion = "1.3.4"

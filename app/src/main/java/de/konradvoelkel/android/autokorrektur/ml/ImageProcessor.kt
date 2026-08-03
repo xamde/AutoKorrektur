@@ -58,12 +58,12 @@ class ImageProcessor(private val context: Context) {
         AppLogger.debug("ImageProcessor: Loaded original bitmap (${originalBitmap.width}x${originalBitmap.height})")
 
         // 2. Convert to OpenCV Mat and correct color space.
-        // Android Bitmaps are ARGB, but OpenCV's bitmapToMat converts them to BGRA.
+        // Android Bitmaps are RGBA, so Utils.bitmapToMat produces RGBA.
         val bgraMat = Mat()
         Utils.bitmapToMat(originalBitmap, bgraMat)
         val rgbMat = Mat()
-        Imgproc.cvtColor(bgraMat, rgbMat, Imgproc.COLOR_BGRA2RGB)
-        bgraMat.release() // Release intermediate BGRA Mat.
+        Imgproc.cvtColor(bgraMat, rgbMat, Imgproc.COLOR_RGBA2RGB)
+        bgraMat.release() // Release intermediate RGBA Mat.
 
         // 3. Optionally downscale the image further for performance.
         val workingMat = downscaleMatIfLarge(rgbMat, downscaleMp)
@@ -265,9 +265,9 @@ class ImageProcessor(private val context: Context) {
      * Correctly converts a preprocessed 3-channel RGB Mat into a displayable ARGB Bitmap.
      */
     private fun createDisplayBitmapFromPreprocessedMat(rgbMat: Mat): Bitmap {
-        // To convert to an ARGB_8888 bitmap, we need a 4-channel BGRA Mat.
+        // To convert to an ARGB_8888 bitmap, we need a 4-channel RGBA Mat.
         val bgraMat = Mat()
-        Imgproc.cvtColor(rgbMat, bgraMat, Imgproc.COLOR_RGB2BGRA)
+        Imgproc.cvtColor(rgbMat, bgraMat, Imgproc.COLOR_RGB2RGBA)
 
         val bitmap = createBitmap(bgraMat.cols(), bgraMat.rows(), Bitmap.Config.ARGB_8888)
         Utils.matToBitmap(bgraMat, bitmap)

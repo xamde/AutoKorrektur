@@ -25,3 +25,30 @@
 
 - [x] **8. Espresso Instrumented UI Test Suite**
   - Add [MainActivityEspressoTest.kt](file:///home/konrad/files/work/__drafts/AutoKorrektur/app/src/androidTest/java/de/konradvoelkel/android/autokorrektur/MainActivityEspressoTest.kt) to test UI navigation, button clicks, and dialogs end-to-end on the emulator.
+
+## Milestone 2: Hybrid Server Architecture, NPU Acceleration & Quality Control
+
+- [x] **9. Hybrid SDXL Server & GDPR Privacy Flow**
+  - Implement FastAPI backend service with memory-only image handling and client-side opt-in GDPR consent.
+
+- [x] **10. Hardware Acceleration & NNAPI Execution Provider**
+  - Probe device NPU capabilities via `DevicePerformanceHelper` and enable Android NNAPI EP for ONNX Runtime & TFLite with safe CPU fallback.
+
+- [x] **11. Self-Staging Integration Tests**
+  - Enhance `VehicleTestDataIntegrationTest.kt` to dynamically extract test images from assets if missing from `/sdcard/`.
+
+- [x] **12. Detekt Static Analysis Integration**
+  - Configure `app/detekt-baseline.xml` and document `./gradlew detekt` in `TESTING.md`.
+
+## Milestone 3: Release Optimization & Bundle Shrinking
+
+- [x] **13. R8 Code & Resource Shrinking**
+  - Enable `isMinifyEnabled = true` and `isShrinkResources = true` in `app/build.gradle.kts` release build type.
+
+- [x] **14. Gradle Dependency Clean Up**
+  - Clean up duplicate dependency declarations in `app/build.gradle.kts`.
+
+- [x] **15. Release Bundle & APK Verification**
+  - Verify `./gradlew assembleRelease` and `./gradlew bundleRelease` pass without R8 compilation errors.
+
+

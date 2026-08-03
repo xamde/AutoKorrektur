@@ -72,10 +72,29 @@ class YoloTFLiteEngine(private val context: Context) {
                 modelBuffer.put(modelBytes)
                 modelBuffer.rewind()
 
-                val options = Interpreter.Options()
                 val threads = if (isDebugBuild) 2 else Runtime.getRuntime().availableProcessors()
-                options.setNumThreads(threads)
-                interpreter = Interpreter(modelBuffer, options)
+
+                interpreter = try {
+                    if (de.konradvoelkel.android.autokorrektur.utils.DevicePerformanceHelper.isNnapiSupported()) {
+                        val nnapiOptions = Interpreter.Options().apply {
+                            setNumThreads(threads)
+                            setUseNNAPI(true)
+                        }
+                        AppLogger.info("YoloTFLiteEngine: Attempting NNAPI acceleration...")
+                        Interpreter(modelBuffer, nnapiOptions)
+                    } else {
+                        null
+                    }
+                } catch (e: Exception) {
+                    AppLogger.warn("YoloTFLiteEngine: NNAPI delegate initialization failed, falling back to CPU: ${e.message}")
+                    null
+                } ?: run {
+                    val cpuOptions = Interpreter.Options().apply {
+                        setNumThreads(threads)
+                    }
+                    AppLogger.info("YoloTFLiteEngine: Initializing CPU interpreter")
+                    Interpreter(modelBuffer, cpuOptions)
+                }
 
                 // Input shape [1, H, W, C]
                 val inTensor = interpreter!!.getInputTensor(0)

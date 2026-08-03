@@ -5,8 +5,8 @@ This checklist tracks the tasks required to build, sign, and publish **AutoKorre
 ---
 
 ## 1. Build Configuration & Security
-- [ ] Enable R8 code shrinking and resource shrinking in `app/build.gradle.kts` (`isMinifyEnabled = true`, `isShrinkResources = true`).
-- [ ] Verify ProGuard rules in `app/proguard-rules.pro` preserve OpenCV, ONNX Runtime, and TFLite native JNI symbols.
+- [x] Enable R8 code shrinking and resource shrinking in `app/build.gradle.kts` (`isMinifyEnabled = true`, `isShrinkResources = true`).
+- [x] Verify ProGuard rules in `app/proguard-rules.pro` preserve OpenCV, ONNX Runtime, and TFLite native JNI symbols.
 - [ ] Generate production release key/keystore (`release.keystore`).
 - [ ] Configure signing credentials safely using environment variables or `local.properties` (never commit keys to Git).
 

@@ -6,6 +6,8 @@ import org.opencv.core.Mat
 
 /** Public facade for YOLO inference used by the app. */
 interface YoloService {
+    val isInitialized: Boolean
+
     fun initialize(
         modelName: String = "yolo11s",
         useFP16: Boolean = false,

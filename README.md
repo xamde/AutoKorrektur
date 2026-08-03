@@ -1,9 +1,7 @@
 # AutoKorrektur
 
-We re-implemented the [AutoKorrektur Web Version](https://github.com/BenB2/AutoKorrektur) in
-Android.
-This web version was based on a Bachelor Thesis "Autokorrektur - Automatisierte Objektersetzung in
-Fotos" by Till Schellscheidt.
+We re-implemented the [AutoKorrektur Web Version](https://github.com/BenB2/AutoKorrektur) in Android.
+This web version was based on the Bachelor Thesis "Autokorrektur - Automatisierte Objektersetzung in Fotos" by Till Schellscheidt.
 
 <table>
   <tr>
@@ -12,29 +10,58 @@ Fotos" by Till Schellscheidt.
   </tr>
 </table>
 
-This application is intended to remove cars from pictures to make it easier to imagine a world, in
-which the most dangerous animal in cities (cars) are less prevalent.
-All processing is done on device.
-Usage is free.
+This application is intended to remove cars from pictures to make it easier to imagine a world in which the most dangerous animal in cities (cars) is less prevalent.
+Default processing is done 100% on-device. Usage is free.
 
 ## Features
 
-* **On-Device Inference**: Full ML processing (YOLOv11-seg and MI-GAN) runs locally.
+* **Hybrid Inference**: Supports both 100% on-device processing (default) and opt-in Premium Server processing.
+* **On-Device Inference**: Fast local processing using YOLOv11-seg and MI-GAN.
+* **Premium Cloud Inference**: Secure, memory-only cloud processing via a FastAPI backend using SDXL for photorealistic results.
 * **Orientation Support**: Full support for both portrait and landscape mode photos with automatic EXIF rotation correction.
+* **Interactive Mask Touch-Up**: Paint brush and eraser tool for tweaking mask boundaries before inpainting.
 
-## Tech
+## Tech Stack
 
-* ONNX
-* OpenCV
-* Instance Segmentation: **YOLOv11-seg**
-* Inpainting: **MI-GAN**
+* **Android Client**: Kotlin, ONNX Runtime, OpenCV, AndroidX, Material Design.
+* **Python Backend**: FastAPI, Uvicorn, Python-Multipart, Pytest. See [backend/README.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/backend/README.md).
+* **Models**: 
+  * Instance Segmentation: **YOLOv11-seg** (Local)
+  * Inpainting: **MI-GAN** (Local) and **SDXL** (Server)
+
+## Development & Testing
+
+See [TESTING.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/TESTING.md) for full testing instructions.
+
+* **Build Debug APK**:
+  ```bash
+  ./gradlew assembleDebug
+  ```
+* **Run Android Unit Tests**:
+  ```bash
+  ./gradlew testDebugUnitTest
+  ```
+* **Run Static Analysis (Detekt)**:
+  ```bash
+  ./gradlew detekt
+  ```
+* **Run Backend Service Tests**:
+  ```bash
+  PYTHONPATH=. .venv/bin/pytest backend/test_server.py
+  ```
+
+## Documentation
+
+* [TESTING.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/TESTING.md) — Testing guidelines and test suite execution.
+* [backend/README.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/backend/README.md) — Backend API specification, GDPR privacy model, and Docker deployment.
+* [PRIVACY_POLICY.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/PRIVACY_POLICY.md) — Privacy policy and GDPR data retention terms.
+* [RELEASE_CHECKLIST.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/RELEASE_CHECKLIST.md) — Release preparation and Play Store checklist.
+* [STORE_LISTING.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/STORE_LISTING.md) — Play Store title, short description, and full description.
 
 ## Licenses
 
 The licensing of this project is governed by the licenses of some components.
 
-* **YOLOv11-seg:** Licensed under GNU AGPLv3. You must comply with its terms, which may require this
-  entire project to be licensed similarly.
+* **YOLOv11-seg:** Licensed under GNU AGPLv3. You must comply with its terms, which may require this entire project to be licensed similarly.
 
 Therefore this Project is licensed under the GNU AGPLv3 License. 
-
