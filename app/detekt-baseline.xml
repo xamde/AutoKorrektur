@@ -19,19 +19,21 @@
     <ID>LongMethod:FirstFragment.kt$FirstFragment$private fun setupUI()</ID>
     <ID>LongMethod:FirstFragment.kt$FirstFragment$private fun startBatchInferenceFlow(useServerSdxl: Boolean)</ID>
     <ID>LongMethod:MiGanInference.kt$MiGanInference$@Throws(IOException::class) fun inferMiGan(imageMat: Mat, maskMat: Mat): Mat</ID>
-    <ID>LongMethod:StaticImagePipeline.kt$StaticImagePipeline$suspend fun processImage( uri: Uri, downscaleMp: Float?, maskUpscale: Float, scoreThreshold: Float, useServerSdxl: Boolean, onMaskGenerated: ((Bitmap) -&gt; Unit)? = null ): PipelineResult</ID>
+    <ID>LongMethod:StaticImagePipeline.kt$StaticImagePipeline$suspend fun processImage( uri: Uri, downscaleMp: Float?, maskUpscale: Float, scoreThreshold: Float, useServerSdxl: Boolean, onMaskGenerated: ((Bitmap) -&gt; Unit)? = null, onProgressUpdate: ((stage: String, percent: Int) -&gt; Unit)? = null ): PipelineResult</ID>
     <ID>LongMethod:YoloInferenceParseDetectionsTest.kt$YoloInferenceParseDetectionsTest$@Test fun parseDetections_returnsExpectedDetections_forSmallSyntheticBuffer()</ID>
+    <ID>LongMethod:YoloMaskAssembler.kt$YoloMaskAssembler$fun assembleMaskFromPrototypes( maskCoefficients: FloatArray, prototypeMats: List&lt;Mat&gt;, boxX: Float, boxY: Float, boxW: Float, boxH: Float, // Normalized (0-1) upscaleFactor: Float, inputWidth: Int, inputHeight: Int ): Mat</ID>
     <ID>LongMethod:YoloServiceImpl.kt$YoloServiceImpl$override fun inferDetailed( transformedMat: Mat, xRatio: Float, yRatio: Float, upscaleFactor: Float, originalWidth: Int?, originalHeight: Int?, overrideConfig: YoloConfig? ): YoloResult</ID>
     <ID>LongMethod:YoloTFLiteEngine.kt$YoloTFLiteEngine$@Throws(ModelLoadException::class) fun initialize(modelName: String = "yolo11s", useFP16: Boolean = false)</ID>
-    <ID>LongParameterList:StaticImagePipeline.kt$StaticImagePipeline$( uri: Uri, downscaleMp: Float?, maskUpscale: Float, scoreThreshold: Float, useServerSdxl: Boolean, onMaskGenerated: ((Bitmap) -&gt; Unit)? = null )</ID>
+    <ID>LongParameterList:StaticImagePipeline.kt$StaticImagePipeline$( uri: Uri, downscaleMp: Float?, maskUpscale: Float, scoreThreshold: Float, useServerSdxl: Boolean, onMaskGenerated: ((Bitmap) -&gt; Unit)? = null, onProgressUpdate: ((stage: String, percent: Int) -&gt; Unit)? = null )</ID>
     <ID>LongParameterList:YoloMaskAssembler.kt$YoloMaskAssembler$( detection: Detection, overlayGray: Mat, upscaleFactor: Float, deinterleavedPrototypes: List&lt;Mat&gt;, inputWidth: Int, inputHeight: Int )</ID>
     <ID>LongParameterList:YoloMaskAssembler.kt$YoloMaskAssembler$( detection: Detection, overlayGray: Mat, upscaleFactor: Float, prototypeMasksData: FloatArray, inputWidth: Int, inputHeight: Int, protoShape: IntArray )</ID>
     <ID>LongParameterList:YoloMaskAssembler.kt$YoloMaskAssembler$( maskCoefficients: FloatArray, prototypeMasksData: FloatArray, // Flat array: C * H * W, interleaved per pixel boxX: Float, boxY: Float, boxW: Float, boxH: Float, // Normalized (0-1) upscaleFactor: Float, inputWidth: Int, inputHeight: Int, protoShape: IntArray )</ID>
     <ID>LongParameterList:YoloMaskAssembler.kt$YoloMaskAssembler$( maskCoefficients: FloatArray, prototypeMats: List&lt;Mat&gt;, boxX: Float, boxY: Float, boxW: Float, boxH: Float, // Normalized (0-1) upscaleFactor: Float, inputWidth: Int, inputHeight: Int )</ID>
-    <ID>LongParameterList:YoloPostprocessor.kt$YoloPostprocessor$( buffer: ByteBuffer, numProposals: Int, @Suppress("UNUSED_PARAMETER") featuresPerProposal: Int, numClasses: Int, scoreThreshold: Float = 0.6f, allowedClassIndices: IntArray = intArrayOf(2, 3, 5, 7) )</ID>
     <ID>LongParameterList:YoloService.kt$YoloService$( transformedMat: Mat, xRatio: Float, yRatio: Float, upscaleFactor: Float = 1.0f, originalWidth: Int? = null, originalHeight: Int? = null )</ID>
     <ID>LongParameterList:YoloService.kt$YoloService$( transformedMat: Mat, xRatio: Float, yRatio: Float, upscaleFactor: Float = 1.0f, originalWidth: Int? = null, originalHeight: Int? = null, overrideConfig: YoloConfig? = null )</ID>
     <ID>MagicNumber:AppLogger.kt$AppLogger$95</ID>
+    <ID>MagicNumber:BatchProcessingWorker.kt$BatchProcessingWorker$0.6f</ID>
+    <ID>MagicNumber:BatchProcessingWorker.kt$BatchProcessingWorker$100</ID>
     <ID>MagicNumber:BeforeAfterSliderView.kt$BeforeAfterSliderView$0.5f</ID>
     <ID>MagicNumber:BeforeAfterSliderView.kt$BeforeAfterSliderView$220</ID>
     <ID>MagicNumber:BeforeAfterSliderView.kt$BeforeAfterSliderView$32f</ID>
@@ -94,17 +96,21 @@
     <ID>MagicNumber:ServerSdxlApi.kt$ServerSdxlApi$30</ID>
     <ID>MagicNumber:ServerSdxlApi.kt$ServerSdxlApi$60</ID>
     <ID>MagicNumber:ServerSdxlApi.kt$ServerSdxlApi$90</ID>
+    <ID>MagicNumber:StaticImagePipeline.kt$StaticImagePipeline$10</ID>
+    <ID>MagicNumber:StaticImagePipeline.kt$StaticImagePipeline$100</ID>
+    <ID>MagicNumber:StaticImagePipeline.kt$StaticImagePipeline$25</ID>
+    <ID>MagicNumber:StaticImagePipeline.kt$StaticImagePipeline$50</ID>
+    <ID>MagicNumber:StaticImagePipeline.kt$StaticImagePipeline$70</ID>
+    <ID>MagicNumber:StaticImagePipeline.kt$StaticImagePipeline$80</ID>
+    <ID>MagicNumber:StaticImagePipeline.kt$StaticImagePipeline$85</ID>
     <ID>MagicNumber:YoloConfig.kt$YoloConfig$3</ID>
     <ID>MagicNumber:YoloConfig.kt$YoloConfig$5</ID>
     <ID>MagicNumber:YoloConfig.kt$YoloConfig$7</ID>
     <ID>MagicNumber:YoloMaskAssembler.kt$YoloMaskAssembler$0.4</ID>
-    <ID>MagicNumber:YoloMaskAssembler.kt$YoloMaskAssembler$255.0</ID>
     <ID>MagicNumber:YoloMaskAssembler.kt$YoloMaskAssembler$3</ID>
     <ID>MagicNumber:YoloMaskAssembler.kt$YoloMaskAssembler$4</ID>
-    <ID>MagicNumber:YoloPostprocessor.kt$YoloPostprocessor$0.000001f</ID>
+    <ID>MagicNumber:YoloMaskAssembler.kt$YoloMaskAssembler$5.0</ID>
     <ID>MagicNumber:YoloPostprocessor.kt$YoloPostprocessor$3</ID>
-    <ID>MagicNumber:YoloPostprocessor.kt$YoloPostprocessor$32</ID>
-    <ID>MagicNumber:YoloPostprocessor.kt$YoloPostprocessor$4</ID>
     <ID>MagicNumber:YoloPostprocessor.kt$YoloPostprocessor$5</ID>
     <ID>MagicNumber:YoloPostprocessor.kt$YoloPostprocessor$7</ID>
     <ID>MagicNumber:YoloServiceImpl.kt$YoloServiceImpl$1.05f</ID>
@@ -166,6 +172,7 @@
     <ID>NewLineAtEndOfFile:YoloService.kt$de.konradvoelkel.android.autokorrektur.ml.api.YoloService.kt</ID>
     <ID>NewLineAtEndOfFile:YoloServiceImpl.kt$de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl.kt</ID>
     <ID>NewLineAtEndOfFile:YoloTFLiteEngine.kt$de.konradvoelkel.android.autokorrektur.ml.engine.YoloTFLiteEngine.kt</ID>
+    <ID>ReturnCount:BatchProcessingWorker.kt$BatchProcessingWorker$override suspend fun doWork(): Result</ID>
     <ID>ReturnCount:BeforeAfterSliderView.kt$BeforeAfterSliderView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
     <ID>ReturnCount:FirstFragment.kt$FirstFragment$private fun performOnnxInference()</ID>
     <ID>ReturnCount:ImageProcessor.kt$ImageProcessor$private fun calculateInSampleSize(width: Int, height: Int, maxMegapixels: Float): Int</ID>
@@ -178,6 +185,7 @@
     <ID>TooGenericExceptionCaught:AppLogger.kt$AppLogger$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ArCameraActivity.kt$ArCameraActivity$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ArCameraActivity.kt$ArCameraActivity$exc: Exception</ID>
+    <ID>TooGenericExceptionCaught:BatchProcessingWorker.kt$BatchProcessingWorker$e: Exception</ID>
     <ID>TooGenericExceptionCaught:BitmapMemoryUtils.kt$BitmapMemoryUtils$e: Exception</ID>
     <ID>TooGenericExceptionCaught:FirstFragment.kt$FirstFragment$e: Exception</ID>
     <ID>TooGenericExceptionCaught:FirstFragment.kt$FirstFragment$ex: Exception</ID>

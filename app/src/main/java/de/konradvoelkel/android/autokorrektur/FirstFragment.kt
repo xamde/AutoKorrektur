@@ -834,6 +834,13 @@ class FirstFragment : Fragment() {
                         maskUpscale = maskUpscale,
                         scoreThreshold = scoreThreshold,
                         useServerSdxl = useServerSdxl,
+                        onProgressUpdate = { stage, percent ->
+                            if (isAdded && !isDetached) {
+                                requireActivity().runOnUiThread {
+                                    binding.startInference.text = "$stage ($percent%)"
+                                }
+                            }
+                        },
                         onMaskGenerated = { maskBitmap ->
                             if (isAdded && !isDetached) {
                                 requireActivity().runOnUiThread {

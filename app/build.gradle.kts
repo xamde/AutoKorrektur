@@ -61,6 +61,7 @@ dependencies {
     implementation(libs.tensorflow.lite)
     implementation(libs.opencv)
     implementation(libs.okhttp)
+    implementation(libs.androidx.work.runtime.ktx)
     testImplementation(libs.junit)
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockk)
