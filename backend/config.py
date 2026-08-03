@@ -15,7 +15,7 @@ class BackendSettings(BaseSettings):
     redis_url: str | None = None
     max_daily_requests: int = 10
     enable_sdxl_load: bool = False
-    sdxl_model_id: str = "diffusers/stable-diffusion-xl-1.0-inpainting-0.1"
+    sdxl_model_id: str = "runwayml/stable-diffusion-inpainting"
     strict_integrity_check: bool = False
     allowed_integrity_tokens: list[str] = ["mock-valid-token"]
 
