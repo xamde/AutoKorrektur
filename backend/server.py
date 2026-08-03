@@ -42,17 +42,16 @@ rate_limits: dict[str, dict[date, int]] = defaultdict(lambda: defaultdict(int))
 sdxl_pipeline: Any | None = None
 try:
     import torch
-    from diffusers import StableDiffusionXLInpaintPipeline
+    from diffusers import AutoPipelineForInpainting
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     logger.info(f"PyTorch detected with device: {device}")
     if settings.enable_sdxl_load:
-        sdxl_pipeline = StableDiffusionXLInpaintPipeline.from_pretrained(
+        sdxl_pipeline = AutoPipelineForInpainting.from_pretrained(
             settings.sdxl_model_id,
             torch_dtype=torch.float16 if device == "cuda" else torch.float32,
-            variant="fp16" if device == "cuda" else None,
         ).to(device)
-        logger.info(f"Loaded SDXL Inpainting model: {settings.sdxl_model_id}")
+        logger.info(f"Loaded inpainting model: {settings.sdxl_model_id} on {device}")
 except Exception as e:
     logger.info(f"SDXL pipeline initialized in mock/test mode: {e}")
 
