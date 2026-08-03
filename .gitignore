@@ -24,20 +24,13 @@ local.properties
 opencv-sdk
 .idea/deploymentTargetSelector.xml
 .idea/androidTestResultsUserPreferences.xml
-/AndroidKorrektur/.tmp/
-/AndroidKorrektur/caches/
-/AndroidKorrektur/native/
-/AndroidKorrektur/wrapper/
-/AndroidKorrektur/jdks/
-/AndroidKorrektur/kotlin-profile/
-/AndroidKorrektur/android/FakeDependency.jar
 /.kotlin/sessions/
 /.idea/markdown.xml
 /.idea/migrations.xml
 
 # Python virtual environments & caches
-.venv/
-venv/
+.venv
+venv
 __pycache__/
 *.pyc
 .pytest_cache/

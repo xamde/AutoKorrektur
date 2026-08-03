@@ -47,7 +47,7 @@ See [TESTING.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/TESTING.m
   ```
 * **Run Backend Service Tests**:
   ```bash
-  PYTHONPATH=. .venv/bin/pytest backend/test_server.py
+  uv run --directory backend pytest --cov=.
   ```
 
 ## Documentation
