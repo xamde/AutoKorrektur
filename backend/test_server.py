@@ -5,6 +5,7 @@ import icontract
 import pytest
 from fastapi.testclient import TestClient
 
+from backend.config import BackendSettings, settings
 from backend.server import (
     app,
     process_inpainting_payload,
@@ -28,6 +29,21 @@ def test_health_check() -> None:
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+
+
+def test_web_workbench_endpoint() -> None:
+    """Test that GET / returns the EiPy interactive web UI html."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "<title>AutoKorrektur SDXL Workbench</title>" in response.text
+
+
+def test_backend_settings() -> None:
+    """Test pydantic-settings defaults and configuration."""
+    cfg = BackendSettings()
+    assert cfg.max_daily_requests == 10
+    assert "mock-valid-token" in cfg.allowed_integrity_tokens
+    assert settings.max_daily_requests == 10
 
 
 def test_inpaint_success_with_preview() -> None:

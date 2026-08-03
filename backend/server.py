@@ -1,36 +1,42 @@
 import asyncio
 import io
 import logging
-import os
 from collections import defaultdict
 from datetime import date
 from typing import Any
 
 import icontract
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
+from pydantic import BaseModel, Field
+
+from backend.config import settings
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("autokorrektur-backend")
 
-app = FastAPI(title="AutoKorrektur SDXL Inpainting API", version="1.0")
+app = FastAPI(
+    title="AutoKorrektur SDXL Inpainting API",
+    description="Photorealistic SDXL cloud inpainting backend service with memory-only GDPR processing.",
+    version="1.0.0",
+)
 
 # Redis / Rate limiting setup
-REDIS_URL = os.getenv("REDIS_URL", None)
 redis_client: Any | None = None
 
-if REDIS_URL:
+if settings.redis_url:
     try:
         import redis.asyncio as redis
 
-        redis_client = redis.from_url(REDIS_URL)
-        logger.info(f"Connected to Redis rate-limiting store at {REDIS_URL}")
+        redis_client = redis.from_url(settings.redis_url)
+        logger.info(f"Connected to Redis rate-limiting store at {settings.redis_url}")
     except Exception as e:
-        logger.warning(f"Failed to connect to Redis at {REDIS_URL}, falling back to in-memory store: {e}")
+        logger.warning(
+            f"Failed to connect to Redis at {settings.redis_url}, falling back to in-memory store: {e}"
+        )
 
 rate_limits: dict[str, dict[date, int]] = defaultdict(lambda: defaultdict(int))
-MAX_DAILY_REQUESTS = 10
 
 # SDXL Pipeline loader (Optional GPU / PyTorch execution)
 sdxl_pipeline: Any | None = None
@@ -40,16 +46,26 @@ try:
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     logger.info(f"PyTorch detected with device: {device}")
-    if os.getenv("ENABLE_SDXL_LOAD", "false").lower() == "true":
-        model_id = os.getenv("SDXL_MODEL_ID", "diffusers/stable-diffusion-xl-1.0-inpainting-0.1")
+    if settings.enable_sdxl_load:
         sdxl_pipeline = StableDiffusionXLInpaintPipeline.from_pretrained(
-            model_id,
+            settings.sdxl_model_id,
             torch_dtype=torch.float16 if device == "cuda" else torch.float32,
             variant="fp16" if device == "cuda" else None,
         ).to(device)
-        logger.info(f"Loaded SDXL Inpainting model: {model_id}")
+        logger.info(f"Loaded SDXL Inpainting model: {settings.sdxl_model_id}")
 except Exception as e:
     logger.info(f"SDXL pipeline initialized in mock/test mode: {e}")
+
+
+# --- Pydantic Data Models (EiPy Data-Handling Standards) ---
+
+
+class HealthCheckResponse(BaseModel):
+    """Pydantic schema for health check endpoint response."""
+
+    status: str = Field(..., description="Service health status", examples=["ok"])
+    redis_connected: bool = Field(..., description="Whether Redis connection is active")
+    sdxl_loaded: bool = Field(..., description="Whether SDXL PyTorch pipeline is active")
 
 
 # --- Design by Contract (DbC) Domain Functions ---
@@ -61,18 +77,11 @@ except Exception as e:
     "play_integrity_token must be non-empty",
 )
 def verify_token(device_uuid: str, play_integrity_token: str) -> bool:
-    """Verifies Play Integrity token to prevent third-party API abuse.
-
-    Allows mock-valid-token in local dev/testing mode.
-    """
-    if play_integrity_token == "mock-valid-token":
+    """Verifies Play Integrity token to prevent third-party API abuse."""
+    if play_integrity_token in settings.allowed_integrity_tokens:
         return True
 
-    allowed_tokens = os.getenv("ALLOWED_INTEGRITY_TOKENS", "").split(",")
-    if allowed_tokens and play_integrity_token in allowed_tokens:
-        return True
-
-    if os.getenv("STRICT_INTEGRITY_CHECK", "false").lower() == "true":
+    if settings.strict_integrity_check:
         logger.warning(
             f"Invalid Play Integrity token rejected for device {device_uuid}: {play_integrity_token[:10]}..."
         )
@@ -88,7 +97,7 @@ def process_inpainting_payload(
 ) -> bytes:
     """Core image inpainting processor contract.
 
-    Transforms input image and mask into inpainted output bytes.
+    Synchronous CPU-bound PIL / PyTorch transformation function.
     """
     if sdxl_pipeline is not None:
         from PIL import Image
@@ -108,7 +117,7 @@ def process_inpainting_payload(
 
 
 async def check_rate_limit(device_uuid: str) -> None:
-    """Enforce MAX_DAILY_REQUESTS limit per device per day."""
+    """Enforce max daily requests limit per device per day."""
     today_str = date.today().isoformat()
     key = f"rate:{device_uuid}:{today_str}"
 
@@ -117,7 +126,7 @@ async def check_rate_limit(device_uuid: str) -> None:
             count = await redis_client.incr(key)
             if count == 1:
                 await redis_client.expire(key, 86400)
-            if count > MAX_DAILY_REQUESTS:
+            if count > settings.max_daily_requests:
                 raise HTTPException(
                     status_code=429,
                     detail="Daily request limit exceeded. Please try again tomorrow.",
@@ -129,13 +138,103 @@ async def check_rate_limit(device_uuid: str) -> None:
             logger.warning(f"Redis rate limit check error: {e}, falling back to in-memory")
 
     today = date.today()
-    if rate_limits[device_uuid][today] >= MAX_DAILY_REQUESTS:
+    if rate_limits[device_uuid][today] >= settings.max_daily_requests:
         logger.warning(f"Rate limit exceeded for {device_uuid}")
         raise HTTPException(
             status_code=429,
             detail="Daily request limit exceeded. Please try again tomorrow.",
         )
     rate_limits[device_uuid][today] += 1
+
+
+# --- API Routes & Interactive Web UI ---
+
+
+@app.get("/", response_class=HTMLResponse)
+def get_web_workbench() -> str:
+    """EiPy User-Interfaces: Interactive in-browser drag-and-drop web workbench."""
+    return """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>AutoKorrektur SDXL Workbench</title>
+        <style>
+            :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --text: #f8fafc; }
+            body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 2rem; }
+            .container { max-width: 900px; margin: 0 auto; background: var(--card); border-radius: 12px; padding: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+            h1 { margin-top: 0; color: var(--accent); }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem; }
+            .drop-zone { border: 2px dashed #475569; border-radius: 8px; padding: 1.5rem; text-align: center; cursor: pointer; transition: 0.2s; }
+            .drop-zone:hover { border-color: var(--accent); background: rgba(56, 189, 248, 0.05); }
+            input[type="file"] { display: none; }
+            button { width: 100%; padding: 0.8rem; background: var(--accent); color: #000; border: none; border-radius: 6px; font-weight: bold; font-size: 1rem; cursor: pointer; margin-top: 1.5rem; }
+            button:hover { opacity: 0.9; }
+            .preview-container { margin-top: 1.5rem; text-align: center; }
+            img { max-width: 100%; border-radius: 8px; border: 1px solid #475569; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>AutoKorrektur Inpainting Workbench</h1>
+            <p>Test the SDXL Cloud Inpainting API directly from your browser.</p>
+            <form id="inpaintForm">
+                <div class="grid">
+                    <div class="drop-zone" onclick="document.getElementById('imageFile').click()">
+                        <strong>📷 Source Image</strong>
+                        <p id="imageName">Click or drop JPEG</p>
+                        <input type="file" id="imageFile" accept="image/*" required onchange="updateName('imageFile', 'imageName')">
+                    </div>
+                    <div class="drop-zone" onclick="document.getElementById('maskFile').click()">
+                        <strong>🎭 Vehicle Mask</strong>
+                        <p id="maskName">Click or drop Mask JPEG</p>
+                        <input type="file" id="maskFile" accept="image/*" required onchange="updateName('maskFile', 'maskName')">
+                    </div>
+                </div>
+                <button type="submit" id="submitBtn">Run SDXL Inpainting</button>
+            </form>
+            <div class="preview-container" id="resultContainer" style="display:none;">
+                <h3>Inpainted Output Result</h3>
+                <img id="resultImg" src="" alt="Result">
+            </div>
+        </div>
+        <script>
+            function updateName(inputId, textId) {
+                const input = document.getElementById(inputId);
+                if (input.files.length > 0) {
+                    document.getElementById(textId).innerText = input.files[0].name;
+                }
+            }
+            document.getElementById('inpaintForm').onsubmit = async (e) => {
+                e.preventDefault();
+                const btn = document.getElementById('submitBtn');
+                btn.disabled = true;
+                btn.innerText = 'Processing Inpainting...';
+
+                const formData = new FormData();
+                formData.append('device_uuid', 'web-workbench-demo');
+                formData.append('play_integrity_token', 'mock-valid-token');
+                formData.append('image', document.getElementById('imageFile').files[0]);
+                formData.append('mask', document.getElementById('maskFile').files[0]);
+
+                try {
+                    const res = await fetch('/v1/inpaint', { method: 'POST', body: formData });
+                    if (!res.ok) throw new Error(await res.text());
+                    const blob = await res.blob();
+                    document.getElementById('resultImg').src = URL.createObjectURL(blob);
+                    document.getElementById('resultContainer').style.display = 'block';
+                } catch (err) {
+                    alert('Error: ' + err.message);
+                } finally {
+                    btn.disabled = false;
+                    btn.innerText = 'Run SDXL Inpainting';
+                }
+            };
+        </script>
+    </body>
+    </html>
+    """
 
 
 @app.post("/v1/inpaint")
@@ -149,6 +248,7 @@ async def inpaint_image(
     """Receives an image, a mask, and an optional preview, and performs SDXL inpainting.
 
     To ensure GDPR compliance, all image data is processed in memory and never written to disk.
+    Uses asyncio.to_thread to execute CPU-bound PIL/PyTorch code without blocking the event loop.
     """
     logger.info(f"Received request for /v1/inpaint from {device_uuid}")
 
@@ -168,7 +268,8 @@ async def inpaint_image(
         if sdxl_pipeline is None:
             await asyncio.sleep(0.1)
 
-        output_data = process_inpainting_payload(image_data, mask_data, preview_data)
+        # EiPy Asyncio: Offload CPU-bound image manipulation to threadpool to avoid event loop blocking
+        output_data = await asyncio.to_thread(process_inpainting_payload, image_data, mask_data, preview_data)
 
         logger.info("Returning processed image from memory")
         return StreamingResponse(io.BytesIO(output_data), media_type="image/jpeg")
@@ -184,9 +285,10 @@ async def inpaint_image(
 
 
 @app.get("/health")
-def health_check() -> dict[str, Any]:
-    return {
-        "status": "ok",
-        "redis_connected": redis_client is not None,
-        "sdxl_loaded": sdxl_pipeline is not None,
-    }
+def health_check() -> HealthCheckResponse:
+    """Health check endpoint returning structured Pydantic schema."""
+    return HealthCheckResponse(
+        status="ok",
+        redis_connected=redis_client is not None,
+        sdxl_loaded=sdxl_pipeline is not None,
+    )
