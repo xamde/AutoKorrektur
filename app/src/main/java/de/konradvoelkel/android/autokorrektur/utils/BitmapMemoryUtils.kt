@@ -9,6 +9,7 @@ import java.io.File
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import androidx.core.graphics.scale
 
 /**
  * Utility functions for memory-safe Bitmap loading, downscaling, and recycling
@@ -39,7 +40,7 @@ object BitmapMemoryUtils {
         val newHeight = (height * scale).roundToInt()
 
         AppLogger.info("Downscaling bitmap for memory safety: ${width}x${height} -> ${newWidth}x${newHeight}")
-        return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
+        return bitmap.scale(newWidth, newHeight)
     }
 
     /**

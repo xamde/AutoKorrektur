@@ -11,6 +11,7 @@ import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
 import kotlin.math.min
+import androidx.core.graphics.withClip
 
 /**
  * Interactive Before/After split-slider view allowing users to drag a vertical handle
@@ -144,10 +145,9 @@ class BeforeAfterSliderView @JvmOverloads constructor(
         drawCenterCropBitmap(canvas, after, viewRect)
 
         // 2. Clip and draw Before Bitmap on the left side of splitX
-        canvas.save()
-        canvas.clipRect(0f, 0f, splitX, height.toFloat())
-        drawCenterCropBitmap(canvas, before, viewRect)
-        canvas.restore()
+        canvas.withClip(0f, 0f, splitX, height.toFloat()) {
+            drawCenterCropBitmap(this, before, viewRect)
+        }
 
         // 3. Draw vertical divider line
         canvas.drawLine(splitX, 0f, splitX, height.toFloat(), dividerPaint)
