@@ -55,19 +55,23 @@ This document describes the current test structure and how to run tests quickly.
 
 ## Backend Testing
 
-To test the Server SDXL Premium Edit functionality locally:
-1. Navigate to the root directory and create a Python virtual environment using `uv`:
+To test the Server SDXL Premium Edit functionality and code quality locally:
+1. Sync backend virtual environment with dev extras via `uv`:
    ```bash
-   uv venv .venv
-   uv pip install --python .venv/bin/python -r backend/requirements.txt
+   uv sync --directory backend --extra dev
    ```
-2. Run backend pytest unit tests:
+2. Run backend quality checks (Ruff & Mypy):
    ```bash
-   PYTHONPATH=. .venv/bin/pytest backend/test_server.py
+   uv run --directory backend ruff check .
+   uv run --directory backend mypy .
    ```
-3. Start the FastAPI server locally:
+3. Run backend pytest unit & contract tests with coverage:
    ```bash
-   .venv/bin/uvicorn backend.server:app --host 127.0.0.1 --port 8000
+   uv run --directory backend pytest --cov=.
    ```
-4. Update `serverUrl` in `app/src/main/java/de/konradvoelkel/android/autokorrektur/ml/api/ServerSdxlApi.kt` if you are testing on a physical device. For emulator testing, `10.0.2.2:8000` is already configured.
+4. Start the FastAPI server locally:
+   ```bash
+   uv run --directory backend uvicorn server:app --host 127.0.0.1 --port 8000
+   ```
+5. Update `serverUrl` in `app/src/main/java/de/konradvoelkel/android/autokorrektur/ml/api/ServerSdxlApi.kt` if testing on a physical device. For emulator testing, `10.0.2.2:8000` is pre-configured.
 
