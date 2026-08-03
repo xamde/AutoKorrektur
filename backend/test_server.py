@@ -1,5 +1,6 @@
 import io
 from collections.abc import Generator
+from pathlib import Path
 
 import icontract
 import pytest
@@ -154,3 +155,38 @@ def test_inpaint_rate_limit_exceeded() -> None:
     res_exceeded = client.post("/v1/inpaint", data=data, files=files)
     assert res_exceeded.status_code == 429
     assert "Daily request limit exceeded" in res_exceeded.json()["detail"]
+
+
+@pytest.mark.parametrize("triple_index", range(1, 51))
+def test_fifty_image_triples_inpaint_suite(triple_index: int) -> None:
+    """Test all 50 image-triples (car, mask, carless) against the backend inpainting service."""
+    fixtures_dir = Path(__file__).parent / "tests" / "fixtures" / "triples"
+    prefix = f"triple_{triple_index:02d}"
+
+    car_path = fixtures_dir / f"{prefix}_with_car.png"
+    mask_path = fixtures_dir / f"{prefix}_mask.png"
+    carless_path = fixtures_dir / f"{prefix}_without_car.png"
+
+    assert car_path.exists(), f"Car image missing for triple {triple_index}"
+    assert mask_path.exists(), f"Mask image missing for triple {triple_index}"
+    assert carless_path.exists(), f"Carless image missing for triple {triple_index}"
+
+    with (
+        open(car_path, "rb") as car_f,
+        open(mask_path, "rb") as mask_f,
+        open(carless_path, "rb") as carless_f,
+    ):
+        files = {
+            "image": (car_path.name, io.BytesIO(car_f.read()), "image/png"),
+            "mask": (mask_path.name, io.BytesIO(mask_f.read()), "image/png"),
+            "preview": (carless_path.name, io.BytesIO(carless_f.read()), "image/png"),
+        }
+        data = {
+            "device_uuid": f"device-triple-{triple_index}",
+            "play_integrity_token": "mock-valid-token",
+        }
+
+        response = client.post("/v1/inpaint", data=data, files=files)
+        assert response.status_code == 200, f"Triple {triple_index} failed inpaint request"
+        assert response.headers["content-type"] in ("image/jpeg", "image/png")
+
