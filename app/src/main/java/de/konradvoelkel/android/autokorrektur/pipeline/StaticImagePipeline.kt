@@ -48,10 +48,12 @@ class StaticImagePipeline(private val context: Context) {
         maskUpscale: Float,
         scoreThreshold: Float,
         useServerSdxl: Boolean,
-        onMaskGenerated: ((Bitmap) -> Unit)? = null
+        onMaskGenerated: ((Bitmap) -> Unit)? = null,
+        onProgressUpdate: ((stage: String, percent: Int) -> Unit)? = null
     ): PipelineResult = withContext(Dispatchers.Default) {
         if (!isInitialized) {
             AppLogger.info("StaticImagePipeline processImage called on uninitialized pipeline; auto-initializing now...")
+            onProgressUpdate?.invoke("Initializing Neural Engines", 10)
             initialize()
         }
 
@@ -59,6 +61,7 @@ class StaticImagePipeline(private val context: Context) {
         var maskMat: Mat? = null
         try {
             // 1. Process Input
+            onProgressUpdate?.invoke("Loading & Preprocessing Image", 25)
             processedImage = imageProcessor.processInputImage(
                 imageUri = uri,
                 modelWidth = 640,
@@ -67,6 +70,7 @@ class StaticImagePipeline(private val context: Context) {
             )
             
             // 2. YOLO Mask Generation
+            onProgressUpdate?.invoke("Running YOLO Segmentation", 50)
             val config = YoloConfig(scoreThreshold = scoreThreshold)
             val yoloResult = yoloInference.inferDetailed(
                 transformedMat = processedImage.transformedMat,
@@ -85,10 +89,10 @@ class StaticImagePipeline(private val context: Context) {
             
             onMaskGenerated?.invoke(maskBitmap)
 
-            
             // 3. Inpainting
             val inpaintedBitmap: Bitmap?
             if (useServerSdxl) {
+                onProgressUpdate?.invoke("Generating Structural Prior (Mi-GAN)", 70)
                 AppLogger.info("Using Server SDXL for inpainting")
                 // Generate a preview with MiGan first to use as structural prior
                 val miGanPreview = miGanInference.inferMiGan(processedImage.originalMat, maskMat)
@@ -96,9 +100,11 @@ class StaticImagePipeline(private val context: Context) {
                 Utils.matToBitmap(miGanPreview, previewBitmap)
                 miGanPreview.release()
                 
+                onProgressUpdate?.invoke("Server SDXL Premium Edit Processing", 85)
                 // Send to server
                 inpaintedBitmap = serverSdxlApi.processWithSdxl(processedImage.originalBitmap, maskBitmap, previewBitmap)
             } else {
+                onProgressUpdate?.invoke("Running MI-GAN Neural Inpainting", 80)
                 AppLogger.info("Using Local Mi-GAN for inpainting")
                 val miGanResult = miGanInference.inferMiGan(processedImage.originalMat, maskMat)
                 inpaintedBitmap = createBitmap(miGanResult.cols(), miGanResult.rows())
@@ -106,6 +112,7 @@ class StaticImagePipeline(private val context: Context) {
                 miGanResult.release()
             }
             
+            onProgressUpdate?.invoke("Processing Complete", 100)
             return@withContext PipelineResult(
                 originalBitmap = processedImage.originalBitmap,
                 maskBitmap = maskBitmap,

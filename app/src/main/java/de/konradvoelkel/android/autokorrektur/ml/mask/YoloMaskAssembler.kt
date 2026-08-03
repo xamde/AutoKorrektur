@@ -151,12 +151,20 @@ object YoloMaskAssembler {
         Imgproc.threshold(resizedMask, resizedMask, 0.4, 1.0, Imgproc.THRESH_BINARY)
 
         // 4. Morphological closing to fill glare holes and smooth vehicle contour
-        val kernel = Imgproc.getStructuringElement(
+        val closeKernel = Imgproc.getStructuringElement(
             Imgproc.MORPH_ELLIPSE,
             Size(MORPH_KERNEL_SIZE_PX, MORPH_KERNEL_SIZE_PX)
         )
-        Imgproc.morphologyEx(resizedMask, resizedMask, Imgproc.MORPH_CLOSE, kernel)
-        kernel.release()
+        Imgproc.morphologyEx(resizedMask, resizedMask, Imgproc.MORPH_CLOSE, closeKernel)
+        closeKernel.release()
+
+        // 5. Slight morphological dilation to cover drop shadows & edge anti-aliasing
+        val dilateKernel = Imgproc.getStructuringElement(
+            Imgproc.MORPH_ELLIPSE,
+            Size(5.0, 5.0)
+        )
+        Imgproc.dilate(resizedMask, resizedMask, dilateKernel)
+        dilateKernel.release()
 
         // Convert to 8-bit for overlay
         resizedMask.convertTo(resizedMask, CvType.CV_8UC1, OPENCV_BYTE_SCALE)

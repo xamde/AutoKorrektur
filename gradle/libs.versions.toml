@@ -18,7 +18,10 @@ mockito = "5.20.0"
 okhttp = "4.12.0"
 mockk = "1.14.6"
 
+workRuntime = "2.10.0"
+
 [libraries]
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntime" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-espresso-intents = { module = "androidx.test.espresso:espresso-intents", version.ref = "espressoCore" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }

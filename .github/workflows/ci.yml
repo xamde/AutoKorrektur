@@ -3,6 +3,7 @@ name: AutoKorrektur CI
 on:
   push:
     branches: [ "main", "master" ]
+    tags: [ "v*" ]
   pull_request:
     branches: [ "main", "master" ]
 
@@ -21,17 +22,40 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install Backend Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt pytest
+
+      - name: Run Backend Pytest Suite
+        run: PYTHONPATH=. pytest backend/test_server.py
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
       - name: Run Detekt Static Analysis
         run: ./gradlew detekt
 
-      - name: Run Unit Tests
+      - name: Run Android Unit Tests
         run: ./gradlew :app:testDebugUnitTest
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
-      - name: Build Release App Bundle
-        run: ./gradlew bundleRelease
+      - name: Build Release App Bundle & APK
+        run: ./gradlew assembleRelease bundleRelease
+
+      - name: Upload Release Artifacts
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: autokorrektur-release-builds
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab
+
