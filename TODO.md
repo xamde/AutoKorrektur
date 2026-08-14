@@ -73,3 +73,23 @@ Build a production-ready Android application for automatic vehicle removal and p
 - [ ] **C1. Code Coverage Gates**
   - Configure Kover for Android unit/instrumented test coverage reporting.
 
+---
+
+## 4. Pending Bug Fixes & Investigation (Detected 2026-08-14)
+
+### 🔴 Critical / Blocker
+- [ ] **B18. Fix `EACCES` Permission Denied in Tests & ML**
+    - `FiftyImageTriplesPipelineBenchmarkTest.kt` and `MiGanInference.kt` both use hardcoded `/sdcard/Download` paths, which fail on API 29+ (Scoped Storage).
+    - **Fix**: Use `context.getExternalFilesDir(null)` or `context.cacheDir` for debug artifacts.
+- [ ] **B19. Fix OpenCV Resize `inv_scale_x > 0` Assertion Failure**
+    - `MiGanDisplayBitmapPipelineTest` fails with a native OpenCV crash in `resize`.
+    - **Fix**: Guard `DefaultPreprocessor.prepare` and `MatScaler.downscaleIfLarge` against zero/empty Mat dimensions and ensure minimum scaling factors.
+
+### 🟠 High Priority
+- [ ] **B20. Investigate Residual Vehicle Detections in Inpainted Outputs**
+    - `FullEmulatedUiInferenceE2ETest` and `MiGanInpaintingInstrumentedTest` currently fail because cars are still detected post-inpainting (5 and 4 residual vehicles respectively).
+    - **Investigation**: Determine if this is due to poor inpainting texture coherence, incorrect mask alignment, or overly sensitive YOLO thresholds (0.25).
+- [ ] **B21. Rigorous 50-Triple On-Device Benchmark Stabilization**
+    - Ensure `FiftyImageTriplesPipelineBenchmarkTest` passes with zero residual cars across the entire 50-image dataset.
+    - Implement the "Visual Report Guide" automation to generate the required photorealistic verification report.
+

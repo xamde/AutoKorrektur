@@ -56,19 +56,20 @@ object GuidedFilter {
         try {
             // 1. Prepare Guidance Image (Convert to CV_32FC1 grayscale normalized 0..1)
             val guideGray32F = Mat().also { matsToRelease.add(it) }
+            val scale = if (guide.depth() == CvType.CV_32F) 1.0 else 1.0 / 255.0
             when (guide.channels()) {
                 4 -> {
                     val gray = Mat().also { matsToRelease.add(it) }
                     Imgproc.cvtColor(guide, gray, Imgproc.COLOR_RGBA2GRAY)
-                    gray.convertTo(guideGray32F, CvType.CV_32FC1, 1.0 / 255.0)
+                    gray.convertTo(guideGray32F, CvType.CV_32FC1, scale)
                 }
                 3 -> {
                     val gray = Mat().also { matsToRelease.add(it) }
                     Imgproc.cvtColor(guide, gray, Imgproc.COLOR_RGB2GRAY)
-                    gray.convertTo(guideGray32F, CvType.CV_32FC1, 1.0 / 255.0)
+                    gray.convertTo(guideGray32F, CvType.CV_32FC1, scale)
                 }
                 else -> {
-                    guide.convertTo(guideGray32F, CvType.CV_32FC1, 1.0 / 255.0)
+                    guide.convertTo(guideGray32F, CvType.CV_32FC1, scale)
                 }
             }
 
