@@ -148,6 +148,9 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
             }
         }
 
+    /**
+     * Pads image and subtractive mask to a square aspect ratio and resizes them to 512x512 for MI-GAN.
+     */
     private fun prepareSquareInputs(
         processedImage: Mat,
         processedMask: Mat,
@@ -173,6 +176,9 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
         return Pair(resizedImage, resizedMask)
     }
 
+    /**
+     * Executes the ONNX Runtime session for MI-GAN inpainting and returns raw HWC byte buffer.
+     */
     private fun runOnnxSession(
         session: OrtSession,
         resizedImage: Mat,
@@ -209,6 +215,9 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
         }
     }
 
+    /**
+     * Unpads and resizes the raw 512x512 MI-GAN output back to the original image dimensions.
+     */
     private fun processOutputMat(
         outputHWC: ByteArray,
         maxSize: Int,
@@ -231,6 +240,9 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
         return Mat(squareResultMat, roi).clone()
     }
 
+    /**
+     * Blends inpainted vehicle patches strictly into mask regions while preserving untouched background pixels.
+     */
     private fun blendResult(processedImage: Mat, processedMask: Mat, unpaddedInpainted: Mat): Mat {
         val finalBlendedMat = processedImage.clone()
         // processedMask has 0 on car and 255 on background.
@@ -242,6 +254,9 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
         return finalBlendedMat
     }
 
+    /**
+     * Normalizes depth and color channels of the input image Mat to standard 8-bit RGB format.
+     */
     private fun preprocessImage(imageMat: Mat): Mat {
         val converted = Mat()
         var current = imageMat
@@ -284,6 +299,9 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
         return rgb
     }
 
+    /**
+     * Converts mask to single-channel 8UC1 and ensures spatial dimensions match the source image.
+     */
     private fun preprocessMask(maskMat: Mat, imageMat: Mat): Mat {
         val processedMask = Mat()
         if (maskMat.channels() == 1 && maskMat.type() == CvType.CV_8UC1) {
@@ -322,6 +340,9 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
         return processedMask
     }
 
+    /**
+     * Creates a direct native ByteBuffer OnnxTensor with UINT8 payload and given tensor shape.
+     */
     private fun createTensor(
         data: ByteArray,
         batchSize: Long,
@@ -341,6 +362,9 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
         )
     }
 
+    /**
+     * Safely retrieves the byte or value payload from an output OnnxValue.
+     */
     private fun getOutputData(outputTensor: ai.onnxruntime.OnnxValue): Any? {
         return if (outputTensor is OnnxTensor) {
             try {
@@ -358,7 +382,9 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
         }
     }
 
-
+    /**
+     * Extracts and flattens image or mask channels into Planar CHW Byte order for ONNX tensor ingestion.
+     */
     private fun orderInCHWAsBytes(mat: Mat): ByteArray {
         val c = mat.channels()
         val h = mat.rows()
