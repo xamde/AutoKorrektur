@@ -1,14 +1,14 @@
 # AutoKorrektur — Project Status & Roadmap
 
-> **Last Updated & Verified**: 2026-08-14 (post code review execution)
-> **Status**: Core ML pipeline, segmentation, inpainting fidelity, EXIF orientation, memory safety, test coverage, and CI/CD fully completed and verified across physical Pixel 10 Pro & emulators.
+> **Last Updated & Verified**: 2026-08-15
+> **Status**: Core ML pipeline, segmentation, inpainting fidelity, EXIF orientation, memory safety, test coverage, and CI/CD fully completed and verified. Transitioning to Product Strategy, Live AR Engine, Production Deployment, and Multi-Model Inpainting.
 
 ---
 
 ## 1. Overall Goal
 
 Build a production-ready Android application for automatic vehicle removal and photorealistic inpainting using a hybrid machine learning architecture:
-- **On-Device (Default)**: YOLOv11-seg instance segmentation + MI-GAN local neural inpainting.
+- **On-Device (Default)**: YOLOv11-seg instance segmentation + MI-GAN & LaMa local neural inpainting.
 - **Cloud (Premium)**: FastAPI backend running Stable Diffusion XL (SDXL) with memory-only GDPR processing and Play Integrity attestation.
 
 ---
@@ -54,134 +54,116 @@ Build a production-ready Android application for automatic vehicle removal and p
 - [x] **T1–T5. Benchmark suites (Desktop, On-Device, Visual Diff, Physical Device Edge-Cases)**
 - [x] **C1. Code Coverage Gates**
 
----
+### ✅ Phase 4: Code Review Sweep (CR-01 through CR-38)
 
-## 4. Backlog Items (All Completed & Verified 2026-08-14)
-
----
-
-### 🔴 4A — Critical: Memory Safety & Resource Leaks
-
-- [x] **CR-01. Fix Bitmap leak in `BatchProcessingWorker` batch loop**
-    - Recycled `result.originalBitmap`, `result.maskBitmap`, and `result.inpaintedBitmap` in `finally` block of batch iteration loop.
-- [x] **CR-02. Fix Bitmap leak on `CancellationException` in `ImageProcessor.kt`**
-    - Guaranteed `.recycle()` on `originalBitmap` and `transformedBitmap` prior to re-throwing `CancellationException`.
-- [x] **CR-03. Fix remaining `!!` operators in `YoloTFLiteEngine.kt`**
-    - Replaced all `pixelBuffer!!` usages with local immutable references.
-- [x] **CR-04. Fix `TemporalBackgroundAccumulator` native memory leak on missed `close()`**
-    - Added `finalize()` safety net that warns and releases unclosed `backgroundMat`.
+- [x] All 38 memory safety, backend async, architecture, test coverage, code cleanup, performance, and documentation items completed.
 
 ---
 
-### 🔴 4B — Critical: Backend Async Correctness
-
-- [x] **CR-05. Fix synchronous gRPC call blocking the asyncio event loop in `verify_token()`**
-    - Wrapped `verify_token(...)` in `await asyncio.to_thread(...)` in `backend/server.py`.
-- [x] **CR-06. Fix unbounded memory read before upload size enforcement in `inpaint_image()`**
-    - Implemented chunked 64KB streaming read with strict cumulative size enforcement aborting with 413.
+## 4. Next Product Roadmap & Strategic Initiatives
 
 ---
 
-### 🟠 4C — High: Architecture & Design
+### 🧭 Phase 6A: Product Strategy, Customer Personas & UX/UI Alignment
 
-- [x] **CR-07. Fix WorkManager `Data` 10KB size limit for batch URI lists**
-    - Implemented temp JSON file queue in `cacheDir` via `KEY_IMAGE_URIS_FILE` with automated cleanup in worker.
-- [x] **CR-08. Add coroutine cancellation checkpoints to ML pipeline**
-    - Inserted `currentCoroutineContext().ensureActive()` across preprocessing, YOLO segmentation, mask generation, inpainting, and blending stages in `StaticImagePipeline.kt`.
-- [x] **CR-09. Move hardcoded SDXL inpainting prompt to `BackendSettings`**
-    - Added `inpainting_prompt` setting in `backend/config.py` with custom prompt support.
-- [x] **CR-10. Fix model ID naming mismatch in `backend/config.py`**
-    - Standardized configuration setting name to `sd_model_id`.
+- [ ] **UX-01. Customer Persona & Target Audience Definition**
+    - Identify primary customer verticals:
+      1. *Automotive Dealerships & Resellers*: High-volume batch processing to remove customer cars or lot clutter from inventory photos.
+      2. *Real Estate & Architectural Photographers*: Precision single-photo editing to remove parked cars obscuring driveways, building facades, and scenic vistas.
+      3. *Urban & Street Photographers / Privacy Seekers*: Rapid vehicle & license-plate removal for privacy compliance and artistic isolation.
+      4. *Casual Social Media Creators*: Quick before/after comparisons for Instagram/TikTok car content.
+    - Output: Create `docs/PERSONAS.md` defining specific goals, pain points, device types, and workflow velocity requirements for each segment.
 
----
+- [ ] **UX-02. Workflow Archetype & Job-to-be-Done (JTBD) Mapping**
+    - Map the 3 primary interaction modes against user personas:
+      1. *Fast Batch Queue*: Select 50 photos -> apply auto-preset -> export directly to cloud/zip.
+      2. *Studio Precision Editor*: Single image -> interactive before/after slider -> manual brush touch-up -> cloud SDXL enhancement.
+      3. *Live Camera AR*: Instant viewfinder preview -> walk around car -> tap shutter for instantaneous car-free photo.
 
-### 🟠 4D — High: Test Quality & Coverage
+- [ ] **UX-03. Comprehensive UI/UX Heuristic Audit**
+    - Evaluate current single-screen monolithic layout against Material 3 standards.
+    - Identify friction points: buried batch mode, options drawer cognitive overload, lack of image cropping/zoom before processing, lack of interactive mask refinement brush.
 
-- [x] **CR-11. Add `@After unmockkAll()` to `BatchProcessingWorkerInstrumentedTest`**
-    - Added `@After fun tearDown() { unmockkAll() }` to eliminate mock state leakage.
-- [x] **CR-12. Add `kotlinx.coroutines.test` to androidTestImplementation**
-    - Added `androidTestImplementation(libs.kotlinx.coroutines.test)` to `app/build.gradle.kts`.
-- [x] **CR-13. Write unit/instrumented tests for `ImageProcessor` core logic**
-    - Created `ImageProcessorInstrumentedTest.kt` testing URI loading, scaling, and error handling.
-- [x] **CR-14. Write unit/instrumented tests for `YoloTFLiteEngine` inference**
-    - Created `YoloTFLiteEngineInstrumentedTest.kt` validating model initialization and tensor output shapes.
-- [x] **CR-15. Write tests for `ServerInpainter` network API contract**
-    - Created `ServerInpainterTest.kt` verifying multipart payload parsing and HTTP 200/400 handling.
-- [x] **CR-16. Add `MainViewModel` coroutine state flow tests**
-    - Expanded `MainViewModelTest.kt` with `runTest` state machine tests (`Success`, `Error`, `Idle`).
-- [x] **CR-17. Add dedicated `ConsentManager` unit tests**
-    - Created `ConsentManagerTest.kt` testing GDPR consent preference persistence.
-- [x] **CR-18. Add `QuotaManager` date transition/reset test**
-    - Injected customizable date provider and verified 24h quota reset in `QuotaManagerTest.kt`.
-- [x] **CR-19. Remove test execution order dependency in `MainActivityGuiRigorousTest`**
-    - Cleaned up numbered method prefixes and decoupled individual test cases.
-- [x] **CR-20. Add UI/integration tests for `BatchUiDelegate` and `InstagramExportDelegate`**
-    - Created `UiDelegateInstrumentedTest.kt` verifying dialog interactions.
+- [ ] **UX-04. Methodical Guided Discovery Framework**
+    - Structure guided questions with the product lead to resolve key UX forks: navigation hierarchy (BottomNav vs Drawer vs Tabs), batch feedback model, preset management, and export destinations.
+
+- [ ] **UX-05. Tailored UI Rehaul Implementation**
+    - Redesign UI components based on agreed persona priorities, introducing clean mode switching, responsive galleries, and modern Material 3 cards.
 
 ---
 
-### 🟡 4E — Medium: Code Quality & Cleanup
+### 🎥 Phase 6B: Live Camera Real-Time AR Inference & Viewfinder Overlay (Item 1)
 
-- [x] **CR-21. Remove deprecated `inferMiGan()` default method from `InpaintingEngine.kt`**
-    - Removed unused deprecated alias.
-- [x] **CR-22. Remove unused `import org.opencv.core.Mat` from `FirstFragment.kt`**
-    - Cleaned up unused import.
-- [x] **CR-23. Document `YoloPostprocessor.postprocess()`**
-    - Added full KDoc and removed `@Suppress("unused")`.
-- [x] **CR-24. Clean up inline FQCNs in `MainViewModel.scheduleBatchWork()`**
-    - Replaced with clean top-level imports.
-- [x] **CR-25. Replace `ExampleUnitTest.kt` boilerplate file**
-    - Renamed to `ImageProcessingUtilsUnitTest.kt`.
-- [x] **CR-26. Add docstrings to backend domain exception classes**
-    - Added comprehensive docstrings to `InvalidImagePayloadError`, `ImageDimensionExceededError`, and `IntegrityVerificationError`.
-- [x] **CR-27. Reduce `@Suppress` annotations on `ImageQualityMetrics.kt`**
-    - Removed broad `MagicNumber` suppression.
+- [ ] **AR-01. CameraX ImageAnalysis Zero-Copy YUV-to-OpenCV Converter**
+    - Build a high-performance native image converter from CameraX `YUV_420_888` `ImageProxy` planes directly into an OpenCV `Mat` (BGR/BGRA) without intermediary byte array copying.
+    - Handle camera sensor orientation and front/back mirroring seamlessly.
 
----
+- [ ] **AR-02. Asynchronous Frame-Skipping ML Inference Loop**
+    - Implement a non-blocking `Coroutines` / `ExecutorService` pipeline that runs YOLOv11n-seg on background threads while rendering camera preview at 30+ FPS without viewfinder lag.
+    - Smooth mask boundary jitter across consecutive frames via exponential moving average (EMA) or optical flow tracking.
 
-### 🟡 4F — Medium: Performance
+- [ ] **AR-03. Live Temporal Background Buffer Blending in Viewfinder**
+    - Wire `TemporalBackgroundAccumulator.accumulateAndBlend()` directly to the live frame pipeline.
+    - As the user moves the phone around the stationary car, unmasked background pixels (pavement, buildings) populate the buffer and replace vehicle pixels in real-time.
 
-- [x] **CR-28. Use `Matrix` scaling instead of `Canvas.drawBitmap()` in `BitmapMemoryUtils.kt`**
-    - Replaced with hardware-accelerated `Bitmap.createBitmap(src, 0, 0, w, h, matrix, true)`.
-- [x] **CR-29. Pre-allocate `ThreadLocal` channel buffers in `YoloMaskAssembler.kt`**
-    - Eliminated per-frame float array allocations.
+- [ ] **AR-04. Custom OpenGL / SurfaceView AR Viewfinder Renderer**
+    - Replace raw `PreviewView` with a hardware-accelerated `SurfaceView` or `GLSurfaceView` that renders the composite blended frame with optional HUD overlays (mask boundary glow, accumulated texture confidence heatmap).
+
+- [ ] **AR-05. High-Resolution Still Photo Capture with AR Composite Stitching**
+    - When the user taps the Shutter button in AR mode, capture a full-resolution camera frame (`ImageCapture`) and project the accumulated low-res background textures onto the high-res capture, running a quick guided filter refinement before saving.
 
 ---
 
-### 🔵 4G — Build, CI & DevOps
+### 🚀 Phase 6C: Production Release Signing & Play Store Deployment (Item 2)
 
-- [x] **CR-30. Add GitHub Actions CI workflow file**
-    - Created `.github/workflows/ci.yml` running backend pytest, Android lint, unit tests, JaCoCo, and emulator tests.
-- [x] **CR-31. Add pre-commit hooks for lint and formatting**
-    - Created `.pre-commit-config.yaml` with Ruff and yaml/json validators.
-- [x] **CR-32. Generate and publish code coverage reports**
-    - Added `jacoco` plugin and configured `jacocoTestReport` task.
-- [x] **CR-33. Add `CHANGELOG.md`**
-    - Created `CHANGELOG.md` following Keep a Changelog standard.
+- [ ] **REL-01. Android Keystore Management & Secret Vault Configuration**
+    - Configure production release keystore with RSA 4096 / EC keys.
+    - Implement secure keystore credential injection via environment variables (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`) for local builds and GitHub Actions CI.
+
+- [ ] **REL-02. Production ProGuard / R8 Optimization & JNI Reflection Guards**
+    - Harden `proguard-rules.pro` to ensure maximum code shrinking while safeguarding OpenCV native bindings, ONNX Runtime JNI calls, TFLite delegates, and Pydantic serialization models.
+    - Verify release build execution on physical Pixel 10 Pro with `isMinifyEnabled = true` and `isShrinkResources = true`.
+
+- [ ] **REL-03. Android App Bundle (AAB) Generation & Asset Pack Verification**
+    - Build signed `.aab` bundles with Play Feature Delivery and Dynamic Model Asset Packs (PAD) to keep base download size under 25 MB.
+    - Run `bundletool` verification to test split APK installations across device densities and ABIs (`arm64-v8a`, `x86_64`).
+
+- [ ] **REL-04. Automated Google Play Store CI/CD Release Track**
+    - Add GitHub Actions CD workflow utilizing `r0adkll/upload-google-play` or Fastlane to deploy signed AABs directly to Google Play Internal App Sharing / Closed Testing Track.
+    - Automatically upload de-obfuscation mapping files and Native Symbol Tables for Crashlytics.
 
 ---
 
-### 🟢 4H — Documentation Gaps
+### 🧠 Phase 6D: Multi-Model Local Inpainting Support — LaMa Integration (Item 4)
 
-- [x] **CR-34. Add KDoc to `MainActivity.kt` public methods**
-- [x] **CR-35. Add KDoc to `ArCameraActivity.kt`**
-- [x] **CR-36. Add KDoc to `BatchProcessingWorker.kt`**
-- [x] **CR-37. Add KDoc to `DevicePerformanceHelper.kt`**
-- [x] **CR-38. Document mask polarity convention in `ARCHITECTURE.md`**
-    - Created comprehensive system design reference.
+- [ ] **ML-01. LaMa (Large Mask Inpainting) ONNX Export & Quantization**
+    - Export Resolution-robust Large Mask Inpainting (LaMa with Fast Fourier Convolutions) into ONNX Runtime format with dynamic spatial shapes.
+    - Quantize to FP16 (`lama_fp16.onnx`, ~50MB) and INT8 for mobile NPU/GPU execution with high PSNR (>32 dB on complex structural textures).
+
+- [ ] **ML-02. Implement `LamaInference.kt` Engine**
+    - Create `LamaInference` implementing the `InpaintingEngine` interface.
+    - Handle LaMa-specific pre-processing: pad image & mask dimensions to multiples of 8, normalize float inputs to $[0.0, 1.0]$, and unpad the output tensor.
+
+- [ ] **ML-03. Inpainting Engine Factory & Dynamic Tier Selection**
+    - Implement `InpaintingEngineFactory` capable of instantiating `MiGanInference` (ultra-fast, lightweight 512x512) or `LamaInference` (high-fidelity structural inpainting).
+    - Update `DevicePerformanceHelper` to default to LaMa on high-end hardware (e.g. Pixel 8/9/10, Snapdragon 8 Gen 2/3) and MI-GAN on resource-constrained devices.
+
+- [ ] **ML-04. Quantitative Benchmark Suite: MI-GAN vs LaMa vs SDXL**
+    - Extend `BenchmarkEvaluator` to run head-to-head comparisons across:
+      - Execution Latency (ms)
+      - Peak Native Memory (MB)
+      - Photorealism & Structural Consistency ($IoU$, SSIM, PSNR, LPIPS)
+    - Output automated markdown reports in `app/build/reports/benchmarks/`.
 
 ---
 
 ## 5. Summary Statistics
 
-| Category | Completed | Remaining |
+| Category | Completed | Open |
 |---|---|---|
-| 4A — Memory Safety | 4 | 0 |
-| 4B — Backend Async | 2 | 0 |
-| 4C — Architecture | 4 | 0 |
-| 4D — Test Coverage | 10 | 0 |
-| 4E — Code Cleanup | 7 | 0 |
-| 4F — Performance | 2 | 0 |
-| 4G — Build/CI | 4 | 0 |
-| 4H — Documentation | 5 | 0 |
-| **Total** | **38** | **0** |
+| Historical Milestones & Backlog (M1–M8, Phases 1–4) | 55 | 0 |
+| **Phase 6A: Product Strategy & UX Alignment** | 0 | 5 |
+| **Phase 6B: Live Camera Real-Time AR (Item 1)** | 0 | 5 |
+| **Phase 6C: Production Release & Play Store (Item 2)** | 0 | 4 |
+| **Phase 6D: Multi-Model Inpainting / LaMa (Item 4)** | 0 | 4 |
+| **Total Future Roadmap** | **0** | **18** |
