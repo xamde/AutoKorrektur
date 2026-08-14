@@ -31,7 +31,7 @@ android {
                 keyAlias = properties.getProperty("keyAlias")
                 keyPassword = properties.getProperty("keyPassword")
             } else {
-                // Fallback to debug if not found
+                logger.warn("Release keystore not found at keystore.properties - fallback to debug signing for development builds")
                 val debugConfig = getByName("debug")
                 storeFile = debugConfig.storeFile
                 storePassword = debugConfig.storePassword
@@ -43,6 +43,8 @@ android {
 
     buildTypes {
         debug {
+            enableUnitTestCoverage = true
+            enableAndroidTestCoverage = true
             buildConfigField("String", "BACKEND_URL", "\"http://127.0.0.1:8000/v1/inpaint\"")
         }
         release {

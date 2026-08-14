@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AutoKorrektur SDXL Workbench</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; margin: 2rem; background: #f8fafc; color: #1e293b; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .form-group { margin-bottom: 1.5rem; }
+        label { display: block; font-weight: 600; margin-bottom: 0.5rem; }
+        input[type="file"], input[type="text"] { width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
+        button { background: #2563eb; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; font-weight: 600; cursor: pointer; }
+        button:disabled { background: #94a3b8; }
+        .preview { margin-top: 1.5rem; display: none; }
+        .preview img { max-width: 100%; height: auto; border-radius: 4px; border: 1px solid #cbd5e1; }
+        .spinner { display: none; margin-left: 1rem; color: #64748b; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AutoKorrektur Inpainting Workbench</h1>
+        <p>Interactive test client for on-premise and cloud neural inpainting endpoints.</p>
+        <form id="inpaintForm">
+            <div class="form-group">
+                <label>Original Image (JPEG/PNG)</label>
+                <input type="file" id="imageInput" accept="image/jpeg,image/png" required>
+            </div>
+            <div class="form-group">
+                <label>Binary Mask (JPEG/PNG, 255=Background, 0=Hole)</label>
+                <input type="file" id="maskInput" accept="image/jpeg,image/png" required>
+            </div>
+            <div class="form-group">
+                <label>Device UUID (Mock)</label>
+                <input type="text" id="uuidInput" value="web-workbench-test-uuid" required>
+            </div>
+            <div class="form-group">
+                <label>Play Integrity Token (Mock)</label>
+                <input type="text" id="tokenInput" value="mock-valid-token" required>
+            </div>
+            <button type="submit" id="submitBtn">Execute Inpainting</button>
+            <span id="spinner" class="spinner">Processing neural inpainting...</span>
+        </form>
+        <div id="previewContainer" class="preview">
+            <h3>Inpainted Result:</h3>
+            <img id="resultImage" src="" alt="Inpainted Output">
+        </div>
+    </div>
+    <script>
+        document.getElementById('inpaintForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('submitBtn');
+            const spinner = document.getElementById('spinner');
+            const previewContainer = document.getElementById('previewContainer');
+            const resultImage = document.getElementById('resultImage');
+
+            const formData = new FormData();
+            formData.append('image', document.getElementById('imageInput').files[0]);
+            formData.append('mask', document.getElementById('maskInput').files[0]);
+            formData.append('device_uuid', document.getElementById('uuidInput').value);
+            formData.append('play_integrity_token', document.getElementById('tokenInput').value);
+
+            submitBtn.disabled = true;
+            spinner.style.display = 'inline';
+            previewContainer.style.display = 'none';
+
+            try {
+                const response = await fetch('/v1/inpaint', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!response.ok) {
+                    const err = await response.json();
+                    alert('Error: ' + (err.detail || response.statusText));
+                    return;
+                }
+                const blob = await response.blob();
+                resultImage.src = URL.createObjectURL(blob);
+                previewContainer.style.display = 'block';
+            } catch (err) {
+                alert('Network Error: ' + err.message);
+            } finally {
+                submitBtn.disabled = false;
+                spinner.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -79,7 +79,7 @@ class MiGanInpaintingInstrumentedTest : AndroidInstrumentedBaseTest() {
         Core.bitwise_not(referenceMask, standardMask)
 
         // Run Mi-GAN inference using original image size and the standard mask
-        val inpainted = migan.inferMiGan(processed.originalMat, standardMask)
+        val inpainted = migan.inpaint(processed.originalMat, standardMask)
         standardMask.release()
 
         // Save RGB->BGR debug output if enabled

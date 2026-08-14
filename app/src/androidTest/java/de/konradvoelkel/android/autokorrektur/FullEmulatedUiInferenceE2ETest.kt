@@ -72,8 +72,9 @@ class FullEmulatedUiInferenceE2ETest : AndroidInstrumentedBaseTest() {
 
         var viewModel: MainViewModel? = null
         scenario.onActivity { activity ->
-            viewModel = ViewModelProvider(activity)[MainViewModel::class.java]
-            viewModel?.setSelectedImageUri(imageUri)
+            val vmInstance = ViewModelProvider(activity)[MainViewModel::class.java]
+            vmInstance.setSelectedImageUri(imageUri)
+            viewModel = vmInstance
         }
 
         assertNotNull("ViewModel must be available", viewModel)
@@ -107,7 +108,7 @@ class FullEmulatedUiInferenceE2ETest : AndroidInstrumentedBaseTest() {
 
         assertNotNull("Inference should complete within $timeoutMs ms", completedState)
         if (completedState is MainUiState.Error) {
-            fail("Inference failed with error: ${(completedState as MainUiState.Error).message}")
+            fail("Inference failed with error: ${completedState.message}")
         }
 
         assertTrue("State must be Success", completedState is MainUiState.Success)

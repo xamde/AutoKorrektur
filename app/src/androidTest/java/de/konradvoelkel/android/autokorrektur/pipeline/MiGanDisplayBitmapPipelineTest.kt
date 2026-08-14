@@ -6,6 +6,7 @@ import androidx.test.filters.MediumTest
 import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
 import de.konradvoelkel.android.autokorrektur.ml.MatScaler
 import de.konradvoelkel.android.autokorrektur.ml.MiGanInference
+import de.konradvoelkel.android.autokorrektur.ml.api.ServerSdxlApi
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
 import de.konradvoelkel.android.autokorrektur.ml.engine.YoloTFLiteEngine
 import de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest
@@ -13,6 +14,7 @@ import de.konradvoelkel.android.autokorrektur.ml.config.YoloConfig
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -83,7 +85,7 @@ class MiGanDisplayBitmapPipelineTest : AndroidInstrumentedBaseTest() {
             AppLogger.info("YoloResult mask: cols=${yoloResult.mask.cols()}, rows=${yoloResult.mask.rows()}, channels=${yoloResult.mask.channels()}, type=${yoloResult.mask.type()}")
 
             // Run Mi-GAN
-            val miGanResult = miGanInference.inferMiGan(
+            val miGanResult = miGanInference.inpaint(
                 imageMat = processedImage.originalMat,
                 maskMat = yoloResult.mask
             )
@@ -157,7 +159,7 @@ class MiGanDisplayBitmapPipelineTest : AndroidInstrumentedBaseTest() {
             )
 
             // Run Mi-GAN
-            val miGanResult = miGanInference.inferMiGan(
+            val miGanResult = miGanInference.inpaint(
                 imageMat = processedImage.originalMat,
                 maskMat = yoloResult.mask
             )
@@ -209,7 +211,7 @@ class MiGanDisplayBitmapPipelineTest : AndroidInstrumentedBaseTest() {
                 originalHeight = processedImage.originalMat.rows()
             )
 
-            val miGanResult = miGanInference.inferMiGan(
+            val miGanResult = miGanInference.inpaint(
                 imageMat = processedImage.originalMat,
                 maskMat = yoloResult.mask
             )
@@ -218,8 +220,9 @@ class MiGanDisplayBitmapPipelineTest : AndroidInstrumentedBaseTest() {
 
             val displayBitmap = MatScaler.createDisplayBitmap(miGanResult)
             assertNotNull(displayBitmap)
-            assertEquals(1920, displayBitmap.width)
-            assertEquals(1080, displayBitmap.height)
+            assertEquals("Display bitmap width matches original", 1920, displayBitmap.width)
+            assertEquals("Display bitmap height matches original", 1080, displayBitmap.height)
+            assertEquals("Display bitmap is ARGB_8888", android.graphics.Bitmap.Config.ARGB_8888, displayBitmap.config)
 
             miGanResult.release()
             yoloResult.mask.release()
@@ -229,44 +232,41 @@ class MiGanDisplayBitmapPipelineTest : AndroidInstrumentedBaseTest() {
         }
 
     @Test
-    fun testVeryHighResCarAsset_throughFullStaticImagePipeline(): Unit =
+    fun testVeryHighResolution_endToEnd_scalesProperly(): Unit =
         kotlinx.coroutines.runBlocking {
-            val testAssets = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().context.assets
-            val tempFile = File(appContext.cacheDir, "test_very_high_res_car.jpg")
-            
-            testAssets.open("very_high_res_car.jpg").use { input ->
-                FileOutputStream(tempFile).use { output ->
-                    input.copyTo(output)
-                }
-            }
-
+            val tempFile = cacheAsset("sample_street_with_car.jpg")
             val uri = android.net.Uri.fromFile(tempFile)
-            val serverSdxlApi = de.konradvoelkel.android.autokorrektur.ml.api.ServerSdxlApi(appContext)
+
+            val serverSdxlApi = ServerSdxlApi(appContext)
             val pipeline = StaticImagePipeline(
                 imageProcessor = imageProcessor,
                 yoloService = yoloService,
                 miGanInference = miGanInference,
                 serverSdxlApi = serverSdxlApi
             )
+
             val result = pipeline.processImage(
                 uri = uri,
                 downscaleMp = null,
                 maskUpscale = 1.0f,
-                scoreThreshold = 0.25f,
+                scoreThreshold = 0.5f,
                 useServerSdxl = false
             )
-            org.junit.Assert.assertNull("Pipeline error: ${result.errorMessage}", result.errorMessage)
+
+            assertNotNull("Pipeline result must not be null", result)
+            assertNull("Error message must be null", result.errorMessage)
+            val inpaintBmp = result.inpaintedBitmap
+            assertNotNull("Inpainted bitmap must not be null", inpaintBmp)
+            requireNotNull(inpaintBmp)
 
             val origBmp = result.originalBitmap
-            val inpaintBmp = result.inpaintedBitmap!!
-            val sampleW = kotlin.math.min(origBmp.width, inpaintBmp.width)
-            val sampleH = kotlin.math.min(origBmp.height, inpaintBmp.height)
+            val maskBmp = result.maskBitmap
 
             var maskedPixels = 0
             var diffPixels = 0
-            for (y in 0 until sampleH step 10) {
-                for (x in 0 until sampleW step 10) {
-                    val maskPx = result.maskBitmap.getPixel(x.coerceAtMost(result.maskBitmap.width - 1), y.coerceAtMost(result.maskBitmap.height - 1)) and 0xFF
+            for (y in 0 until minOf(origBmp.height, inpaintBmp.height, maskBmp.height) step 4) {
+                for (x in 0 until minOf(origBmp.width, inpaintBmp.width, maskBmp.width) step 4) {
+                    val maskPx = android.graphics.Color.red(maskBmp.getPixel(x, y))
                     if (maskPx < 128) {
                         maskedPixels++
                         if (origBmp.getPixel(x, y) != inpaintBmp.getPixel(x, y)) {
@@ -281,10 +281,10 @@ class MiGanDisplayBitmapPipelineTest : AndroidInstrumentedBaseTest() {
                 assertTrue("Diff pixels in vehicle mask should be > 0 (actual: $diffPixels)", diffPixels > 0)
             }
             assertTrue("Original bitmap must be valid", result.originalBitmap.width > 0 && result.originalBitmap.height > 0)
-            assertTrue("Inpainted bitmap must be valid", result.inpaintedBitmap!!.width > 0 && result.inpaintedBitmap!!.height > 0)
+            assertTrue("Inpainted bitmap must be valid", inpaintBmp.width > 0 && inpaintBmp.height > 0)
 
             // Test UI presentation scaling (exercises BitmapMemoryUtils & MaskOverlayUtils on Android 17)
-            val displayScaled = de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.createScaledBitmapForDisplay(result.inpaintedBitmap!!)
+            val displayScaled = de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.createScaledBitmapForDisplay(inpaintBmp)
             assertNotNull("Display scaled bitmap must not be null", displayScaled)
             assertTrue("Display scaled width <= 1920", displayScaled.width <= 1920)
 
@@ -305,7 +305,7 @@ class MiGanDisplayBitmapPipelineTest : AndroidInstrumentedBaseTest() {
 
             FileOutputStream(origOut).use { result.originalBitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
             FileOutputStream(maskOut).use { result.maskBitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
-            FileOutputStream(inpaintOut).use { result.inpaintedBitmap!!.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+            FileOutputStream(inpaintOut).use { inpaintBmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
             AppLogger.info("Saved test artifacts to ${cacheDir.absolutePath}")
 
             displayScaled.recycle()

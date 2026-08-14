@@ -98,6 +98,21 @@ open class AndroidInstrumentedBaseTest {
     }
 
     companion object {
+        /** Minimum mean pixel intensity change required on vehicle hole to verify inpainting occurred. */
+        const val MIN_INPAINT_MEAN_CAR_DIFF = 15.0
+
+        /** Maximum mean pixel deviation allowed on background to ensure background preservation. */
+        const val MAX_INPAINT_MEAN_BG_DIFF = 2.0
+
+        /** Minimum PSNR for deterministic background preservation tests (unaltered pixels). */
+        const val MIN_BACKGROUND_PSNR_DB = 40.0
+
+        /** Minimum PSNR for generative neural inpainting against synthetic ground truth. */
+        const val MIN_GENERATIVE_PSNR_DB = 8.0
+
+        /** Minimum SSIM for generative neural inpainting against synthetic ground truth. */
+        const val MIN_GENERATIVE_SSIM = 0.10
+
         @BeforeClass
         @JvmStatic
         fun beforeAllBase() {

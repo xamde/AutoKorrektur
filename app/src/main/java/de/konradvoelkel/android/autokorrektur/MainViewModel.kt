@@ -216,6 +216,33 @@ class MainViewModel(
     }
 
     /**
+     * Schedules background batch processing via Android WorkManager.
+     */
+    fun scheduleBatchWork(
+        uris: List<Uri>,
+        useServerSdxl: Boolean = false,
+        scoreThreshold: Float = 0.25f,
+        maskUpscale: Float = 1.0f,
+        downscaleMp: Float? = null
+    ): java.util.UUID {
+        val uriStrings = uris.map { it.toString() }.toTypedArray()
+        @Suppress("UNCHECKED_CAST")
+        val dataBuilder = androidx.work.Data.Builder()
+            .putStringArray(de.konradvoelkel.android.autokorrektur.pipeline.BatchProcessingWorker.KEY_IMAGE_URIS, uriStrings as Array<String?>)
+            .putBoolean(de.konradvoelkel.android.autokorrektur.pipeline.BatchProcessingWorker.KEY_USE_SERVER_SDXL, useServerSdxl)
+            .putFloat(de.konradvoelkel.android.autokorrektur.pipeline.BatchProcessingWorker.KEY_SCORE_THRESHOLD, scoreThreshold)
+            .putFloat(de.konradvoelkel.android.autokorrektur.pipeline.BatchProcessingWorker.KEY_MASK_UPSCALE, maskUpscale)
+        if (downscaleMp != null) {
+            dataBuilder.putFloat(de.konradvoelkel.android.autokorrektur.pipeline.BatchProcessingWorker.KEY_DOWNSCALE_MP, downscaleMp)
+        }
+        val request = androidx.work.OneTimeWorkRequestBuilder<de.konradvoelkel.android.autokorrektur.pipeline.BatchProcessingWorker>()
+            .setInputData(dataBuilder.build())
+            .build()
+        androidx.work.WorkManager.getInstance(getApplication()).enqueue(request)
+        return request.id
+    }
+
+    /**
      * Cancels active inference jobs and resets editor state to idle defaults.
      */
     fun clearState() {
@@ -227,5 +254,24 @@ class MainViewModel(
     override fun onCleared() {
         super.onCleared()
         pipeline.close()
+    }
+
+    /**
+     * Factory for constructing [MainViewModel] with customized or mocked dependencies.
+     */
+    class Factory(
+        private val application: Application,
+        private val pipeline: StaticImagePipeline? = null
+    ) : androidx.lifecycle.ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+            val targetPipeline = pipeline ?: StaticImagePipeline(
+                ImageProcessor(application),
+                YoloServiceImpl(YoloTFLiteEngine(application)),
+                MiGanInference(application),
+                ServerSdxlApi(application)
+            )
+            return MainViewModel(application, targetPipeline) as T
+        }
     }
 }

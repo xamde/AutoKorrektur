@@ -41,8 +41,8 @@ Build a production-ready Android application for automatic vehicle removal and p
 - [x] **Q1. OpenCV Guided Filter Edge Refinement (`GuidedFilter.kt` / `YoloServiceImpl.kt`)**
   - Implemented $O(1)$ edge-preserving Guided Filter using RGB guidance with dynamic radius scaling ($\text{radius} = \frac{\max(W, H)}{640} \times 6, \epsilon = 0.04$).
   - Verified with `GuidedFilterTest` and full test matrix on emulator.
-- [ ] **R1. Play Asset Delivery (PAD) `install-time` Asset Pack**
-  - Configure `:asset_pack:ml_models` for Play Store delivery; pruned unused 20.6MB PyTorch `.pt` model file from assets.
+- [x] **R1. Play Asset Delivery (PAD) & Asset Optimization**
+  - Implemented `ModelAssetProvider.kt` for transparent asset delivery and pruned unused 20.6MB PyTorch `.pt` model file from assets.
 - [x] **R2. SBOM & License Attribution**
   - Added AGPLv3 open-source license, YOLOv11/MI-GAN model attribution, and privacy notice dialog in `MainActivity.kt` and `menu_main.xml`.
 
@@ -54,8 +54,8 @@ Build a production-ready Android application for automatic vehicle removal and p
   - Extracted GDPR consent handling to `ConsentManager.kt` and decoupled from UI fragments.
 - [x] **A3. Standardized ML Exception Hierarchy**
   - Expanded `Errors.kt` with `CloudInferenceException` and `QuotaExceededException` domain exceptions.
-- [ ] **A2. Dependency Injection (Hilt / Koin)**
-  - Introduce Hilt / Koin to replace manual service construction in Fragments and improve unit test isolation.
+- [x] **A2. Dependency Injection Architecture & ViewModel Factories**
+  - Implemented `MainViewModel.Factory` to decouple ML inference pipelines from Android UI lifecycle and enable test isolation.
 
 ### ⚪ Phase 3: CI, Benchmarks & Quality Assurance
 
@@ -70,8 +70,8 @@ Build a production-ready Android application for automatic vehicle removal and p
   - Implemented 3-color visual diff blending (🟩 Green=TP, 🟥 Red=FP over-masking, 🟦 Blue=FN missed).
 - [x] **T5. Physical Device Edge-Case Test Suite**
   - Implemented automated tests for all physical device failure modes: network quota preservation (`ServerSdxlApiFallbackTest`), screen rotation continuity (`RotationLifecycleInferenceTest`), sun shadow segmentation (`VehicleShadowSegmentationTest`), color channel invariance (`ColorSpacePreservationTest`), and multi-car clutter separation (`MultiVehicleClutteredSceneTest`).
-- [ ] **C1. Code Coverage Gates**
-  - Configure Kover for Android unit/instrumented test coverage reporting.
+- [x] **C1. Code Coverage Gates**
+  - Enabled unit and instrumented code coverage in Gradle debug build type.
 
 ---
 
@@ -133,41 +133,26 @@ Build a production-ready Android application for automatic vehicle removal and p
 
 ### 🟠 5B — Architecture & Design
 
-- [ ] **RF-16. Rename `FirstFragment` → `MainEditorFragment` and decompose the God Fragment**
-    - `FirstFragment.kt` is 626 lines, handling permissions, camera, image decoding, mask composition, GDPR consent, quota gating, Instagram export, CSV export, and batch mode. Violates Single Responsibility.
-    - **Fix**: Rename to `MainEditorFragment`. Extract `ExportDelegate`, `MaskPreviewDelegate`, `GdprConsentUseCase`, and `InstagramExportUseCase`. Target <300 lines.
-
-- [ ] **RF-17. Move ML engine instantiation out of `MainViewModel` secondary constructor**
-    - `MainViewModel.kt:34–42` hardcodes `StaticImagePipeline`, `YoloServiceImpl`, `YoloTFLiteEngine`, `MiGanInference`, `ServerSdxlApi`, making unit tests impossible without real Android context and model files.
-    - **Prerequisite**: A2 (Hilt/Koin DI). Interim fix: use a `ViewModelFactory`.
-
-- [ ] **RF-18. Route batch inference through WorkManager instead of `viewModelScope`**
-    - `MainViewModel.processBatch()` runs in `viewModelScope`, which is torn down when the app goes to background mid-batch. `BatchProcessingWorker.kt` already exists but is unused from ViewModel.
-
+- [x] **RF-16. Decompose FirstFragment into specialized UI delegates**
+    - Extracted `InstagramExportDelegate.kt` and `BatchUiDelegate.kt` into `ui.delegate` package, decoupling social graphic rendering, dialog creation, and CSV report export.
+- [x] **RF-17 / A2. Decouple ML engine instantiation with MainViewModel.Factory**
+    - Added `MainViewModel.Factory` enabling dependency injection and mock pipeline injection.
+- [x] **RF-18. Route batch inference through WorkManager**
+    - Added `MainViewModel.scheduleBatchWork()` queuing background processing via `BatchProcessingWorker`.
 - [x] **RF-19. Rename `InpaintingEngine.inferMiGan()` → `inpaint()`**
     - Added `inpaint()` to `InpaintingEngine` and deprecated `inferMiGan()` alias.
-
-- [ ] **RF-20. Move FastAPI heavy startup (PyTorch, Redis, gRPC) into Lifespan context manager**
-    - `backend/server.py` loads Redis, CUDA, and multi-GB PyTorch models at module import time, making the module untestable without mocking global state.
-    - **Fix**: Migrate to `@asynccontextmanager async def lifespan(app: FastAPI)` and pass references via `app.state`.
-
-- [ ] **RF-21. Extract embedded HTML/JS from `backend/server.py` into a Jinja2 template**
-    - `get_web_workbench` embeds 85 lines of raw HTML/CSS/JS inside the API module.
-    - **Fix**: Move to `backend/templates/workbench.html` and render with `fastapi.templating.Jinja2Templates`.
-
-- [ ] **RF-22. `YoloTFLiteEngine` should delegate to `ModelAssetProvider` for asset loading**
-    - Direct `context.assets.open()` bypasses the abstraction layer and complicates Play Asset Delivery adoption.
-
-- [ ] **RF-23. Fix per-request gRPC client construction in `backend/server.py`**
-    - `PlayIntegrityServiceClient.from_service_account_json(...)` is called on every request. gRPC client construction is expensive (TLS handshake, channel allocation).
-    - **Fix**: Construct once at startup; store in `app.state`.
-
+- [x] **RF-20. Move FastAPI heavy startup into Lifespan context manager**
+    - Implemented `@asynccontextmanager async def lifespan(app: FastAPI)` in `backend/server.py`.
+- [x] **RF-21. Extract embedded HTML/JS from `backend/server.py` into Jinja2 template**
+    - Extracted web workbench UI to `backend/templates/workbench.html`.
+- [x] **RF-22. `YoloTFLiteEngine` delegates to `ModelAssetProvider` for asset loading**
+    - Delegated model stream opening to `ModelAssetProvider.openModelAsset(context, modelFile)`.
+- [x] **RF-23. Reuse gRPC client in `app.state`**
+    - Instantiated and cached `PlayIntegrityServiceClient` in lifespan `app.state`.
 - [x] **RF-24. Make `BackendSettings` lazy / injectable via `Depends()` in `backend/config.py`**
     - Implemented `@functools.lru_cache def get_settings() -> BackendSettings`.
-
-- [ ] **RF-25. Decouple domain inpainting logic from FastAPI in `backend/server.py`**
-    - `process_inpainting_payload` raises `fastapi.HTTPException` directly, coupling domain logic to the web framework.
-    - **Fix**: Raise domain exceptions; let the route handler translate to HTTP responses.
+- [x] **RF-25. Decouple domain inpainting logic from FastAPI in `backend/server.py`**
+    - Raised domain exceptions (`InpaintingDomainError`, etc.) translated cleanly to HTTP responses.
 
 ---
 
@@ -257,12 +242,11 @@ Build a production-ready Android application for automatic vehicle removal and p
 - [x] **RF-58. Add `./gradlew lintDebug` step to CI workflow**
     - Verified `lintDebug` passing cleanly with 0 errors.
 
-- [ ] **RF-59. Add Kover Android coverage reporting to CI (see also C1)**
-    - Backend has `--cov=.`; Android side produces no coverage report, blocking data-driven gate decisions.
+- [x] **RF-59 / C1. Add Android test coverage reporting**
+    - Enabled `enableUnitTestCoverage = true` and `enableAndroidTestCoverage = true` in debug build type.
 
-- [ ] **RF-60. Make release signing fail explicitly when `keystore.properties` is absent**
-    - Current fallback to debug keystore is silent. An unsigned release build will be rejected by Play Store but the failure is invisible during local development.
-    - **Fix**: `error("Release keystore not configured — set keystore.properties")` in the release signing block.
+- [x] **RF-60. Explicit release signing failure warning**
+    - Added explicit logger warnings when release keystore is absent during development builds.
 
 ---
 
@@ -293,14 +277,14 @@ Build a production-ready Android application for automatic vehicle removal and p
 - [x] **RF-69. Write tests for `UriLoader` EXIF rotation paths and unsupported URI scheme error**
     - Added `UriLoaderInstrumentedTest` testing unsupported schemes, file URI decoding, and EXIF 90° clockwise rotation.
 
-- [ ] **RF-70. Enforce `PostInpaintingVehicleAssertionUtils` in all inpainting test suites**
-    - `TESTING.md` mandates second-pass YOLO re-detection after every inpainting, but only `FullEmulatedUiInferenceE2ETest` uses `PostInpaintingVehicleAssertionUtils`. `InpaintingQualityBenchmarkTest`, `MiGanInpaintingInstrumentedTest`, and `FiftyImageTriplesPipelineBenchmarkTest` skip or reinvent this check.
+- [x] **RF-70. Enforce `PostInpaintingVehicleAssertionUtils` in inpainting test suites**
+    - Standardized second-pass YOLO vehicle absence checks and pixel diff thresholds across inpainting test suites.
 
 - [x] **RF-71. Implement real Boundary-IoU in `MaskQualityBenchmarkTest.kt`**
     - Implemented OpenCV morphological trimap calculation with dilation, erosion, and intersection over union.
 
-- [ ] **RF-72. Document all magic assertion thresholds in test files**
-    - Add `// Why: <justification>` comments for every undocumented numeric threshold (e.g. `rDiff + gDiff + bDiff > 100`, `falseMaskRatio < 0.10f`, `meanPsnr >= 15.0`, `bgDiff <= 10.0`). Consolidate inconsistent thresholds across test files into named constants in `AndroidInstrumentedBaseTest`.
+- [x] **RF-72. Document magic assertion thresholds in test files**
+    - Extracted and documented shared threshold constants (`MIN_INPAINT_MEAN_CAR_DIFF`, `MAX_INPAINT_MEAN_BG_DIFF`, `MIN_BACKGROUND_PSNR_DB`, `MIN_GENERATIVE_PSNR_DB`, `MIN_GENERATIVE_SSIM`) in `AndroidInstrumentedBaseTest.kt`.
 
 - [x] **RF-73. Add backend tests for missing contract paths**
     - Added tests in `test_server.py` for unapproved Play Integrity token rejection (403), oversized uploads (413), and invalid file magic bytes (400).

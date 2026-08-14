@@ -66,6 +66,8 @@ class FirstFragment : Fragment() {
 
     private val viewModel: MainViewModel by activityViewModels()
     private lateinit var exportManager: ImageExportManager
+    private lateinit var instagramDelegate: de.konradvoelkel.android.autokorrektur.ui.delegate.InstagramExportDelegate
+    private lateinit var batchUiDelegate: de.konradvoelkel.android.autokorrektur.ui.delegate.BatchUiDelegate
 
     // Activity result launcher for image selection
     private val selectImageLauncher = registerForActivityResult(
@@ -138,6 +140,8 @@ class FirstFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         exportManager = ImageExportManager(requireContext())
+        instagramDelegate = de.konradvoelkel.android.autokorrektur.ui.delegate.InstagramExportDelegate(requireContext(), exportManager) { showSnackbar(it) }
+        batchUiDelegate = de.konradvoelkel.android.autokorrektur.ui.delegate.BatchUiDelegate(requireContext(), exportManager) { showSnackbar(it) }
         setupUI()
         observeViewModel()
     }
@@ -547,7 +551,7 @@ class FirstFragment : Fragment() {
         val successCount = results.count { it.success }
         val message = getString(R.string.msg_batch_completed, successCount, results.size)
         Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG)
-            .setAction(R.string.btn_export_csv) { exportManager.exportBatchResultsToCSV(results) }
+            .setAction(R.string.btn_export_csv) { batchUiDelegate.showCsvExportDialog(results) }
             .show()
     }
 
@@ -560,61 +564,10 @@ class FirstFragment : Fragment() {
         val inpainted = state.result.inpaintedBitmap ?: return
         val currentOriginalBitmap = state.result.originalBitmap
 
-        try {
-            val options = resources.getStringArray(R.array.instagram_formats)
-            AlertDialog.Builder(requireContext())
-                .setTitle(R.string.dialog_instagram_format_title)
-                .setItems(options) { _, selectedPosition ->
-                    val (ratio, layout) = when (selectedPosition) {
-                        0 -> Pair(InstagramExportUtils.AspectRatio.SQUARE_1_1, InstagramExportUtils.LayoutStyle.SIDE_BY_SIDE)
-                        1 -> Pair(InstagramExportUtils.AspectRatio.PORTRAIT_4_5, InstagramExportUtils.LayoutStyle.STACKED)
-                        else -> Pair(InstagramExportUtils.AspectRatio.STORY_9_16, InstagramExportUtils.LayoutStyle.SIDE_BY_SIDE)
-                    }
-
-                    val graphic =
-                        InstagramExportUtils.createComparisonBitmap(
-                            beforeBitmap = currentOriginalBitmap,
-                            afterBitmap = inpainted,
-                            ratio = ratio,
-                            layout = layout
-                        )
-                    
-                    val actionOptions = arrayOf(
-                        getString(R.string.share_to_instagram),
-                        getString(R.string.save_graphic)
-                    )
-                    AlertDialog.Builder(requireContext())
-                        .setTitle(R.string.dialog_instagram_ready_title)
-                        .setItems(actionOptions) { _, actionWhich ->
-                            when (actionWhich) {
-                                0 -> {
-                                    val shareUri = de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.saveBitmapForSharing(requireContext(), graphic)
-                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                        type = "image/jpeg"
-                                        putExtra(Intent.EXTRA_STREAM, shareUri)
-                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    }
-                                    startActivity(
-                                        Intent.createChooser(
-                                            shareIntent,
-                                            getString(R.string.share_chooser_title)
-                                        )
-                                    )
-                                }
-                                1 -> {
-                                    if (exportManager.saveImageToGallery(graphic) != null) showSnackbar(
-                                        getString(R.string.msg_instagram_graphic_saved)
-                                    )
-                                }
-                            }
-                        }
-                        .show()
-                }
-                .show()
-        } catch (e: Exception) {
-            AppLogger.error("Failed to generate Instagram comparison graphic", e)
-            showSnackbar(getString(R.string.error_export_message, e.message))
-        }
+        instagramDelegate.showExportDialog(
+            originalBitmap = currentOriginalBitmap,
+            inpaintedBitmap = inpainted
+        )
     }
 
     private fun getDownscaleMpFromSpinner(): Float? {

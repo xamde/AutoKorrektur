@@ -12,44 +12,46 @@ from pydantic import BaseModel, Field
 
 from backend.config import settings
 
+from contextlib import asynccontextmanager
+from pathlib import Path
+
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("autokorrektur-backend")
 
-# Log configuration on startup
-logger.info("Effective configuration:")
-for key, value in settings.model_dump().items():
-    if "password" in key.lower() or "token" in key.lower():
-        logger.info(f"  {key}: [REDACTED]")
-    else:
-        logger.info(f"  {key}: {value}")
+# Setup template path
+TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 
-app = FastAPI(
-    title="AutoKorrektur SDXL Inpainting API",
-    description="Photorealistic SDXL cloud inpainting backend service with memory-only GDPR processing.",
-    version="1.0.0",
-)
+# Domain Exceptions
+class InpaintingDomainError(Exception):
+    """Base domain exception for inpainting backend."""
+    def __init__(self, message: str, status_code: int = 400):
+        super().__init__(message)
+        self.message = message
+        self.status_code = status_code
 
-# Redis / Rate limiting setup
+
+class InvalidImagePayloadError(InpaintingDomainError):
+    def __init__(self, message: str):
+        super().__init__(message, status_code=400)
+
+
+class ImageDimensionExceededError(InpaintingDomainError):
+    def __init__(self, message: str):
+        super().__init__(message, status_code=400)
+
+
+class IntegrityVerificationError(InpaintingDomainError):
+    def __init__(self, message: str):
+        super().__init__(message, status_code=403)
+
+
+# Global state holders for lifespan
 redis_client: Any | None = None
-
-if settings.redis_url:
-    try:
-        import redis.asyncio as redis
-
-        redis_client = redis.from_url(settings.redis_url)
-        logger.info(f"Connected to Redis rate-limiting store at {settings.redis_url}")
-    except Exception as e:
-        logger.warning(
-            f"Failed to connect to Redis at {settings.redis_url}, falling back to in-memory store: {e}"
-        )
-
-rate_limits: dict[str, dict[date, int]] = defaultdict(lambda: defaultdict(int))
-
-# SDXL Pipeline loader (Optional GPU / PyTorch execution)
 sdxl_pipeline: Any | None = None
-# B11: Guard global SDXL pipeline with a semaphore to prevent CUDA OOM/crashes.
 sdxl_semaphore: asyncio.Semaphore | None = None
+integrity_client: Any | None = None
+rate_limits: dict[str, dict[date, int]] = defaultdict(lambda: defaultdict(int))
 
 
 def get_sdxl_semaphore() -> asyncio.Semaphore:
@@ -59,20 +61,63 @@ def get_sdxl_semaphore() -> asyncio.Semaphore:
         sdxl_semaphore = asyncio.Semaphore(1)
     return sdxl_semaphore
 
-try:
-    import torch
-    from diffusers import AutoPipelineForInpainting
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    logger.info(f"PyTorch detected with device: {device}")
-    if settings.enable_sdxl_load:
-        sdxl_pipeline = AutoPipelineForInpainting.from_pretrained(  # type: ignore[no-untyped-call]
-            settings.sdxl_model_id,
-            torch_dtype=torch.float16 if device == "cuda" else torch.float32,
-        ).to(device)
-        logger.info(f"Loaded inpainting model: {settings.sdxl_model_id} on {device}")
-except Exception as e:
-    logger.info(f"SDXL pipeline initialized in mock/test mode: {e}")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """FastAPI lifespan context manager initializing models, caches, and API clients."""
+    global redis_client, sdxl_pipeline, integrity_client
+
+    logger.info("Initializing AutoKorrektur backend lifespan...")
+    # 1. Redis setup
+    if settings.redis_url:
+        try:
+            import redis.asyncio as redis
+            redis_client = redis.from_url(settings.redis_url)
+            logger.info(f"Connected to Redis rate-limiting store at {settings.redis_url}")
+        except Exception as e:
+            logger.warning(f"Failed to connect to Redis: {e}")
+
+    # 2. PyTorch / SDXL setup
+    try:
+        import torch
+        from diffusers import AutoPipelineForInpainting
+
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        logger.info(f"PyTorch detected with device: {device}")
+        if settings.enable_sdxl_load:
+            sdxl_pipeline = AutoPipelineForInpainting.from_pretrained(
+                settings.sdxl_model_id,
+                torch_dtype=torch.float16 if device == "cuda" else torch.float32,
+            ).to(device)
+            logger.info(f"Loaded inpainting model: {settings.sdxl_model_id} on {device}")
+    except Exception as e:
+        logger.info(f"SDXL pipeline initialized in mock/test mode: {e}")
+
+    # 3. Google Play Integrity gRPC client setup
+    if settings.google_application_credentials:
+        try:
+            from google.cloud import play_integrity_v1
+            integrity_client = play_integrity_v1.PlayIntegrityServiceClient.from_service_account_json(
+                settings.google_application_credentials
+            )
+            logger.info("Initialized Google Play Integrity gRPC client")
+        except Exception as e:
+            logger.warning(f"Failed to initialize Play Integrity client: {e}")
+
+    yield
+
+    # Clean shutdown
+    if redis_client:
+        await redis_client.close()
+    logger.info("Shutting down AutoKorrektur backend lifespan.")
+
+
+app = FastAPI(
+    title="AutoKorrektur SDXL Inpainting API",
+    description="Photorealistic SDXL cloud inpainting backend service with memory-only GDPR processing.",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 
 
 # --- Pydantic Data Models (EiPy Data-Handling Standards) ---
@@ -105,7 +150,7 @@ def verify_token(device_uuid: str, play_integrity_token: str) -> bool:
         try:
             from google.cloud import play_integrity_v1
 
-            client = play_integrity_v1.PlayIntegrityServiceClient.from_service_account_json(
+            client = integrity_client or play_integrity_v1.PlayIntegrityServiceClient.from_service_account_json(
                 settings.google_application_credentials
             )
             request = play_integrity_v1.DecodeIntegrityTokenRequest(
@@ -116,31 +161,32 @@ def verify_token(device_uuid: str, play_integrity_token: str) -> bool:
             # Check package name and device integrity
             token_payload = response.token_payload_external
             if token_payload.app_integrity.package_name != settings.android_package_name:
-                 logger.warning(f"Integrity token package name mismatch: {token_payload.app_integrity.package_name}")
-                 if settings.strict_integrity_check:
-                     raise HTTPException(status_code=403, detail="App integrity check failed: package mismatch")
+                logger.warning(f"Integrity token package name mismatch: {token_payload.app_integrity.package_name}")
+                if settings.strict_integrity_check:
+                    raise IntegrityVerificationError("App integrity check failed: package mismatch")
 
             # Check device integrity levels (MEETS_DEVICE_INTEGRITY or better)
             integrity_levels = token_payload.device_integrity.device_recognition_verdict
             if "MEETS_DEVICE_INTEGRITY" not in integrity_levels:
                 logger.warning(f"Integrity token device recognition failed for {device_uuid}: {integrity_levels}")
                 if settings.strict_integrity_check:
-                    raise HTTPException(status_code=403, detail="Device integrity check failed")
+                    raise IntegrityVerificationError("Device integrity check failed")
 
             logger.info(f"Play Integrity token verified for device {device_uuid}")
             return True
+        except InpaintingDomainError:
+            raise
         except Exception as e:
             logger.error(f"Error during Play Integrity verification: {e}")
             if settings.strict_integrity_check:
-                raise HTTPException(status_code=403, detail=f"Play Integrity verification error: {str(e)}") from e
+                raise IntegrityVerificationError(f"Play Integrity verification error: {str(e)}") from e
 
     logger.warning(
         f"Invalid Play Integrity token rejected for device {device_uuid}: {play_integrity_token[:10]}..."
     )
     if settings.strict_integrity_check:
-        raise HTTPException(status_code=403, detail="Invalid Google Play Integrity attestation token")
+        raise IntegrityVerificationError("Invalid Google Play Integrity attestation token")
 
-    # If not strict and no credentials, we still log but allow (dev mode)
     return True
 
 
@@ -153,27 +199,27 @@ def process_inpainting_payload(
     """Core image inpainting processor contract.
 
     Synchronous CPU-bound PIL / PyTorch transformation function.
+    Raises domain exceptions rather than web-framework HTTP exceptions.
     """
     from PIL import Image
 
-    # C18: Magic byte sniffing and dimension validation
     def validate_and_open(data: bytes, name: str) -> Image.Image:
         # Sniff magic bytes for JPEG/PNG
         if not (data.startswith(b"\xff\xd8\xff") or data.startswith(b"\x89PNG\r\n\x1a\n")):
-             raise HTTPException(status_code=400, detail=f"Invalid image format for {name}. Only JPEG and PNG are allowed.")
+            raise InvalidImagePayloadError(f"Invalid image format for {name}. Only JPEG and PNG are allowed.")
 
         try:
             img = Image.open(io.BytesIO(data))
-            img.verify() # verify it's not truncated
-            img = Image.open(io.BytesIO(data)) # reopen as verify() closes the file
+            img.verify()
+            img = Image.open(io.BytesIO(data))
 
             if img.width > 2048 or img.height > 2048:
-                raise HTTPException(status_code=400, detail=f"{name} dimensions exceed 2048x2048 limit")
+                raise ImageDimensionExceededError(f"{name} dimensions exceed 2048x2048 limit")
             return img
+        except InpaintingDomainError:
+            raise
         except Exception as e:
-            if isinstance(e, HTTPException):
-                raise
-            raise HTTPException(status_code=400, detail=f"Failed to process {name}: {str(e)}") from e
+            raise InvalidImagePayloadError(f"Failed to process {name}: {str(e)}") from e
 
     init_img = validate_and_open(image_bytes, "image").convert("RGB")
     mask_img = validate_and_open(mask_bytes, "mask").convert("L")
@@ -188,7 +234,7 @@ def process_inpainting_payload(
         else:
             result = init_img
 
-    # C18: Re-encode image before returning to ensure clean metadata and format
+    # Re-encode image before returning to ensure clean metadata and format
     buf = io.BytesIO()
     result.save(buf, format="JPEG", quality=95, optimize=True)
     return buf.getvalue()
@@ -242,105 +288,11 @@ async def check_rate_limit(device_uuid: str, client_ip: str) -> None:
 
 @app.get("/", response_class=HTMLResponse)
 def get_web_workbench() -> str:
-    """EiPy User-Interfaces: Interactive in-browser drag-and-drop web workbench."""
-    return """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>AutoKorrektur SDXL Workbench</title>
-        <style>
-            :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --text: #f8fafc; }
-            body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 2rem; }
-            .container { max-width: 900px; margin: 0 auto; background: var(--card); border-radius: 12px; padding: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-            h1 { margin-top: 0; color: var(--accent); }
-            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem; }
-            .drop-zone { border: 2px dashed #475569; border-radius: 8px; padding: 1.5rem; text-align: center; cursor: pointer; transition: 0.2s; }
-            .drop-zone:hover { border-color: var(--accent); background: rgba(56, 189, 248, 0.05); }
-            input[type="file"] { display: none; }
-            button { width: 100%; padding: 0.8rem; background: var(--accent); color: #000; border: none; border-radius: 6px; font-weight: bold; font-size: 1rem; cursor: pointer; margin-top: 1.5rem; }
-            button:hover { opacity: 0.9; }
-            .preview-container { margin-top: 1.5rem; text-align: center; }
-            img { max-width: 100%; border-radius: 8px; border: 1px solid #475569; }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1>AutoKorrektur Inpainting Workbench</h1>
-            <p>Test the SDXL Cloud Inpainting API directly from your browser.</p>
-            <form id="inpaintForm">
-                <div class="grid">
-                    <div class="drop-zone" onclick="document.getElementById('imageFile').click()">
-                        <strong>📷 Source Image</strong>
-                        <p id="imageName">Click or drop JPEG</p>
-                        <input type="file" id="imageFile" accept="image/*" required onchange="updateName('imageFile', 'imageName')">
-                    </div>
-                    <div class="drop-zone" onclick="document.getElementById('maskFile').click()">
-                        <strong>🎭 Vehicle Mask</strong>
-                        <p id="maskName">Click or drop Mask JPEG</p>
-                        <input type="file" id="maskFile" accept="image/*" required onchange="updateName('maskFile', 'maskName')">
-                    </div>
-                </div>
-                <div style="margin-top: 1rem;">
-                    <label for="integrityToken" style="display: block; margin-bottom: 0.5rem;">🔑 Play Integrity Token</label>
-                    <input type="text" id="integrityToken" placeholder="Paste your token here" style="width: 100%; padding: 0.8rem; background: #334155; border: 1px solid #475569; border-radius: 6px; color: white;">
-                </div>
-                <button type="submit" id="submitBtn">Run SDXL Inpainting</button>
-            </form>
-            <div class="preview-container" id="resultContainer" style="display:none;">
-                <h3>Inpainted Output Result</h3>
-                <img id="resultImg" src="" alt="Result">
-            </div>
-        </div>
-        <script>
-            function updateName(inputId, textId) {
-                const input = document.getElementById(inputId);
-                if (input.files.length > 0) {
-                    document.getElementById(textId).innerText = input.files[0].name;
-                }
-            }
-            document.getElementById('inpaintForm').onsubmit = async (e) => {
-                e.preventDefault();
-                const btn = document.getElementById('submitBtn');
-                btn.disabled = true;
-                btn.innerText = 'Processing Inpainting...';
-                const form = e.target;
-                const formData = new FormData(form);
-                const submitBtn = document.getElementById('submitBtn');
-                const spinner = document.getElementById('spinner');
-                const previewContainer = document.getElementById('preview-container');
-                const resultImage = document.getElementById('resultImage');
-
-                submitBtn.disabled = true;
-                spinner.style.display = 'block';
-                previewContainer.style.display = 'none';
-
-                try {
-                    const response = await fetch('/v1/inpaint', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    if (!response.ok) {
-                        const err = await response.json();
-                        alert('Error: ' + (err.detail || response.statusText));
-                        return;
-                    }
-                    const blob = await response.blob();
-                    resultImage.src = URL.createObjectURL(blob);
-                    previewContainer.style.display = 'block';
-                } catch (err) {
-                    alert('Network Error: ' + err.message);
-                } finally {
-                    submitBtn.disabled = false;
-                    spinner.style.display = 'none';
-                }
-            });
-        </script>
-    </body>
-    </html>
-    """
-    return HTMLResponse(content=html_content)
+    """Interactive in-browser drag-and-drop web workbench loaded from template."""
+    workbench_path = TEMPLATES_DIR / "workbench.html"
+    if workbench_path.exists():
+        return workbench_path.read_text(encoding="utf-8")
+    return "<h1>AutoKorrektur Inpainting Workbench</h1>"
 
 
 @app.post("/v1/inpaint", response_class=StreamingResponse)
@@ -360,7 +312,11 @@ async def inpaint_image(
     client_ip = request.client.host if request.client else "unknown"
     logger.info(f"Received request for /v1/inpaint from {device_uuid} at {client_ip}")
 
-    verify_token(device_uuid, play_integrity_token)
+    try:
+        verify_token(device_uuid, play_integrity_token)
+    except InpaintingDomainError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message) from e
+
     await check_rate_limit(device_uuid, client_ip)
 
     # A7: Upload size limit check
@@ -387,12 +343,15 @@ async def inpaint_image(
 
         # B11: Use the semaphore to limit concurrent SDXL inferences
         async with get_sdxl_semaphore():
-            # EiPy Asyncio: Offload CPU-bound image manipulation to threadpool to avoid event loop blocking
+            # Offload CPU-bound image manipulation to threadpool
             output_data = await asyncio.to_thread(process_inpainting_payload, image_data, mask_data, preview_data)
 
         logger.info("Returning processed image from memory")
         return StreamingResponse(io.BytesIO(output_data), media_type="image/jpeg")
 
+    except InpaintingDomainError as e:
+        logger.warning(f"Inpainting domain validation error: {e.message}")
+        raise HTTPException(status_code=e.status_code, detail=e.message) from e
     except icontract.ViolationError as e:
         logger.error(f"Contract violation: {e}")
         raise HTTPException(status_code=400, detail=str(e)) from e

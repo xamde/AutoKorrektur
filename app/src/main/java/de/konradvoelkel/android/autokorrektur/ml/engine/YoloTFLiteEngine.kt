@@ -2,6 +2,7 @@ package de.konradvoelkel.android.autokorrektur.ml.engine
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import de.konradvoelkel.android.autokorrektur.ml.asset.ModelAssetProvider
 import de.konradvoelkel.android.autokorrektur.ml.errors.InferenceException
 import de.konradvoelkel.android.autokorrektur.ml.errors.ModelLoadException
 import de.konradvoelkel.android.autokorrektur.ml.errors.ShapeMismatchException
@@ -66,16 +67,8 @@ class YoloTFLiteEngine(private val context: Context) : YoloEngine {
                 "model/${modelName}-seg_saved_model/${modelName}-seg_float32.tflite"
             }
             try {
-                val modelBytes = try {
-                    context.assets.openFd(modelFile).use { afd ->
-                        afd.createInputStream().use { inputStream ->
-                            inputStream.readBytes()
-                        }
-                    }
-                } catch (e: Exception) {
-                    context.assets.open(modelFile).use { inputStream ->
-                        inputStream.readBytes()
-                    }
+                val modelBytes = ModelAssetProvider.openModelAsset(context, modelFile).use { inputStream ->
+                    inputStream.readBytes()
                 }
 
                 val modelBuffer = ByteBuffer.allocateDirect(modelBytes.size)
