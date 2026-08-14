@@ -3,6 +3,7 @@ package de.konradvoelkel.android.autokorrektur.utils
 import android.graphics.Bitmap
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
+import de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
@@ -10,7 +11,7 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 @SmallTest
-class InstagramExportUtilsInstrumentedTest {
+class InstagramExportUtilsInstrumentedTest : AndroidInstrumentedBaseTest() {
 
     @Test
     fun createComparisonBitmap_squareOneToOne_generatesValid1080x1080Bitmap() {

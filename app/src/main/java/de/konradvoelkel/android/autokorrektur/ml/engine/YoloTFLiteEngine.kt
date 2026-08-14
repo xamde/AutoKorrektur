@@ -41,6 +41,7 @@ class YoloTFLiteEngine(private val context: Context) : YoloEngine {
     private var inputBuffer: ByteBuffer? = null
     private var outputDetections: ByteBuffer? = null
     private var outputPrototypes: ByteBuffer? = null
+    private var pixelBuffer: ByteArray? = null
 
     // Synchronization lock for lifecycle and run serialization
     private val lock = Any()
@@ -135,6 +136,10 @@ class YoloTFLiteEngine(private val context: Context) : YoloEngine {
         val inBuf = inputBuffer
         if (inBuf == null || inBuf.capacity() < inBytes) {
             inputBuffer = ByteBuffer.allocateDirect(inBytes).order(ByteOrder.nativeOrder())
+        }
+        val totalRawBytes = inputH * inputW * inputC
+        if (pixelBuffer == null || pixelBuffer!!.size < totalRawBytes) {
+            pixelBuffer = ByteArray(totalRawBytes)
         }
         // Assume float32 outputs
         val detFloats = detShape.fold(1) { acc, v -> acc * v }
@@ -261,6 +266,7 @@ class YoloTFLiteEngine(private val context: Context) : YoloEngine {
                 inputBuffer = null
                 outputDetections = null
                 outputPrototypes = null
+                pixelBuffer = null
                 detShape = intArrayOf()
                 protoShape = intArrayOf()
             }
@@ -289,9 +295,13 @@ class YoloTFLiteEngine(private val context: Context) : YoloEngine {
             val channels = input.channels()
             if (channels != 3) throw ShapeMismatchException("Expected 3 channels, got $channels")
 
-            // Copy pixels
+            // Copy pixels using pre-allocated buffer
             val totalBytes = rows * cols * channels
-            val pixels = ByteArray(totalBytes)
+            val pixels = if (pixelBuffer != null && pixelBuffer!!.size >= totalBytes) {
+                pixelBuffer!!
+            } else {
+                ByteArray(totalBytes).also { pixelBuffer = it }
+            }
             val reshaped = input.reshape(1, totalBytes)
             reshaped.get(0, 0, pixels)
             reshaped.release()

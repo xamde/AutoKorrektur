@@ -17,6 +17,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.opencv.android.OpenCVLoader
 import org.opencv.android.Utils
+import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
 import org.opencv.core.Size
@@ -206,13 +207,65 @@ class MaskQualityBenchmarkTest : AndroidInstrumentedBaseTest() {
         val dice = if (predCount + gtCount > 0) (2.0f * intersection) / (predCount + gtCount).toFloat() else 1.0f
         val overMasking = if (bgTotal > 0) fpCount.toFloat() / bgTotal.toFloat() else 0.0f
 
+        // Compute true Boundary-IoU with OpenCV trimap
+        val predCarMat = Mat(height, width, CvType.CV_8UC1)
+        val gtCarMat = Mat(height, width, CvType.CV_8UC1)
+        val predCarBytes = ByteArray(width * height) { if ((predBytes[it].toInt() and 0xFF) < 128) 255.toByte() else 0.toByte() }
+        val gtCarBytes = ByteArray(width * height) { if (Color.red(gtPixels[it]) > 128) 255.toByte() else 0.toByte() }
+        predCarMat.put(0, 0, predCarBytes)
+        gtCarMat.put(0, 0, gtCarBytes)
+
+        val boundaryIou = computeBoundaryIou(predCarMat, gtCarMat, d = 4)
+        predCarMat.release()
+        gtCarMat.release()
+
         return SegmentationMetrics(
             sampleId = sampleId,
             category = category,
             iou = iou,
             dice = dice,
-            boundaryIou = iou * 0.95f,
+            boundaryIou = boundaryIou,
             overMaskingRate = overMasking
         )
+    }
+
+    private fun computeBoundaryIou(
+        predMat: Mat,
+        gtMat: Mat,
+        d: Int = 4
+    ): Float {
+        val kernelSize = (2 * d + 1).toDouble()
+        val kernel = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, Size(kernelSize, kernelSize))
+        val gtDilated = Mat()
+        val gtEroded = Mat()
+        val trimap = Mat()
+
+        Imgproc.dilate(gtMat, gtDilated, kernel)
+        Imgproc.erode(gtMat, gtEroded, kernel)
+        Core.subtract(gtDilated, gtEroded, trimap)
+
+        val predTrimap = Mat()
+        val gtTrimap = Mat()
+        Core.bitwise_and(predMat, trimap, predTrimap)
+        Core.bitwise_and(gtMat, trimap, gtTrimap)
+
+        val intersectionMat = Mat()
+        val unionMat = Mat()
+        Core.bitwise_and(predTrimap, gtTrimap, intersectionMat)
+        Core.bitwise_or(predTrimap, gtTrimap, unionMat)
+
+        val intersection = Core.countNonZero(intersectionMat)
+        val union = Core.countNonZero(unionMat)
+
+        kernel.release()
+        gtDilated.release()
+        gtEroded.release()
+        trimap.release()
+        predTrimap.release()
+        gtTrimap.release()
+        intersectionMat.release()
+        unionMat.release()
+
+        return if (union > 0) intersection.toFloat() / union.toFloat() else 1.0f
     }
 }

@@ -2,13 +2,14 @@ package de.konradvoelkel.android.autokorrektur
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 
 @RunWith(AndroidJUnit4::class)
-class VehicleTestDataIntegrationTest {
+class VehicleTestDataIntegrationTest : AndroidInstrumentedBaseTest() {
 
     private val testPhotos = listOf(
         "street_with_car.jpg",

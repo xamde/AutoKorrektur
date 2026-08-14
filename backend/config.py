@@ -36,7 +36,7 @@ class BackendSettings(BaseSettings):
         description="Whether to enforce strict Google Play Integrity attestation token verification",
     )
     allowed_integrity_tokens: list[str] = Field(
-        default=["mock-valid-token"],
+        default_factory=list,
         description="List of mock Play Integrity tokens permitted in development/test environments",
     )
     google_application_credentials: str | None = Field(
