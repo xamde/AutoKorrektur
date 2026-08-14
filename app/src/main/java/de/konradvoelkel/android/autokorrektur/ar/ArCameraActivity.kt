@@ -8,6 +8,7 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.snackbar.Snackbar
 import de.konradvoelkel.android.autokorrektur.R
 import de.konradvoelkel.android.autokorrektur.databinding.ActivityArCameraBinding
@@ -15,10 +16,8 @@ import de.konradvoelkel.android.autokorrektur.ml.api.YoloService
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
 import de.konradvoelkel.android.autokorrektur.ml.engine.YoloTFLiteEngine
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
-import androidx.lifecycle.lifecycleScope
+import de.konradvoelkel.android.autokorrektur.utils.ImageExportManager
 import kotlinx.coroutines.launch
-import org.opencv.android.Utils
-import org.opencv.core.CvType
 import org.opencv.core.Mat
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -33,6 +32,10 @@ class ArCameraActivity : AppCompatActivity() {
     private lateinit var cameraExecutor: ExecutorService
     private val accumulator = TemporalBackgroundAccumulator()
     private lateinit var yoloInference: YoloService
+    private lateinit var arPipeline: RealtimeArPipeline
+    private lateinit var exportManager: ImageExportManager
+
+    private var latestRenderedBitmap: Bitmap? = null
 
     /**
      * Sets up CameraX view binding, buttons, and launches asynchronous YOLO engine initialization.
@@ -44,10 +47,26 @@ class ArCameraActivity : AppCompatActivity() {
 
         cameraExecutor = Executors.newSingleThreadExecutor()
         yoloInference = YoloServiceImpl(YoloTFLiteEngine(this))
+        arPipeline = RealtimeArPipeline(yoloInference, accumulator)
+        exportManager = ImageExportManager(this)
+
+        arPipeline.onFrameRendered = { bitmap, fps ->
+            runOnUiThread {
+                if (!isDestroyed && !isFinishing) {
+                    val prev = latestRenderedBitmap
+                    latestRenderedBitmap = bitmap
+                    binding.arOverlayView.setImageBitmap(bitmap)
+                    binding.arFpsBadge.text = "${fps.toInt().coerceAtLeast(1)} FPS"
+                    prev?.recycle()
+                } else {
+                    bitmap.recycle()
+                }
+            }
+        }
 
         lifecycleScope.launch {
             try {
-                yoloInference.initialize(modelName = "yolo11n", useFP16 = false)
+                arPipeline.initialize(modelName = "yolo11s")
             } catch (e: Exception) {
                 AppLogger.error("Failed to initialize YOLO for AR camera", e)
             }
@@ -58,12 +77,19 @@ class ArCameraActivity : AppCompatActivity() {
         }
 
         binding.resetArButton.setOnClickListener {
-            accumulator.reset()
+            arPipeline.reset()
             Snackbar.make(binding.root, R.string.msg_ar_reset, Snackbar.LENGTH_SHORT).show()
         }
 
         binding.captureArButton.setOnClickListener {
-            Snackbar.make(binding.root, R.string.msg_ar_captured, Snackbar.LENGTH_SHORT).show()
+            val currentBmp = latestRenderedBitmap
+            if (currentBmp != null) {
+                val copyBmp = currentBmp.copy(currentBmp.config ?: Bitmap.Config.ARGB_8888, true)
+                exportManager.saveImageToGallery(copyBmp)
+                Snackbar.make(binding.root, R.string.msg_ar_captured, Snackbar.LENGTH_SHORT).show()
+            } else {
+                Snackbar.make(binding.root, "No AR frame ready to capture", Snackbar.LENGTH_SHORT).show()
+            }
         }
 
         startCamera()
@@ -92,7 +118,24 @@ class ArCameraActivity : AppCompatActivity() {
                     .build()
                     .also {
                         it.setAnalyzer(cameraExecutor) { imageProxy ->
-                            imageProxy.close()
+                            try {
+                                val rotation = imageProxy.imageInfo.rotationDegrees
+                                val rgbaMat = ArFrameConverter.yuvImageProxyToRgbaMat(imageProxy)
+                                val rotatedMat = if (rotation != 0) {
+                                    val rot = ArFrameConverter.rotateMat(rgbaMat, rotation)
+                                    rgbaMat.release()
+                                    rot
+                                } else {
+                                    rgbaMat
+                                }
+
+                                arPipeline.processFrame(rotatedMat)
+                                rotatedMat.release()
+                            } catch (e: Exception) {
+                                AppLogger.error("Error analyzing AR frame", e)
+                            } finally {
+                                imageProxy.close()
+                            }
                         }
                     }
 
@@ -112,10 +155,9 @@ class ArCameraActivity : AppCompatActivity() {
     override fun onDestroy() {
         cameraExecutor.shutdown()
         cameraProvider?.unbindAll()
-        accumulator.reset()
-        if (::yoloInference.isInitialized) {
-            yoloInference.close()
-        }
+        arPipeline.close()
+        latestRenderedBitmap?.recycle()
+        latestRenderedBitmap = null
         super.onDestroy()
     }
 }

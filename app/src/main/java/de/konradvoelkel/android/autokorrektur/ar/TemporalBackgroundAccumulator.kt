@@ -17,6 +17,12 @@ class TemporalBackgroundAccumulator : AutoCloseable {
     private var backgroundMat: Mat? = null
 
     /**
+     * Whether clean background pixels have been accumulated into the buffer.
+     */
+    val hasAccumulatedBackground: Boolean
+        get() = backgroundMat != null
+
+    /**
      * Accumulates clean background pixels from [frameMat] and blends accumulated background
      * into vehicle regions specified by [maskMat].
      *
