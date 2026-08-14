@@ -102,7 +102,7 @@ class MiGanInpaintingInstrumentedTest : AndroidInstrumentedBaseTest() {
 
         // 1) Verify car pixels were modified (inpainted) in the car hole (referenceMask > 0)
         val carDiff = OpenCvTestUtils.meanAbsDiffOnMaskRgb8u3(referenceMask, inRgb8, outRgb8)
-        assertTrue("Car region must be inpainted (mean diff > 0.5, actual: $carDiff)", carDiff > 0.5)
+        assertTrue("Car region must be inpainted (mean diff >= 10.0, actual: $carDiff)", carDiff >= 10.0)
 
         // 2) Verify in non-car (background) regions, output agrees with input
         val bgMask = Mat()
@@ -110,7 +110,7 @@ class MiGanInpaintingInstrumentedTest : AndroidInstrumentedBaseTest() {
         val bgDiff = OpenCvTestUtils.meanAbsDiffOnMaskRgb8u3(bgMask, inRgb8, outRgb8)
         bgMask.release()
 
-        val tolerancePerChannel = 10.0
+        val tolerancePerChannel = 2.0
         assertTrue(
             "Background should be preserved (mean abs diff per channel <= $tolerancePerChannel, actual: $bgDiff)",
             bgDiff <= tolerancePerChannel

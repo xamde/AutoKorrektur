@@ -52,6 +52,37 @@ open class AndroidInstrumentedBaseTest {
         }
     }
 
+    /**
+     * Runs YOLO re-detection on an image Bitmap to verify whether vehicles remain (RF-70).
+     */
+    protected suspend fun hasVehicleInImage(
+        yolo: de.konradvoelkel.android.autokorrektur.ml.api.YoloService,
+        image: android.graphics.Bitmap,
+        scoreThreshold: Float = 0.35f
+    ): Boolean {
+        val imageProcessor = PipelineTestFixtures.imageProcessor()
+        val tempFile = File(appContext.cacheDir, "yolo_recheck_${System.nanoTime()}.jpg")
+        baseTempFiles.add(tempFile)
+        java.io.FileOutputStream(tempFile).use { image.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, it) }
+        val processed = imageProcessor.processInputImage(
+            imageUri = android.net.Uri.fromFile(tempFile),
+            modelWidth = 640,
+            modelHeight = 640,
+            downscaleMp = null
+        )
+        val config = de.konradvoelkel.android.autokorrektur.ml.config.YoloConfig(scoreThreshold = scoreThreshold)
+        val result = yolo.inferDetailed(
+            transformedMat = processed.transformedMat,
+            xRatio = processed.xRatio,
+            yRatio = processed.yRatio,
+            upscaleFactor = 1.0f,
+            overrideConfig = config
+        )
+        val hasDetections = result.detections.isNotEmpty()
+        result.mask.release()
+        return hasDetections
+    }
+
     @org.junit.After
     fun baseTearDown() {
         baseTempFiles.forEach {

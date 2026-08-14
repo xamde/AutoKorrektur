@@ -186,12 +186,9 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
         tensorsToClose: MutableList<OnnxTensor>,
         matsToRelease: MutableList<Mat>
     ): ByteArray {
-        val onnxMask = Mat().also { matsToRelease.add(it) }
-        // resizedMask has 0 on vehicle and 255 on background.
-        // Invert so onnxMask has 255 on vehicle hole and 0 on preserved background.
-        Core.bitwise_not(resizedMask, onnxMask)
+        // resizedMask has 0 on vehicle hole and 255 on preserved background, matching MI-GAN input convention.
         val imageArray = orderInCHWAsBytes(resizedImage)
-        val maskArray = orderInCHWAsBytes(onnxMask)
+        val maskArray = orderInCHWAsBytes(resizedMask)
 
         val imageTensor =
             createTensor(imageArray, 1, 3, MODEL_INPUT_SIZE.toLong(), MODEL_INPUT_SIZE.toLong())
@@ -200,8 +197,8 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
             createTensor(maskArray, 1, 1, MODEL_INPUT_SIZE.toLong(), MODEL_INPUT_SIZE.toLong())
                 .also { tensorsToClose.add(it) }
 
-        val nonZeroMaskCount = maskArray.count { it != 0.toByte() }
-        AppLogger.info("MiGanInference: maskArray nonZeroCount = $nonZeroMaskCount / ${maskArray.size}")
+        val zeroHoleCount = maskArray.count { it == 0.toByte() }
+        AppLogger.info("MiGanInference: maskArray zeroHoleCount = $zeroHoleCount / ${maskArray.size}")
 
         val inputs = mapOf("image" to imageTensor, "mask" to maskTensor)
 
