@@ -207,12 +207,5 @@ class MainViewModel(
     override fun onCleared() {
         super.onCleared()
         pipeline.close()
-        // B14: Recycle bitmaps if success state was held
-        val currentState = uiState.value
-        if (currentState is MainUiState.Success) {
-            currentState.result.originalBitmap.recycle()
-            currentState.result.maskBitmap.recycle()
-            currentState.result.inpaintedBitmap?.recycle()
-        }
     }
 }

@@ -49,7 +49,15 @@ rate_limits: dict[str, dict[date, int]] = defaultdict(lambda: defaultdict(int))
 # SDXL Pipeline loader (Optional GPU / PyTorch execution)
 sdxl_pipeline: Any | None = None
 # B11: Guard global SDXL pipeline with a semaphore to prevent CUDA OOM/crashes.
-sdxl_semaphore: asyncio.Semaphore = asyncio.Semaphore(1)
+sdxl_semaphore: asyncio.Semaphore | None = None
+
+
+def get_sdxl_semaphore() -> asyncio.Semaphore:
+    """Lazily initializes the inpainting semaphore inside the running event loop."""
+    global sdxl_semaphore
+    if sdxl_semaphore is None:
+        sdxl_semaphore = asyncio.Semaphore(1)
+    return sdxl_semaphore
 
 try:
     import torch
@@ -215,6 +223,11 @@ async def check_rate_limit(device_uuid: str, client_ip: str) -> None:
     # B12: In-memory fallback (only useful for single-worker dev setups)
     today = date.today()
     mem_key = f"{device_uuid}:{client_ip}"
+    # Prune expired dates to prevent unbounded dictionary growth
+    expired_days = [d for d in rate_limits[mem_key] if d < today]
+    for d in expired_days:
+        del rate_limits[mem_key][d]
+
     if rate_limits[mem_key][today] >= settings.max_daily_requests:
         logger.warning(f"In-memory rate limit exceeded for {mem_key}")
         raise HTTPException(
@@ -292,40 +305,52 @@ def get_web_workbench() -> str:
                 const btn = document.getElementById('submitBtn');
                 btn.disabled = true;
                 btn.innerText = 'Processing Inpainting...';
+                const form = e.target;
+                const formData = new FormData(form);
+                const submitBtn = document.getElementById('submitBtn');
+                const spinner = document.getElementById('spinner');
+                const previewContainer = document.getElementById('preview-container');
+                const resultImage = document.getElementById('resultImage');
 
-                const formData = new FormData();
-                formData.append('device_uuid', 'web-workbench-demo');
-                formData.append('play_integrity_token', document.getElementById('integrityToken').value);
-                formData.append('image', document.getElementById('imageFile').files[0]);
-                formData.append('mask', document.getElementById('maskFile').files[0]);
+                submitBtn.disabled = true;
+                spinner.style.display = 'block';
+                previewContainer.style.display = 'none';
 
                 try {
-                    const res = await fetch('/v1/inpaint', { method: 'POST', body: formData });
-                    if (!res.ok) throw new Error(await res.text());
-                    const blob = await res.blob();
-                    document.getElementById('resultImg').src = URL.createObjectURL(blob);
-                    document.getElementById('resultContainer').style.display = 'block';
+                    const response = await fetch('/v1/inpaint', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (!response.ok) {
+                        const err = await response.json();
+                        alert('Error: ' + (err.detail || response.statusText));
+                        return;
+                    }
+                    const blob = await response.blob();
+                    resultImage.src = URL.createObjectURL(blob);
+                    previewContainer.style.display = 'block';
                 } catch (err) {
-                    alert('Error: ' + err.message);
+                    alert('Network Error: ' + err.message);
                 } finally {
-                    btn.disabled = false;
-                    btn.innerText = 'Run SDXL Inpainting';
+                    submitBtn.disabled = false;
+                    spinner.style.display = 'none';
                 }
-            };
+            });
         </script>
     </body>
     </html>
     """
+    return HTMLResponse(content=html_content)
 
 
-@app.post("/v1/inpaint")
+@app.post("/v1/inpaint", response_class=StreamingResponse)
 async def inpaint_image(
     request: Request,
-    device_uuid: str = Form(...),
-    play_integrity_token: str = Form(...),
-    image: UploadFile = File(...),
-    mask: UploadFile = File(...),
-    preview: UploadFile | None = File(None),
+    image: UploadFile = File(..., description="Original image JPEG/PNG"),
+    mask: UploadFile = File(..., description="Mask image matching original dimensions"),
+    preview: UploadFile | None = File(None, description="Optional preview image"),
+    device_uuid: str = Form(..., description="Client device UUID"),
+    play_integrity_token: str = Form(..., description="Google Play Integrity attestation token"),
 ) -> StreamingResponse:
     """Receives an image, a mask, and an optional preview, and performs SDXL inpainting.
 
@@ -341,7 +366,7 @@ async def inpaint_image(
     # A7: Upload size limit check
     total_size = (image.size or 0) + (mask.size or 0) + ((preview.size or 0) if preview else 0)
     if total_size > settings.max_upload_bytes:
-         raise HTTPException(status_code=413, detail=f"Total upload size exceeds {settings.max_upload_bytes} bytes")
+        raise HTTPException(status_code=413, detail=f"Total upload size exceeds {settings.max_upload_bytes} bytes")
 
     try:
         image_data = await image.read()
@@ -351,13 +376,17 @@ async def inpaint_image(
         if preview:
             preview_data = await preview.read()
 
+        actual_total_size = len(image_data) + len(mask_data) + (len(preview_data) if preview_data else 0)
+        if actual_total_size > settings.max_upload_bytes:
+            raise HTTPException(status_code=413, detail=f"Total upload size exceeds {settings.max_upload_bytes} bytes")
+
         logger.info(f"Loaded image ({len(image_data)} bytes) and mask ({len(mask_data)} bytes) into memory")
 
         if sdxl_pipeline is None:
             await asyncio.sleep(0.1)
 
         # B11: Use the semaphore to limit concurrent SDXL inferences
-        async with sdxl_semaphore:
+        async with get_sdxl_semaphore():
             # EiPy Asyncio: Offload CPU-bound image manipulation to threadpool to avoid event loop blocking
             output_data = await asyncio.to_thread(process_inpainting_payload, image_data, mask_data, preview_data)
 

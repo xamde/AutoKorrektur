@@ -12,24 +12,18 @@ import org.opencv.core.Mat
  * It normalizes the Mat's values to the 0-255 range to make them visible.
  */
 fun matToBitmapForDebug(mat: Mat): Bitmap {
-    // The input mat is CV_32FC1. Its values can be anything (e.g., -5.0 to 10.0).
-    // To visualize it, we need to normalize these values to a 0-255 range.
-    val normalizedMat = Mat()
-    Core.normalize(mat, normalizedMat, 0.0, 255.0, Core.NORM_MINMAX)
+    val matsToRelease = mutableListOf<Mat>()
+    try {
+        val normalizedMat = Mat().also { matsToRelease.add(it) }
+        Core.normalize(mat, normalizedMat, 0.0, 255.0, Core.NORM_MINMAX)
 
-    // Now convert the normalized float matrix to an 8-bit unsigned integer matrix.
-    val displayMat = Mat()
-    normalizedMat.convertTo(displayMat, CvType.CV_8U)
+        val displayMat = Mat().also { matsToRelease.add(it) }
+        normalizedMat.convertTo(displayMat, CvType.CV_8U)
 
-    // Create a Bitmap with the same dimensions as the Mat.
-    val bitmap = createBitmap(displayMat.cols(), displayMat.rows())
-
-    // Copy the Mat data to the Bitmap.
-    Utils.matToBitmap(displayMat, bitmap)
-
-    // Release intermediate Mats to free up memory
-    normalizedMat.release()
-    displayMat.release()
-
-    return bitmap
+        val bitmap = createBitmap(displayMat.cols(), displayMat.rows())
+        Utils.matToBitmap(displayMat, bitmap)
+        return bitmap
+    } finally {
+        matsToRelease.forEach { it.release() }
+    }
 }

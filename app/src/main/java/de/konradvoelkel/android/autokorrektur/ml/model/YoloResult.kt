@@ -11,4 +11,14 @@ data class YoloResult(
     val mask: Mat,
     val detections: List<Detection>,
     val warnings: List<String> = emptyList()
-)
+) : AutoCloseable {
+    fun release() {
+        try {
+            mask.release()
+        } catch (_: Exception) {}
+    }
+
+    override fun close() {
+        release()
+    }
+}

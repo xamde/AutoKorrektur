@@ -63,20 +63,20 @@ class ServerSdxlApi(
             .build()
             
         try {
-            val response = client.newCall(request).execute()
-            if (!response.isSuccessful) {
-                val errorBody = response.body.string()
-                AppLogger.error("Server returned ${response.code}: $errorBody")
-                throw CloudInferenceException("Server inpainting failed (${response.code}): $errorBody")
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    val errorBody = response.body.string()
+                    AppLogger.error("Server returned ${response.code}: $errorBody")
+                    throw CloudInferenceException("Server inpainting failed (${response.code}): $errorBody")
+                }
+
+                val responseBytes = response.body.bytes()
+                val resultBitmap = BitmapFactory.decodeByteArray(responseBytes, 0, responseBytes.size)
+                    ?: throw CloudInferenceException("Failed to decode image from server")
+                quotaManager.consumeQuota()
+                AppLogger.info("ServerSdxlApi: Successfully received inpainted image (Remaining today: ${quotaManager.getRemainingDailyQuota()})")
+                return@withContext resultBitmap
             }
-            
-            val responseBytes = response.body.bytes()
-            val resultBitmap = BitmapFactory.decodeByteArray(responseBytes, 0, responseBytes.size) 
-                ?: throw CloudInferenceException("Failed to decode image from server")
-            quotaManager.consumeQuota()
-            AppLogger.info("ServerSdxlApi: Successfully received inpainted image (Remaining today: ${quotaManager.getRemainingDailyQuota()})")
-            return@withContext resultBitmap
-            
         } catch (e: Exception) {
             AppLogger.error("ServerSdxlApi Error", e)
             if (e is CloudInferenceException || e is QuotaExceededException) throw e
