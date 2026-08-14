@@ -94,6 +94,7 @@ class FiftyImageTriplesPipelineBenchmarkTest : AndroidInstrumentedBaseTest() {
             val carlessBitmap = BitmapFactory.decodeStream(carlessStream, null, decodeOptions)
             carlessStream.close()
             assertNotNull("Triple $i carless ground truth bitmap should load", carlessBitmap)
+            requireNotNull(carlessBitmap)
 
             // 3. Load reference mask (where 255 = car) and run Mi-GAN inpainting
             val maskAssetPath = "triples/${prefix}_mask.png"
@@ -108,7 +109,7 @@ class FiftyImageTriplesPipelineBenchmarkTest : AndroidInstrumentedBaseTest() {
             )
 
             val startTime = System.currentTimeMillis()
-            val inpaintedMat = miGan.inferMiGan(processedImage.originalMat, maskMat)
+            val inpaintedMat = miGan.inpaint(processedImage.originalMat, maskMat)
             val elapsedTime = System.currentTimeMillis() - startTime
             executionTimesMs.add(elapsedTime)
 
@@ -122,13 +123,13 @@ class FiftyImageTriplesPipelineBenchmarkTest : AndroidInstrumentedBaseTest() {
             }
             rgbaMat.release()
 
-            assertEquals("Triple $i inpainted width must match ground truth", carlessBitmap!!.width, inpaintedBitmap.width)
+            assertEquals("Triple $i inpainted width must match ground truth", carlessBitmap.width, inpaintedBitmap.width)
             assertEquals("Triple $i inpainted height must match ground truth", carlessBitmap.height, inpaintedBitmap.height)
 
             if (i == 1) {
                 val invMask = Mat()
                 Core.bitwise_not(maskMat, invMask)
-                val invMat = miGan.inferMiGan(processedImage.originalMat, invMask)
+                val invMat = miGan.inpaint(processedImage.originalMat, invMask)
                 val invBmp = Bitmap.createBitmap(invMat.cols(), invMat.rows(), Bitmap.Config.ARGB_8888)
                 Utils.matToBitmap(invMat, invBmp)
                 val invFile = File(appContext.cacheDir, "triple_01_migan_inverted_mask.png")
@@ -193,7 +194,7 @@ class FiftyImageTriplesPipelineBenchmarkTest : AndroidInstrumentedBaseTest() {
                 )
             )
 
-            carlessBitmap?.recycle()
+            carlessBitmap.recycle()
         }
 
         // Calculate aggregate statistics

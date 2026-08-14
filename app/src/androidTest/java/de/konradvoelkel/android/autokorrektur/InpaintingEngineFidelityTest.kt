@@ -50,7 +50,7 @@ class InpaintingEngineFidelityTest : AndroidInstrumentedBaseTest() {
         org.opencv.android.Utils.bitmapToMat(maskBitmap, maskMat)
 
         val outputMat = try {
-            miGan.inferMiGan(inputMat, maskMat)
+            miGan.inpaint(inputMat, maskMat)
         } catch (e: Exception) {
             null
         }

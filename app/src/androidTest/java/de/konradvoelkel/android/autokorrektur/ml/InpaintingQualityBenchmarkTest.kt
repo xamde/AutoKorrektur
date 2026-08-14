@@ -86,7 +86,7 @@ class InpaintingQualityBenchmarkTest : AndroidInstrumentedBaseTest() {
                     org.opencv.core.Core.bitwise_not(rawMaskMat, maskMat)
                     rawMaskMat.release()
 
-                    val outputMat = inpaintingEngine.inferMiGan(origMat, maskMat)
+                    val outputMat = inpaintingEngine.inpaint(origMat, maskMat)
 
                     val metrics = computeInpaintMetrics(origMat, maskMat, outputMat, sampleId)
                     results.add(metrics)

@@ -76,7 +76,7 @@ class ImageUiParityTests :
             )
 
             // Path A (expected/UX-correct): run Mi-GAN on original image aligned with mask
-            a = migan.inferMiGan(processed.originalMat, mask)
+            a = migan.inpaint(processed.originalMat, mask)
 
             // Verify Path A returns expected full-resolution dimensions matching original image
             assertEquals("Mi-GAN result width should match original width", processed.originalMat.cols(), a.cols())
