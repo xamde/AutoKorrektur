@@ -96,7 +96,7 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
      * @return The inpainted image matrix (CV_8UC3)
      */
     @Throws(IOException::class)
-    override suspend fun inferMiGan(imageMat: Mat, maskMat: Mat): Mat =
+    override suspend fun inpaint(imageMat: Mat, maskMat: Mat): Mat =
         withContext(Dispatchers.Default) {
             val session = miGanSession ?: run {
                 initialize()

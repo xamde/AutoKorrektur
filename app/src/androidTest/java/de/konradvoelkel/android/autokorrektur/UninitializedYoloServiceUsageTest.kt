@@ -86,7 +86,6 @@ class UninitializedYoloServiceUsageTest : AndroidInstrumentedBaseTest() {
         }
     }
 
-    @org.junit.Ignore("ActivityScenario conflict when run after GUI tests")
     @Test
     fun testStartInferenceInFirstFragmentDoesNotShowUninitializedError() {
         val scenario = ActivityScenario.launch(MainActivity::class.java)

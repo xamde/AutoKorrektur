@@ -56,16 +56,18 @@ object YoloMaskAssembler {
             "Prototype data size mismatch: expected ${numPrototypesChannels * pixelsPerChannel}, got ${prototypeMasksData.size}"
         }
 
-        // B8: Optimize by reducing JNI calls. Build one FloatArray per channel and put all at once.
-        return List(numPrototypesChannels) { c ->
-            val channelData = FloatArray(pixelsPerChannel)
+        // B8 & RF-36: Reuse single pre-allocated channel buffer to eliminate 31 intermediate GC allocations per frame
+        val channelBuffer = FloatArray(pixelsPerChannel)
+        val resultList = ArrayList<Mat>(numPrototypesChannels)
+        for (c in 0 until numPrototypesChannels) {
             for (i in 0 until pixelsPerChannel) {
-                channelData[i] = prototypeMasksData[i * numPrototypesChannels + c]
+                channelBuffer[i] = prototypeMasksData[i * numPrototypesChannels + c]
             }
             val mat = Mat(prototypeHeight, prototypeWidth, CvType.CV_32FC1)
-            mat.put(0, 0, channelData)
-            mat
+            mat.put(0, 0, channelBuffer)
+            resultList.add(mat)
         }
+        return resultList
     }
 
 
