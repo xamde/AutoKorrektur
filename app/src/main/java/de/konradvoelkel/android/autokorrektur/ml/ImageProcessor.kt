@@ -65,11 +65,12 @@ class ImageProcessor(context: Context) : ImagePreprocessingService {
             transformedBitmap = MatScaler.createDisplayBitmap(prep.forBitmap)
 
             // 6. Build normalized float Mat for engine
-            val transformedMat = Mat()
+            val transformedMat = Mat().also { matsToRelease.add(it) }
             prep.forEngine.convertTo(transformedMat, CvType.CV_32F, 1.0 / 255.0)
 
             // Cleanup local refs we are returning
             matsToRelease.remove(workingMat)
+            matsToRelease.remove(transformedMat)
 
             return ProcessedImage(
                 originalBitmap = originalBitmap,
@@ -80,6 +81,7 @@ class ImageProcessor(context: Context) : ImagePreprocessingService {
                 yRatio = prep.yRatio
             )
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             originalBitmap?.recycle()
             transformedBitmap?.recycle()
             throw if (e is IOException) e else IOException(

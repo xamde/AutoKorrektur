@@ -133,22 +133,6 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
                     processOutputMat(outputHWC, maxSize, origWidth, origHeight, matsToRelease)
 
                 try {
-                    // Save raw model output before blending to inspect what Mi-GAN produces
-                    try {
-                        val debugBmp = android.graphics.Bitmap.createBitmap(
-                            unpaddedInpaintedMat.cols(),
-                            unpaddedInpaintedMat.rows(),
-                            android.graphics.Bitmap.Config.ARGB_8888
-                        )
-                        org.opencv.android.Utils.matToBitmap(unpaddedInpaintedMat, debugBmp)
-                        val debugFile = java.io.File("/sdcard/Download/raw_migan_output.png")
-                        debugFile.parentFile?.mkdirs()
-                        val fos = debugFile.outputStream()
-                        debugBmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, fos)
-                        fos.close()
-                        debugBmp.recycle()
-                    } catch (_: Exception) {}
-
                     // 4. Blend result
                     return@withContext blendResult(
                         processedImage,

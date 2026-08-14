@@ -24,14 +24,26 @@ object ModelAssetProvider {
     /**
      * Returns or extracts the model file to local storage for native engines requiring File paths.
      */
+    @Synchronized
     fun getOrExtractModelFile(context: Context, relativePath: String): File {
         val fileName = File(relativePath).name
         val destinationFile = File(context.filesDir, fileName)
         if (!destinationFile.exists() || destinationFile.length() == 0L) {
-            openModelAsset(context, relativePath).use { input ->
-                destinationFile.outputStream().use { output ->
-                    input.copyTo(output)
+            val tempFile = File(context.filesDir, "$fileName.tmp_${System.currentTimeMillis()}")
+            try {
+                openModelAsset(context, relativePath).use { input ->
+                    tempFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
                 }
+                if (!tempFile.renameTo(destinationFile)) {
+                    // Fallback copy if renameTo across mount fails
+                    tempFile.copyTo(destinationFile, overwrite = true)
+                    tempFile.delete()
+                }
+            } catch (e: Exception) {
+                tempFile.delete()
+                throw e
             }
         }
         return destinationFile

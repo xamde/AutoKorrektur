@@ -23,4 +23,19 @@ data class PreprocessResult(
     val forBitmap: Mat,  // CV_8UC3 (same size as forEngine)
     val xRatio: Float,
     val yRatio: Float
-)
+) : AutoCloseable {
+    fun release() {
+        try {
+            if (forEngine !== forBitmap) {
+                forEngine.release()
+                forBitmap.release()
+            } else {
+                forEngine.release()
+            }
+        } catch (_: Exception) {}
+    }
+
+    override fun close() {
+        release()
+    }
+}

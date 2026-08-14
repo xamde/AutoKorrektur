@@ -50,7 +50,8 @@ object AppLogger {
             logFile = File(logDir, LOG_FILE_NAME)
 
             // Rotate log file if it's too large
-            if (logFile?.exists() == true && logFile?.length()!! > MAX_LOG_FILE_SIZE) {
+            val currentLogFile = logFile
+            if (currentLogFile != null && currentLogFile.exists() && currentLogFile.length() > MAX_LOG_FILE_SIZE) {
                 rotateLogFile()
             }
 

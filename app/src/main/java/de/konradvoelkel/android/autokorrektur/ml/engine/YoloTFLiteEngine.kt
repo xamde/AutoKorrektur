@@ -106,8 +106,10 @@ class YoloTFLiteEngine(private val context: Context) : YoloEngine {
                     Interpreter(modelBuffer, cpuOptions)
                 }
 
+                val interp = interpreter ?: throw ModelLoadException("Interpreter is null after initialization")
+
                 // Input shape [1, H, W, C]
-                val inTensor = interpreter!!.getInputTensor(0)
+                val inTensor = interp.getInputTensor(0)
                 val inShape = inTensor.shape()
                 if (inShape.size != 4) throw ShapeMismatchException("Unexpected input shape: ${inShape.joinToString()}")
                 inputH = inShape[1]
@@ -116,8 +118,8 @@ class YoloTFLiteEngine(private val context: Context) : YoloEngine {
                 AppLogger.debug("Engine input shape: [${inShape.joinToString()}]")
 
                 // Output shapes
-                detShape = interpreter!!.getOutputTensor(0).shape()
-                protoShape = interpreter!!.getOutputTensor(1).shape()
+                detShape = interp.getOutputTensor(0).shape()
+                protoShape = interp.getOutputTensor(1).shape()
                 AppLogger.debug("Engine output shapes: det=${detShape.joinToString()}, proto=${protoShape.joinToString()}")
 
                 allocateBuffers()
@@ -130,7 +132,8 @@ class YoloTFLiteEngine(private val context: Context) : YoloEngine {
 
     private fun allocateBuffers() {
         val inBytes = inputH * inputW * inputC * 4 // float32
-        if (inputBuffer == null || inputBuffer!!.capacity() < inBytes) {
+        val inBuf = inputBuffer
+        if (inBuf == null || inBuf.capacity() < inBytes) {
             inputBuffer = ByteBuffer.allocateDirect(inBytes).order(ByteOrder.nativeOrder())
         }
         // Assume float32 outputs
@@ -138,16 +141,18 @@ class YoloTFLiteEngine(private val context: Context) : YoloEngine {
         val protoFloats = protoShape.fold(1) { acc, v -> acc * v }
         val detBytes = detFloats * 4
         val protoBytes = protoFloats * 4
-        if (outputDetections == null || outputDetections!!.capacity() < detBytes) {
+        val outDet = outputDetections
+        if (outDet == null || outDet.capacity() < detBytes) {
             outputDetections = ByteBuffer.allocateDirect(detBytes).order(ByteOrder.nativeOrder())
         }
-        if (outputPrototypes == null || outputPrototypes!!.capacity() < protoBytes) {
+        val outProto = outputPrototypes
+        if (outProto == null || outProto.capacity() < protoBytes) {
             outputPrototypes = ByteBuffer.allocateDirect(protoBytes).order(ByteOrder.nativeOrder())
         }
         // Reset positions
-        inputBuffer!!.rewind()
-        outputDetections!!.rewind()
-        outputPrototypes!!.rewind()
+        inputBuffer?.rewind()
+        outputDetections?.rewind()
+        outputPrototypes?.rewind()
     }
 
     override fun shapes(): Shapes = Shapes(
@@ -165,14 +170,20 @@ class YoloTFLiteEngine(private val context: Context) : YoloEngine {
     override fun run(rgbMat: Mat): RawOutputs {
         synchronized(lock) {
             try {
-                if (!isInitialized) {
-                    throw InferenceException("YoloTFLiteEngine.run() called before initialize()")
-                }
+                val interp = interpreter
+                    ?: throw InferenceException("YoloTFLiteEngine.run() called before initialize()")
 
                 if (inputBuffer == null || outputDetections == null || outputPrototypes == null) {
                     // Allocate or reallocate buffers if needed (defensive)
                     allocateBuffers()
                 }
+
+                val inBuf = inputBuffer
+                    ?: throw InferenceException("inputBuffer is null during run()")
+                val outDet = outputDetections
+                    ?: throw InferenceException("outputDetections is null during run()")
+                val outProto = outputPrototypes
+                    ?: throw InferenceException("outputPrototypes is null during run()")
 
                 if (rgbMat.rows() != inputH || rgbMat.cols() != inputW) {
                     // Resize into a temporary Mat to match model input
@@ -183,35 +194,35 @@ class YoloTFLiteEngine(private val context: Context) : YoloEngine {
                         org.opencv.core.Size(inputW.toDouble(), inputH.toDouble())
                     )
                     try {
-                        matToByteBuffer(resized, inputBuffer!!)
+                        matToByteBuffer(resized, inBuf)
                     } finally {
                         resized.release()
                     }
                 } else {
-                    matToByteBuffer(rgbMat, inputBuffer!!)
+                    matToByteBuffer(rgbMat, inBuf)
                 }
 
-                val inputs = arrayOf<Any>(inputBuffer as Any)
+                val inputs = arrayOf<Any>(inBuf as Any)
                 val outputs = HashMap<Int, Any>(2)
                 // Ensure output buffers are rewound
-                outputDetections!!.rewind()
-                outputPrototypes!!.rewind()
-                outputs[0] = outputDetections as Any
-                outputs[1] = outputPrototypes as Any
+                outDet.rewind()
+                outProto.rewind()
+                outputs[0] = outDet as Any
+                outputs[1] = outProto as Any
 
-                interpreter!!.runForMultipleInputsOutputs(inputs, outputs)
+                interp.runForMultipleInputsOutputs(inputs, outputs)
 
                 // B6: Return real copies to avoid aliasing with internal reusable buffers
-                val detResult = ByteBuffer.allocateDirect(outputDetections!!.capacity())
+                val detResult = ByteBuffer.allocateDirect(outDet.capacity())
                     .order(ByteOrder.nativeOrder())
-                outputDetections!!.rewind()
-                detResult.put(outputDetections!!)
+                outDet.rewind()
+                detResult.put(outDet)
                 detResult.rewind()
 
-                val protoResult = ByteBuffer.allocateDirect(outputPrototypes!!.capacity())
+                val protoResult = ByteBuffer.allocateDirect(outProto.capacity())
                     .order(ByteOrder.nativeOrder())
-                outputPrototypes!!.rewind()
-                protoResult.put(outputPrototypes!!)
+                outProto.rewind()
+                protoResult.put(outProto)
                 protoResult.rewind()
 
                 return RawOutputs(detResult, protoResult, shapes())

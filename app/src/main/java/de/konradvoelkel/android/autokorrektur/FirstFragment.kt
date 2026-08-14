@@ -176,38 +176,44 @@ class FirstFragment : Fragment() {
 
             is MainUiState.Success -> {
                 val result = state.result
-                if (viewModel.properties.value.isBatchMode) {
-                    addImageToContainer(result.inpaintedBitmap!!, getString(R.string.label_result))
-                    if (viewModel.properties.value.batchProcessingResults.size == viewModel.properties.value.selectedImageUris.size) {
-                        finalizeBatchProcessing()
+                val inpainted = result.inpaintedBitmap
+                if (inpainted != null) {
+                    if (viewModel.properties.value.isBatchMode) {
+                        addImageToContainer(inpainted, getString(R.string.label_result))
+                        if (viewModel.properties.value.batchProcessingResults.size == viewModel.properties.value.selectedImageUris.size) {
+                            finalizeBatchProcessing()
+                        }
+                    } else {
+                        val safeOrig =
+                            de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.createScaledBitmapForDisplay(
+                                result.originalBitmap
+                            )
+                        val safeProc =
+                            de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.createScaledBitmapForDisplay(
+                                inpainted
+                            )
+                        binding.beforeAfterSliderView.setBitmaps(safeOrig, safeProc)
+                        binding.beforeAfterSliderView.visibility = View.VISIBLE
+
+                        // Render the mask overlay view so the user can verify the detected vehicle mask
+                        binding.imagesContainer.removeAllViews()
+                        val overlay = de.konradvoelkel.android.autokorrektur.utils.MaskOverlayUtils.createRedOverlayBitmap(
+                            result.maskBitmap,
+                            safeOrig.width,
+                            safeOrig.height
+                        )
+                        val combinedMask = Bitmap.createBitmap(safeOrig.width, safeOrig.height, Bitmap.Config.ARGB_8888)
+                        val canvas = android.graphics.Canvas(combinedMask)
+                        canvas.drawBitmap(safeOrig, 0f, 0f, null)
+                        canvas.drawBitmap(overlay, 0f, 0f, null)
+                        overlay.recycle()
+
+                        addImageToContainer(combinedMask, getString(R.string.label_mask))
+                        binding.imagesContainer.visibility = View.VISIBLE
                     }
                 } else {
-                    val safeOrig =
-                        de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.createScaledBitmapForDisplay(
-                            result.originalBitmap
-                        )
-                    val safeProc =
-                        de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.createScaledBitmapForDisplay(
-                            result.inpaintedBitmap!!
-                        )
-                    binding.beforeAfterSliderView.setBitmaps(safeOrig, safeProc)
-                    binding.beforeAfterSliderView.visibility = View.VISIBLE
-
-                    // Render the mask overlay view so the user can verify the detected vehicle mask
-                    binding.imagesContainer.removeAllViews()
-                    val overlay = de.konradvoelkel.android.autokorrektur.utils.MaskOverlayUtils.createRedOverlayBitmap(
-                        result.maskBitmap,
-                        safeOrig.width,
-                        safeOrig.height
-                    )
-                    val combinedMask = Bitmap.createBitmap(safeOrig.width, safeOrig.height, Bitmap.Config.ARGB_8888)
-                    val canvas = android.graphics.Canvas(combinedMask)
-                    canvas.drawBitmap(safeOrig, 0f, 0f, null)
-                    canvas.drawBitmap(overlay, 0f, 0f, null)
-                    overlay.recycle()
-
-                    addImageToContainer(combinedMask, getString(R.string.label_mask))
-                    binding.imagesContainer.visibility = View.VISIBLE
+                    showSnackbar(getString(R.string.error_no_processed_image))
+                    viewModel.clearState()
                 }
                 updateInferenceButtonState(viewModel.properties.value)
                 binding.fileSelect.isEnabled = true

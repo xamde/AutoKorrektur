@@ -103,64 +103,38 @@ Build a production-ready Android application for automatic vehicle removal and p
 
 ### 🔴 5A — Safety: Crashes, Resource Leaks & Security
 
-- [ ] **RF-01. Remove debug `/sdcard/` write from `MiGanInference.kt` production path**
+- [x] **RF-01. Remove debug `/sdcard/` write from `MiGanInference.kt` production path**
     - `MiGanInference.kt:137–150` writes `raw_migan_output.png` to `/sdcard/Download/` on *every* inference call using an unclosed `FileOutputStream` (no `.use{}`). Causes EACCES on API 29+, leaks file handles on exception, and bloats user storage.
-    - **Fix**: Delete the debug block entirely; if needed for debugging, gate behind `BuildConfig.DEBUG` and write to `context.cacheDir`.
-
-- [ ] **RF-02. Fix OkHttp response body leak in `ServerSdxlApi.kt`**
-    - `ServerSdxlApi.kt:66`: `client.newCall(request).execute()` is not wrapped in `.use {}`. Unclosed response bodies leak sockets and exhaust the OkHttp connection pool.
-    - **Fix**: `client.newCall(request).execute().use { response -> … }`.
-
-- [ ] **RF-03. Replace 15+ unsafe `!!` operators in `YoloTFLiteEngine.kt`**
-    - Over 15 force-unwrap assertions on nullable `interpreter` and buffer fields (e.g. L110, L133, L186, L205, L211, L214). Any concurrent teardown or post-`close()` call causes an unhandled `NullPointerException`.
-    - **Fix**: Extract `val interp = interpreter ?: throw ModelNotInitializedException(...)` once at the top of each method and use it consistently.
-
-- [ ] **RF-04. Fix unsafe `!!` on nullable `inpaintedBitmap` in `FirstFragment.kt`**
-    - `FirstFragment.kt:180, 191`: `result.inpaintedBitmap!!` crashes with NPE when inpainting fails and returns `null`.
-    - **Fix**: `result.inpaintedBitmap ?: return` (or transition to an error state).
-
-- [ ] **RF-05. Fix unsafe `!!` in `AppLogger.kt:53`**
-    - `logFile?.length()!!` throws NPE if `logFile` changes to `null` under concurrent access.
-    - **Fix**: `(logFile?.length() ?: 0L) > MAX_LOG_FILE_SIZE`.
-
-- [ ] **RF-06. Add `try-finally` to all OpenCV Mat allocations in `ImageQualityMetrics.kt`**
-    - 15+ intermediate `Mat` objects in `calculateSsim` (L76–136) are only released at end of method. Any OpenCV exception before L138 leaks native heap.
-    - **Fix**: `try { … } finally { matsToRelease.forEach { it.release() } }`.
-
-- [ ] **RF-07. Add `try-finally` to `DebugUtil.kt` and `MaskTouchUpUtils.kt` Mat allocations**
-    - Both files allocate intermediate OpenCV Mats without a `finally` guard, risking native memory leaks on exception.
-
-- [ ] **RF-08. Add `release()` / `AutoCloseable` to `YoloResult` and `Preprocessor.PreprocessResult`**
-    - Both data classes hold native `Mat` objects without a `release()` or `AutoCloseable` lifecycle, putting the burden on every caller to manually free native memory.
-    - **Fix**: Implement `AutoCloseable`; document ownership transfer in KDoc.
-
-- [ ] **RF-09. Fix ViewModel calling `Bitmap.recycle()` on in-use bitmaps (`MainViewModel.kt:212–216`)**
-    - `onCleared()` calls `.recycle()` on bitmaps that may still be rendering in the UI, causing `Canvas: trying to use a recycled bitmap` crashes.
-    - **Fix**: Do not recycle bitmaps from ViewModel; let the Fragment/View own and release them on view destruction.
-
-- [ ] **RF-10. Fix `ModelAssetProvider.kt` concurrent file extraction race condition**
-    - `getOrExtractModelFile` (L30–36) checks file existence and writes without synchronization. Concurrent callers can read partially written model files.
-    - **Fix**: Write to a `.tmp` file, then use `File.renameTo()` for an atomic replacement; or use `@Synchronized`.
-
+    - **Fix**: Deleted debug write block from production path.
+- [x] **RF-02. Fix OkHttp response body leak in `ServerSdxlApi.kt`**
+    - `ServerSdxlApi.kt:66`: `client.newCall(request).execute()` wrapped in `.use { response -> … }` to prevent socket leaks.
+- [x] **RF-03. Replace 15+ unsafe `!!` operators in `YoloTFLiteEngine.kt`**
+    - Extracted safe checked local references (`val interp = interpreter ?: throw ...`) and wrapped buffer access.
+- [x] **RF-04. Fix unsafe `!!` on nullable `inpaintedBitmap` in `FirstFragment.kt`**
+    - Safely guarded `result.inpaintedBitmap` with null checks and fallback error handling.
+- [x] **RF-05. Fix unsafe `!!` in `AppLogger.kt:53`**
+    - Replaced `logFile?.length()!!` with safe null-safe length check.
+- [x] **RF-06. Add `try-finally` to all OpenCV Mat allocations in `ImageQualityMetrics.kt`**
+    - Wrapped all intermediate `Mat` allocations in `try-finally` blocks.
+- [x] **RF-07. Add `try-finally` to `DebugUtil.kt` and `MaskTouchUpUtils.kt` Mat allocations**
+    - Wrapped all intermediate OpenCV Mats in `try-finally` blocks.
+- [x] **RF-08. Add `release()` / `AutoCloseable` to `YoloResult` and `Preprocessor.PreprocessResult`**
+    - Implemented `AutoCloseable` on `YoloResult` and `PreprocessResult`.
+- [x] **RF-09. Fix ViewModel calling `Bitmap.recycle()` on in-use bitmaps (`MainViewModel.kt:212–216`)**
+    - Removed premature `.recycle()` in ViewModel `onCleared()`.
+- [x] **RF-10. Fix `ModelAssetProvider.kt` concurrent file extraction race condition**
+    - Added `@Synchronized` and atomic temp-file extraction with rename fallback.
 - [ ] **RF-11. Remove hardcoded `mock-valid-token` Play Integrity bypass from `backend/config.py`**
     - `allowed_integrity_tokens` defaults to `["mock-valid-token"]`. In production, any caller can bypass attestation with this trivially guessable token.
     - **Fix**: Default to empty list; require explicit production configuration.
-
-- [ ] **RF-12. Fix FastAPI in-memory rate limit dict memory leak (`backend/server.py`)**
-    - `rate_limits: dict[str, dict[date, int]]` accumulates date entries forever and is never pruned.
-    - **Fix**: Evict entries older than today on each lookup.
-
-- [ ] **RF-13. Fix HTTP request body size enforcement in `backend/server.py`**
-    - `UploadFile.size` can be `None` for chunked transfers, silently bypassing the `max_upload_bytes` check. Server then reads the entire body into RAM, enabling memory exhaustion attacks.
-    - **Fix**: Stream and count bytes while reading; reject uploads exceeding the limit.
-
-- [ ] **RF-14. Fix `asyncio.Semaphore(1)` created at module scope in `backend/server.py`**
-    - Instantiating asyncio synchronization primitives outside a running event loop can cause "attached to a different loop" errors.
-    - **Fix**: Create the semaphore inside a FastAPI Lifespan context manager.
-
-- [ ] **RF-15. Fix `ImageProcessor.kt` catching `CancellationException`**
-    - The broad `catch (e: Exception)` can swallow `kotlinx.coroutines.CancellationException`, breaking cooperative coroutine cancellation.
-    - **Fix**: Re-throw `CancellationException`: `if (e is CancellationException) throw e`.
+- [x] **RF-12. Fix FastAPI in-memory rate limit dict memory leak (`backend/server.py`)**
+    - Pruned expired date entries from `rate_limits` dictionary on each lookup.
+- [x] **RF-13. Fix HTTP request body size enforcement in `backend/server.py`**
+    - Verified actual read bytes against `max_upload_bytes` to prevent chunked upload bypass.
+- [x] **RF-14. Fix `asyncio.Semaphore(1)` created at module scope in `backend/server.py`**
+    - Wrapped in `get_sdxl_semaphore()` lazy getter attached to active event loop.
+- [x] **RF-15. Fix `ImageProcessor.kt` catching `CancellationException`**
+    - Re-threw `CancellationException` and tracked `transformedMat` in `matsToRelease`.
 
 ---
 

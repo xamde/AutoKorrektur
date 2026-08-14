@@ -21,30 +21,30 @@ object MaskTouchUpUtils {
     fun createDilatedMask(maskBitmap: Bitmap, radiusPx: Int): Bitmap {
         if (radiusPx <= 0) return maskBitmap
 
-        val mat = Mat()
-        Utils.bitmapToMat(maskBitmap, mat)
+        val matsToRelease = mutableListOf<Mat>()
+        try {
+            val mat = Mat().also { matsToRelease.add(it) }
+            Utils.bitmapToMat(maskBitmap, mat)
 
-        val kernelSize = (radiusPx * 2 + 1).toDouble()
-        val kernel = Imgproc.getStructuringElement(
-            Imgproc.MORPH_ELLIPSE,
-            Size(kernelSize, kernelSize)
-        )
+            val kernelSize = (radiusPx * 2 + 1).toDouble()
+            val kernel = Imgproc.getStructuringElement(
+                Imgproc.MORPH_ELLIPSE,
+                Size(kernelSize, kernelSize)
+            ).also { matsToRelease.add(it) }
 
-        val dilatedMat = Mat()
-        Imgproc.dilate(mat, dilatedMat, kernel)
+            val dilatedMat = Mat().also { matsToRelease.add(it) }
+            Imgproc.dilate(mat, dilatedMat, kernel)
 
-        val resultBitmap = Bitmap.createBitmap(
-            maskBitmap.width,
-            maskBitmap.height,
-            Bitmap.Config.ARGB_8888
-        )
-        Utils.matToBitmap(dilatedMat, resultBitmap)
-
-        mat.release()
-        dilatedMat.release()
-        kernel.release()
-
-        return resultBitmap
+            val resultBitmap = Bitmap.createBitmap(
+                maskBitmap.width,
+                maskBitmap.height,
+                Bitmap.Config.ARGB_8888
+            )
+            Utils.matToBitmap(dilatedMat, resultBitmap)
+            return resultBitmap
+        } finally {
+            matsToRelease.forEach { it.release() }
+        }
     }
 
     /**
