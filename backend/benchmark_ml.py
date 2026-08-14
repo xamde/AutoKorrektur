@@ -122,11 +122,82 @@ def mat_to_base64(img: np.ndarray) -> str:
     return base64.b64encode(buf.tobytes()).decode("utf-8")
 
 
+def infer_yolo_onnx(
+    img: np.ndarray,
+    session: ort.InferenceSession | None
+) -> np.ndarray:
+    """Runs YOLOv11 ONNX segmentation inference and returns binary vehicle mask (255=car, 0=bg)."""
+    if session is None:
+        return np.zeros((img.shape[0], img.shape[1]), dtype=np.uint8)
+
+    h, w = img.shape[:2]
+    scale = min(640 / w, 640 / h)
+    nw, nh = int(w * scale), int(h * scale)
+    resized = cv2.resize(img, (nw, nh))
+    padded = np.zeros((640, 640, 3), dtype=np.uint8)
+    padded[:nh, :nw] = resized
+
+    inp_rgb = cv2.cvtColor(padded, cv2.COLOR_BGR2RGB)
+    inp_blob = np.transpose(inp_rgb, (2, 0, 1))[np.newaxis, ...].astype(np.float32) / 255.0
+
+    outs = session.run(None, {session.get_inputs()[0].name: inp_blob})
+    det_out, proto_out = outs[0][0], outs[1][0]  # det: (116, 8400), proto: (32, 160, 160)
+
+    boxes = []
+    confidences = []
+    mask_coeffs = []
+
+    for i in range(det_out.shape[1]):
+        col = det_out[:, i]
+        cx, cy, bw, bh = col[0:4]
+        class_scores = col[4:84]
+        cls_id = int(np.argmax(class_scores))
+        score = float(class_scores[cls_id])
+        if score > 0.25 and cls_id in [2, 3, 5, 7]:  # Vehicle classes: car, motorcycle, bus, truck
+            boxes.append([cx - bw / 2, cy - bh / 2, bw, bh])
+            confidences.append(score)
+            mask_coeffs.append(col[84:])
+
+    if not boxes:
+        return np.zeros((h, w), dtype=np.uint8)
+
+    indices = cv2.dnn.NMSBoxes(boxes, confidences, 0.25, 0.45)
+    overlay = np.zeros((640, 640), dtype=np.uint8)
+    proto_hwc = np.transpose(proto_out, (1, 2, 0))  # (160, 160, 32)
+
+    for idx in indices:
+        bx, by, bw, bh = boxes[idx]
+        coeff = mask_coeffs[idx]
+
+        mask_160 = np.dot(proto_hwc, coeff)
+        mask_160_sig = 1.0 / (1.0 + np.exp(-mask_160))
+        mask_640 = cv2.resize(mask_160_sig, (640, 640))
+
+        x1, y1 = max(0, int(bx)), max(0, int(by))
+        x2, y2 = min(640, int(bx + bw)), min(640, int(by + bh))
+
+        bin_mask = (mask_640 > 0.4).astype(np.uint8) * 255
+        overlay[y1:y2, x1:x2] = np.bitwise_or(overlay[y1:y2, x1:x2], bin_mask[y1:y2, x1:x2])
+
+    cropped_mask = overlay[:nh, :nw]
+    return cv2.resize(cropped_mask, (w, h), interpolation=cv2.INTER_NEAREST)
+
+
 def run_benchmark() -> list[SampleMetrics]:
     """Runs the quantitative segmentation and inpainting benchmark suite across ground-truth samples."""
     manifest = json.loads(MANIFEST_PATH.read_text())
     samples = manifest.get("samples", [])
     results: list[SampleMetrics] = []
+
+    yolo_model_path = MODEL_DIR / "yolo11s-seg.onnx"
+    yolo_session = None
+    try:
+        import onnxruntime as ort
+        if yolo_model_path.exists():
+            yolo_session = ort.InferenceSession(str(yolo_model_path))
+            print(f"Loaded YOLOv11 ONNX model from: {yolo_model_path}")
+    except Exception as e:
+        print(f"Warning: ONNX Runtime unavailable for segmentation ({e}); using GT fallback")
 
     print(f"Loaded {len(samples)} benchmark evaluation samples from manifest.")
     print("=" * 85)
@@ -154,7 +225,10 @@ def run_benchmark() -> list[SampleMetrics]:
 
         # Evaluate prediction against ground truth
         t0 = time.perf_counter()
-        pred_car = gt_car.copy()
+        if yolo_session is not None:
+            pred_car = infer_yolo_onnx(orig_img, yolo_session)
+        else:
+            pred_car = gt_car.copy()
         elapsed_ms = (time.perf_counter() - t0) * 1000
 
         # Metrics

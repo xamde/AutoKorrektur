@@ -49,4 +49,13 @@ class BackendSettings(BaseSettings):
     )
 
 
-settings = BackendSettings()
+import functools
+
+
+@functools.lru_cache
+def get_settings() -> BackendSettings:
+    """Returns a cached instance of BackendSettings."""
+    return BackendSettings()
+
+
+settings = get_settings()

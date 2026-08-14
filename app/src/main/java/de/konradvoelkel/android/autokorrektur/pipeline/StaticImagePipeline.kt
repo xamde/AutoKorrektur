@@ -138,7 +138,7 @@ class StaticImagePipeline(
                     previewBitmap = processedImage.transformedBitmap
                 )
             } else {
-                val inpaintMat = miGanInference.inferMiGan(
+                val inpaintMat = miGanInference.inpaint(
                     imageMat = processedImage.originalMat,
                     maskMat = maskMat
                 )
