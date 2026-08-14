@@ -8,6 +8,7 @@ import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
 import de.konradvoelkel.android.autokorrektur.ml.engine.YoloTFLiteEngine
 import de.konradvoelkel.android.autokorrektur.ml.config.YoloConfig
 import de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -46,30 +47,27 @@ class VehicleMaskSegmentationTest : AndroidInstrumentedBaseTest() {
             val bitmap = BitmapFactory.decodeStream(stream)
             assertNotNull("Corpus bitmap $filename should decode", bitmap)
 
-            val rawMat = org.opencv.core.Mat()
-            org.opencv.android.Utils.bitmapToMat(bitmap, rawMat)
-            val rgbMat = org.opencv.core.Mat()
-            org.opencv.imgproc.Imgproc.cvtColor(rawMat, rgbMat, org.opencv.imgproc.Imgproc.COLOR_RGBA2RGB)
-            val inputMat = org.opencv.core.Mat()
-            org.opencv.imgproc.Imgproc.resize(rgbMat, inputMat, org.opencv.core.Size(640.0, 640.0))
-            rawMat.release()
-            rgbMat.release()
+            val tempFile = cacheAsset(filename)
+            val uri = android.net.Uri.fromFile(tempFile)
+            val processedImage = imageProcessor.processInputImage(
+                imageUri = uri,
+                modelWidth = 640,
+                modelHeight = 640
+            )
 
             val yoloResult = yoloService.inferDetailed(
-                transformedMat = inputMat,
-                xRatio = 1.0f,
-                yRatio = 1.0f,
+                transformedMat = processedImage.transformedMat,
+                xRatio = processedImage.xRatio,
+                yRatio = processedImage.yRatio,
                 upscaleFactor = 1.05f
             )
 
             assertNotNull("YoloResult mask should not be null for $filename", yoloResult.mask)
             assertTrue("Mask Mat should not be empty for $filename", !yoloResult.mask.empty())
+            assertTrue("Mask rows should be > 0 for $filename", yoloResult.mask.rows() > 0)
+            assertTrue("Mask cols should be > 0 for $filename", yoloResult.mask.cols() > 0)
 
-            // Ensure non-zero mask pixels exist if vehicles were detected
-            val nonZeroCount = Core.countNonZero(yoloResult.mask)
-            assertTrue("Mask pixel count should be non-negative for $filename", nonZeroCount >= 0)
-
-            inputMat.release()
+            processedImage.release()
             yoloResult.mask.release()
             bitmap.recycle()
         }

@@ -33,13 +33,16 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.snackbar.Snackbar
+import de.konradvoelkel.android.autokorrektur.ar.ArCameraActivity
 import de.konradvoelkel.android.autokorrektur.manager.ConsentManager
 import de.konradvoelkel.android.autokorrektur.manager.QuotaManager
 import de.konradvoelkel.android.autokorrektur.databinding.FragmentFirstBinding
 import de.konradvoelkel.android.autokorrektur.ui.model.MainUiProperties
 import de.konradvoelkel.android.autokorrektur.ui.model.MainUiState
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
+import de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils
 import de.konradvoelkel.android.autokorrektur.utils.ImageExportManager
+import de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils
 import de.konradvoelkel.android.autokorrektur.utils.MaskOverlayUtils
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -184,30 +187,31 @@ class FirstFragment : Fragment() {
                             finalizeBatchProcessing()
                         }
                     } else {
-                        val safeOrig =
-                            de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.createScaledBitmapForDisplay(
-                                result.originalBitmap
+                        val displayBefore =
+                            BitmapMemoryUtils.createScaledBitmapForDisplay(
+                                result.originalBitmap, maxDimension = 1440
                             )
-                        val safeProc =
-                            de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.createScaledBitmapForDisplay(
-                                inpainted
+                        val displayAfter =
+                            BitmapMemoryUtils.createScaledBitmapForDisplay(
+                                inpainted, maxDimension = 1440
                             )
-                        binding.beforeAfterSliderView.setBitmaps(safeOrig, safeProc)
+                        
+                        binding.beforeAfterSliderView.setBitmaps(displayBefore, displayAfter)
                         binding.beforeAfterSliderView.visibility = View.VISIBLE
 
-                        // Render the mask overlay view so the user can verify the detected vehicle mask
-                        binding.imagesContainer.removeAllViews()
-                        val overlay = de.konradvoelkel.android.autokorrektur.utils.MaskOverlayUtils.createRedOverlayBitmap(
+                        // Render intermediate vehicle mask preview with a semi-transparent red overlay
+                        val overlay = MaskOverlayUtils.createRedOverlayBitmap(
                             result.maskBitmap,
-                            safeOrig.width,
-                            safeOrig.height
+                            displayBefore.width,
+                            displayBefore.height
                         )
-                        val combinedMask = Bitmap.createBitmap(safeOrig.width, safeOrig.height, Bitmap.Config.ARGB_8888)
-                        val canvas = android.graphics.Canvas(combinedMask)
-                        canvas.drawBitmap(safeOrig, 0f, 0f, null)
+                        val combinedMask = Bitmap.createBitmap(displayBefore.width, displayBefore.height, Bitmap.Config.ARGB_8888)
+                        val canvas = Canvas(combinedMask)
+                        canvas.drawBitmap(displayBefore, 0f, 0f, null)
                         canvas.drawBitmap(overlay, 0f, 0f, null)
                         overlay.recycle()
 
+                        binding.imagesContainer.removeAllViews()
                         addImageToContainer(combinedMask, getString(R.string.label_mask))
                         binding.imagesContainer.visibility = View.VISIBLE
                     }
@@ -301,7 +305,7 @@ class FirstFragment : Fragment() {
 
         binding.arLiveModeButton.setOnClickListener {
             if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-                val intent = Intent(requireContext(), de.konradvoelkel.android.autokorrektur.ar.ArCameraActivity::class.java)
+                val intent = Intent(requireContext(), ArCameraActivity::class.java)
                 startActivity(intent)
             } else {
                 cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
@@ -325,7 +329,7 @@ class FirstFragment : Fragment() {
                 val quotaManager = QuotaManager(requireContext())
                 val remaining = quotaManager.getRemainingDailyQuota()
                 if (!consentManager.isConsentGranted()) {
-                    val view = android.view.LayoutInflater.from(requireContext()).inflate(R.layout.dialog_gdpr_consent, null)
+                    val view = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_gdpr_consent, null)
                     val checkbox = view.findViewById<android.widget.CheckBox>(R.id.rememberChoiceCheckbox)
                     AlertDialog.Builder(requireContext())
                         .setTitle(R.string.premium_edit_title)
@@ -471,10 +475,10 @@ class FirstFragment : Fragment() {
     }
 
     private fun decodePreviewBitmap(uri: Uri, targetW: Int, targetH: Int): Bitmap {
-        return de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.decodeSampledBitmapFromUri(
-            requireContext(),
-            uri,
-            kotlin.math.max(targetW, targetH)
+        return BitmapMemoryUtils.decodeSampledBitmapFromUri(
+            context = requireContext(),
+            uri = uri,
+            maxDimension = kotlin.math.max(targetW, targetH)
         )
     }
 
@@ -553,26 +557,28 @@ class FirstFragment : Fragment() {
             showSnackbar(getString(R.string.error_export_instagram_no_image))
             return
         }
-        val afterBitmap = state.result.inpaintedBitmap ?: return
-        val beforeBitmap = state.result.originalBitmap
+        val inpainted = state.result.inpaintedBitmap ?: return
+        val currentOriginalBitmap = state.result.originalBitmap
 
         try {
             val options = resources.getStringArray(R.array.instagram_formats)
             AlertDialog.Builder(requireContext())
                 .setTitle(R.string.dialog_instagram_format_title)
-                .setItems(options) { _, which ->
-                    val (ratio, layout) = when (which) {
-                        0 -> Pair(de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.AspectRatio.SQUARE_1_1, de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.LayoutStyle.SIDE_BY_SIDE)
-                        1 -> Pair(de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.AspectRatio.PORTRAIT_4_5, de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.LayoutStyle.STACKED)
-                        else -> Pair(de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.AspectRatio.STORY_9_16, de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.LayoutStyle.SIDE_BY_SIDE)
+                .setItems(options) { _, selectedPosition ->
+                    val (ratio, layout) = when (selectedPosition) {
+                        0 -> Pair(InstagramExportUtils.AspectRatio.SQUARE_1_1, InstagramExportUtils.LayoutStyle.SIDE_BY_SIDE)
+                        1 -> Pair(InstagramExportUtils.AspectRatio.PORTRAIT_4_5, InstagramExportUtils.LayoutStyle.STACKED)
+                        else -> Pair(InstagramExportUtils.AspectRatio.STORY_9_16, InstagramExportUtils.LayoutStyle.SIDE_BY_SIDE)
                     }
+
                     val graphic =
-                        de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.createComparisonBitmap(
-                            beforeBitmap,
-                            afterBitmap,
-                            ratio,
-                            layout
+                        InstagramExportUtils.createComparisonBitmap(
+                            beforeBitmap = currentOriginalBitmap,
+                            afterBitmap = inpainted,
+                            ratio = ratio,
+                            layout = layout
                         )
+                    
                     val actionOptions = arrayOf(
                         getString(R.string.share_to_instagram),
                         getString(R.string.save_graphic)
