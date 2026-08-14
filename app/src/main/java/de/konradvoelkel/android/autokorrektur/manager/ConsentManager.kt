@@ -9,18 +9,13 @@ import android.content.SharedPreferences
 class ConsentManager(context: Context) {
 
     private val prefs: SharedPreferences =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        context.getSharedPreferences(PreferencesConstants.PREFS_NAME, Context.MODE_PRIVATE)
 
     fun isConsentGranted(): Boolean {
-        return prefs.getBoolean(KEY_GDPR_CONSENT, false)
+        return prefs.getBoolean(PreferencesConstants.KEY_GDPR_CONSENT, false)
     }
 
     fun setConsentGranted(granted: Boolean) {
-        prefs.edit().putBoolean(KEY_GDPR_CONSENT, granted).apply()
-    }
-
-    companion object {
-        private const val PREFS_NAME = "autokorrektur_prefs"
-        private const val KEY_GDPR_CONSENT = "gdpr_sdxl_consent"
+        prefs.edit().putBoolean(PreferencesConstants.KEY_GDPR_CONSENT, granted).apply()
     }
 }

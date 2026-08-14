@@ -20,8 +20,12 @@ object AppLogger {
     private const val MAX_LOG_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 
     private var logFile: File? = null
+    private val dateFormatter: java.time.format.DateTimeFormatter by lazy {
+        java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
+    }
+
+    private val logLock = Any()
     private var isInitialized = false
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
 
     enum class LogLevel(val priority: Int, val tag: String) {
         DEBUG(Log.DEBUG, "DEBUG"),
@@ -38,7 +42,7 @@ object AppLogger {
         try {
             // Try to use external storage first, fall back to internal if not available
             val logDir = if (Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED) {
-                File(context.getExternalFilesDir(null), "logs")
+                File(context.getExternalFilesDir(null) ?: context.filesDir, "logs")
             } else {
                 File(context.filesDir, "logs")
             }
@@ -96,10 +100,14 @@ object AppLogger {
     }
 
     /**
-     * Log a message with specified level
+     * Core logging function that handles all log levels
      */
     private fun log(level: LogLevel, message: String, throwable: Throwable? = null) {
-        val timestamp = dateFormat.format(Date())
+        val timestamp = try {
+            java.time.LocalDateTime.now().format(dateFormatter)
+        } catch (_: Throwable) {
+            SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault()).format(Date())
+        }
         val logMessage = "[$timestamp] [${level.tag}] $message"
 
         // Always log to Android Log
@@ -112,19 +120,21 @@ object AppLogger {
 
         // Write to file if initialized
         if (isInitialized && logFile != null) {
-            try {
-                FileWriter(logFile, true).use { writer ->
-                    writer.appendLine(logMessage)
-                    if (throwable != null) {
-                        writer.appendLine("Exception: ${throwable.javaClass.simpleName}: ${throwable.message}")
-                        throwable.stackTrace.forEach { element ->
-                            writer.appendLine("  at $element")
+            synchronized(logLock) {
+                try {
+                    FileWriter(logFile, true).use { writer ->
+                        writer.appendLine(logMessage)
+                        if (throwable != null) {
+                            writer.appendLine("Exception: ${throwable.javaClass.simpleName}: ${throwable.message}")
+                            throwable.stackTrace.forEach { element ->
+                                writer.appendLine("  at $element")
+                            }
                         }
+                        writer.flush()
                     }
-                    writer.flush()
+                } catch (e: IOException) {
+                    Log.e(TAG, "Failed to write to log file", e)
                 }
-            } catch (e: IOException) {
-                Log.e(TAG, "Failed to write to log file", e)
             }
         }
     }

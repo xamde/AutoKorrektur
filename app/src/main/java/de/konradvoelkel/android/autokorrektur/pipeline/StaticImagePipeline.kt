@@ -50,9 +50,15 @@ class StaticImagePipeline(
     private val miGanInference: InpaintingEngine,
     private val serverSdxlApi: ServerInpainter
 ) {
+    /**
+     * True if the underlying YOLO neural engine has been initialized and is ready for inference.
+     */
     val isInitialized: Boolean
         get() = yoloService.isInitialized
     
+    /**
+     * Initializes the YOLO model weights and the on-device MI-GAN inpainting session.
+     */
     suspend fun initialize() = withContext(Dispatchers.Default) {
         val modelName = "yolo11s"
         AppLogger.info("StaticImagePipeline initializing with model: $modelName")
@@ -61,6 +67,18 @@ class StaticImagePipeline(
         miGanInference.initialize()
     }
 
+    /**
+     * Runs the complete pipeline on a single image URI:
+     * loads image, runs YOLO segmentation, and performs inpainting.
+     *
+     * @param uri URI of the input image
+     * @param downscaleMp Optional downscale limit in megapixels
+     * @param maskUpscale Scale factor for mask boundary dilation
+     * @param scoreThreshold Confidence threshold for vehicle detection
+     * @param useServerSdxl True to use remote SDXL, false for on-device MI-GAN
+     * @param onMaskGenerated Optional callback receiving the intermediate mask Bitmap
+     * @param onProgressUpdate Optional progress reporter callback
+     */
     suspend fun processImage(
         uri: Uri,
         downscaleMp: Float?,
@@ -100,38 +118,36 @@ class StaticImagePipeline(
                 originalHeight = processedImage.originalMat.rows(),
                 overrideConfig = config
             )
-            val currentMaskMat = yoloResult.mask
-            maskMat = currentMaskMat
+            maskMat = yoloResult.mask
             
-            // Convert mask to Bitmap
-            val maskBitmap = MatScaler.createDisplayBitmap(currentMaskMat)
-            
+            // Generate Mask Bitmap for UI
+            val maskBitmap = Bitmap.createBitmap(
+                maskMat.cols(),
+                maskMat.rows(),
+                Bitmap.Config.ARGB_8888
+            )
+            Utils.matToBitmap(maskMat, maskBitmap)
             onMaskGenerated?.invoke(maskBitmap)
 
-            // 3. Inpainting
-            val inpaintedBitmap: Bitmap?
-            if (useServerSdxl) {
-                onProgressUpdate?.invoke("Generating Structural Prior (Mi-GAN)", 70)
-                AppLogger.info("Using Server SDXL for inpainting")
-                // Generate a preview with MiGan first to use as structural prior
-                val miGanPreview =
-                    miGanInference.inferMiGan(processedImage.originalMat, currentMaskMat)
-                val previewBitmap = MatScaler.createDisplayBitmap(miGanPreview)
-                miGanPreview.release()
-                
-                onProgressUpdate?.invoke("Server SDXL Premium Edit Processing", 85)
-                // Send to server
-                inpaintedBitmap = serverSdxlApi.processWithSdxl(processedImage.originalBitmap, maskBitmap, previewBitmap)
+            // 3. Neural Inpainting
+            onProgressUpdate?.invoke(if (useServerSdxl) "Running Cloud SDXL Inpainting" else "Running On-Device Inpainting", 75)
+            val inpaintedBitmap = if (useServerSdxl) {
+                serverSdxlApi.processWithSdxl(
+                    originalBitmap = processedImage.originalBitmap,
+                    maskBitmap = maskBitmap,
+                    previewBitmap = processedImage.transformedBitmap
+                )
             } else {
-                onProgressUpdate?.invoke("Running MI-GAN Neural Inpainting", 80)
-                AppLogger.info("Using Local Mi-GAN for inpainting")
-                val miGanResult =
-                    miGanInference.inferMiGan(processedImage.originalMat, currentMaskMat)
-                inpaintedBitmap = MatScaler.createDisplayBitmap(miGanResult)
-                miGanResult.release()
+                val inpaintMat = miGanInference.inferMiGan(
+                    imageMat = processedImage.originalMat,
+                    maskMat = maskMat
+                )
+                val outBmp = MatScaler.createDisplayBitmap(inpaintMat)
+                inpaintMat.release()
+                outBmp
             }
             
-            onProgressUpdate?.invoke("Processing Complete", 100)
+            onProgressUpdate?.invoke("Completed", 100)
             return@withContext PipelineResult(
                 originalBitmap = processedImage.originalBitmap,
                 maskBitmap = maskBitmap,
@@ -153,6 +169,9 @@ class StaticImagePipeline(
         }
     }
     
+    /**
+     * Releases model sessions and closes open resources.
+     */
     fun close() {
         yoloService.close()
         miGanInference.close()

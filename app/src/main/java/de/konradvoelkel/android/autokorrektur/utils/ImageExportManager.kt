@@ -60,15 +60,15 @@ class ImageExportManager(private val context: Context) {
             csvContent.append("Image Name,Processing Time (ms),Mask Upscale,Score Threshold,Downshift,Downscale MP,Segmentation Model,Success,Error Message\n")
 
             results.forEach { result ->
-                csvContent.append("${result.originalImageName},")
-                csvContent.append("${result.processingTimeMs},")
-                csvContent.append("${result.maskUpscale},")
-                csvContent.append("${result.scoreThreshold},")
-                csvContent.append("${result.downshift},")
-                csvContent.append("${result.downscaleMp},")
-                csvContent.append("${result.segmentationModel},")
-                csvContent.append("${result.success},")
-                csvContent.append("${result.errorMessage ?: ""}\n")
+                csvContent.append(escapeCsvField(result.originalImageName)).append(",")
+                csvContent.append(result.processingTimeMs).append(",")
+                csvContent.append(result.maskUpscale).append(",")
+                csvContent.append(result.scoreThreshold).append(",")
+                csvContent.append(result.downshift).append(",")
+                csvContent.append(result.downscaleMp).append(",")
+                csvContent.append(escapeCsvField(result.segmentationModel)).append(",")
+                csvContent.append(result.success).append(",")
+                csvContent.append(escapeCsvField(result.errorMessage ?: "")).append("\n")
             }
 
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
@@ -85,6 +85,14 @@ class ImageExportManager(private val context: Context) {
         } catch (e: Exception) {
             AppLogger.error("Failed to export CSV", e)
             null
+        }
+    }
+
+    private fun escapeCsvField(value: String): String {
+        return if (value.contains(",") || value.contains("\"") || value.contains("\n") || value.contains("\r")) {
+            "\"" + value.replace("\"", "\"\"") + "\""
+        } else {
+            value
         }
     }
 }

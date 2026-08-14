@@ -9,6 +9,13 @@ data class YoloConfig(
     val scoreThreshold: Float = 0.25f,
     val iouThreshold: Float = 0.45f,
     val topAmountPerClass: Int = 100,
+    /**
+     * COCO class indices representing target vehicles:
+     * - 2: car
+     * - 3: motorcycle
+     * - 5: bus
+     * - 7: truck
+     */
     val vehicleClassIndices: IntArray = intArrayOf(2, 3, 5, 7),
     val labels: Array<String> = DEFAULT_LABELS
 ) {

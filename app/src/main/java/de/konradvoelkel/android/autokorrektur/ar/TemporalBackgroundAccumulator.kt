@@ -12,7 +12,7 @@ import org.opencv.core.Scalar
  * Stores clean background pixels (road, sidewalk, building facade) from un-masked frame regions
  * as the user moves the camera, blending accumulated textures into vehicle mask regions in real-time.
  */
-class TemporalBackgroundAccumulator {
+class TemporalBackgroundAccumulator : AutoCloseable {
 
     private var backgroundMat: Mat? = null
 
@@ -20,9 +20,12 @@ class TemporalBackgroundAccumulator {
      * Accumulates clean background pixels from [frameMat] and blends accumulated background
      * into vehicle regions specified by [maskMat].
      *
+     * Note: The returned [Mat] is a newly allocated matrix whose native memory must be released
+     * by the caller via [Mat.release].
+     *
      * @param frameMat Current camera frame BGRA matrix.
      * @param maskMat Binary mask matrix (255 for vehicle pixels, 0 for background).
-     * @return Blended BGRA matrix with vehicles replaced by accumulated background.
+     * @return Blended BGRA matrix with vehicles replaced by accumulated background (caller must release).
      */
     @Synchronized
     fun accumulateAndBlend(frameMat: Mat, maskMat: Mat): Mat {
@@ -60,11 +63,15 @@ class TemporalBackgroundAccumulator {
     }
 
     /**
-     * Resets the accumulated background buffer.
+     * Resets the accumulated background buffer and releases native memory.
      */
     @Synchronized
     fun reset() {
         backgroundMat?.release()
         backgroundMat = null
+    }
+
+    override fun close() {
+        reset()
     }
 }

@@ -20,14 +20,25 @@ import java.io.IOException
  */
 object InstagramExportUtils {
 
+    /**
+     * Common aspect ratios supported by Instagram posts and stories.
+     */
     enum class AspectRatio(val width: Int, val height: Int) {
+        /** 1:1 square format (1080x1080). */
         SQUARE_1_1(1080, 1080),
+        /** 4:5 vertical portrait feed format (1080x1350). */
         PORTRAIT_4_5(1080, 1350),
+        /** 9:16 vertical full-screen Story/Reel format (1080x1920). */
         STORY_9_16(1080, 1920)
     }
 
+    /**
+     * Layout arrangement of Before and After images.
+     */
     enum class LayoutStyle {
+        /** Left and right comparison panes. */
         SIDE_BY_SIDE,
+        /** Top and bottom comparison panes. */
         STACKED
     }
 
@@ -172,7 +183,11 @@ object InstagramExportUtils {
      * Saves a bitmap to temporary app cache and returns a content Uri for sharing via FileProvider.
      */
     @Throws(IOException::class)
-    fun saveBitmapForSharing(context: Context, bitmap: Bitmap, fileName: String = "autokorrektur_share.jpg"): Uri {
+    fun saveBitmapForSharing(
+        context: Context,
+        bitmap: Bitmap,
+        fileName: String = "autokorrektur_share_${System.currentTimeMillis()}.jpg"
+    ): Uri {
         val imagesDir = File(context.cacheDir, "images").apply { mkdirs() }
         val imageFile = File(imagesDir, fileName)
 
