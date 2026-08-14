@@ -18,6 +18,7 @@ class RigorousGuiFlowInstrumentedTest {
     @Test
     fun testGuiElementsAndSdxlToggleVisibility() {
         val scenario = ActivityScenario.launch(MainActivity::class.java)
+        scenario.onActivity { }
 
         // Verify select image button is displayed
         onView(withId(R.id.fileSelect)).check(matches(isDisplayed()))

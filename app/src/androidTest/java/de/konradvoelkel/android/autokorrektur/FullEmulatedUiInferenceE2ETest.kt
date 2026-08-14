@@ -127,12 +127,12 @@ class FullEmulatedUiInferenceE2ETest : AndroidInstrumentedBaseTest() {
         // Capture final UI state screenshot showing both Mask and Slider
         saveScreenCapture("e2e_02_inference_success_with_mask_and_slider.png")
 
-        // Save result bitmaps to /sdcard/Download for debugging
+        // Save result bitmaps to externalCacheDir for debugging
         try {
-            val maskFile = File("/sdcard/Download/e2e_mask_bitmap.png")
+            val maskFile = File(appContext.externalCacheDir, "e2e_mask_bitmap.png")
             FileOutputStream(maskFile).use { successResult.maskBitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
             successResult.inpaintedBitmap?.let { bmp ->
-                val inpaintFile = File("/sdcard/Download/e2e_inpainted_bitmap.png")
+                val inpaintFile = File(appContext.externalCacheDir, "e2e_inpainted_bitmap.png")
                 FileOutputStream(inpaintFile).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
             }
         } catch (_: Exception) {}
@@ -146,38 +146,53 @@ class FullEmulatedUiInferenceE2ETest : AndroidInstrumentedBaseTest() {
         assertTrue("Inpainted bitmap must have valid dimensions", inpaintBmp.width > 0 && inpaintBmp.height > 0)
         assertTrue("Mask bitmap must have valid dimensions", maskBmp.width > 0 && maskBmp.height > 0)
 
-        // Sample pixels to verify that vehicle area was inpainted and background was preserved
-        var maskedPixelsChanged = 0
-        var totalMaskedPixels = 0
-        val sampleStep = 8
+        // Compute Mean Absolute Difference in masked car region vs preserved background region
+        var carDiffSum = 0.0
+        var carPixelCount = 0
+        var bgDiffSum = 0.0
+        var bgPixelCount = 0
+        val sampleStep = 4
 
         for (y in 0 until maskBmp.height step sampleStep) {
             for (x in 0 until maskBmp.width step sampleStep) {
                 val maskPixel = maskBmp.getPixel(x, y) and 0xFF
-                // In maskBitmap: 0 is masked vehicle hole, 255 is background
+                val origPixel = origBmp.getPixel(x.coerceAtMost(origBmp.width - 1), y.coerceAtMost(origBmp.height - 1))
+                val inpaintPixel = inpaintBmp.getPixel(x.coerceAtMost(inpaintBmp.width - 1), y.coerceAtMost(inpaintBmp.height - 1))
+
+                val rDiff = Math.abs(android.graphics.Color.red(origPixel) - android.graphics.Color.red(inpaintPixel))
+                val gDiff = Math.abs(android.graphics.Color.green(origPixel) - android.graphics.Color.green(inpaintPixel))
+                val bDiff = Math.abs(android.graphics.Color.blue(origPixel) - android.graphics.Color.blue(inpaintPixel))
+                val pixelDiff = (rDiff + gDiff + bDiff) / 3.0
+
                 if (maskPixel < 128) {
-                    totalMaskedPixels++
-                    val origPixel = origBmp.getPixel(x.coerceAtMost(origBmp.width - 1), y.coerceAtMost(origBmp.height - 1))
-                    val inpaintPixel = inpaintBmp.getPixel(x.coerceAtMost(inpaintBmp.width - 1), y.coerceAtMost(inpaintBmp.height - 1))
-                    if (origPixel != inpaintPixel) {
-                        maskedPixelsChanged++
-                    }
+                    carDiffSum += pixelDiff
+                    carPixelCount++
+                } else {
+                    bgDiffSum += pixelDiff
+                    bgPixelCount++
                 }
             }
         }
 
-        assertTrue("Mask must detect vehicle region", totalMaskedPixels > 100)
-        val changeRatio = maskedPixelsChanged.toFloat() / totalMaskedPixels.toFloat()
-        AppLogger.info("E2E Inpainting verification: maskedPixelsChanged=$maskedPixelsChanged, totalMaskedPixels=$totalMaskedPixels, changeRatio=$changeRatio")
-        assertTrue("Inpainting must modify pixels in masked vehicle area (changeRatio=$changeRatio)", changeRatio > 0.80f)
+        val meanCarDiff = if (carPixelCount > 0) carDiffSum / carPixelCount else 0.0
+        val meanBgDiff = if (bgPixelCount > 0) bgDiffSum / bgPixelCount else 0.0
+
+        AppLogger.info("E2E Verification: meanCarDiff=$meanCarDiff, meanBgDiff=$meanBgDiff, carPixelCount=$carPixelCount")
+        assertTrue("Mask must detect vehicle region", carPixelCount > 100)
+        assertTrue("Inpainted car area must be substantially modified (meanCarDiff=$meanCarDiff, expected >= 15.0)", meanCarDiff >= 15.0)
+        assertTrue("Background area outside mask must be preserved untouched (meanBgDiff=$meanBgDiff, expected <= 2.0)", meanBgDiff <= 2.0)
+
+        // 8. Verify No Vehicle Remaining via YOLO Re-Detection
+        val yolo = de.konradvoelkel.android.autokorrektur.shared.PipelineTestFixtures.yolo()
+        val carStillDetected = hasVehicleInImage(yolo, inpaintBmp, scoreThreshold = 0.40f)
+        org.junit.Assert.assertFalse("Vehicle should no longer be detectable in the inpainted image", carStillDetected)
 
         scenario.close()
     }
 
     private fun saveScreenCapture(fileName: String) {
         try {
-            val outFile = File("/sdcard/Download", fileName)
-            outFile.parentFile?.mkdirs()
+            val outFile = File(appContext.externalCacheDir, fileName)
             val uiDevice = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation
             val screenshot = uiDevice.takeScreenshot()
             if (screenshot != null) {

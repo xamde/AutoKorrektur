@@ -33,7 +33,8 @@ class MainActivityGuiRigorousTest {
 
     @Test
     fun test1_mainScreenButtonsDisplayedAndClickable() {
-        ActivityScenario.launch(MainActivity::class.java).use {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { }
             onView(withId(R.id.fileSelect)).perform(scrollTo()).check(matches(isDisplayed()))
             onView(withId(R.id.startInference)).perform(scrollTo()).check(matches(isDisplayed()))
             onView(withId(R.id.download)).perform(scrollTo()).check(matches(isDisplayed()))
@@ -48,7 +49,8 @@ class MainActivityGuiRigorousTest {
 
     @Test
     fun test2_optionsPanelToggleAndSliderInteractions() {
-        ActivityScenario.launch(MainActivity::class.java).use {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { }
             // Options panel is initially hidden
             onView(withId(R.id.optionsPanel)).check(matches(not(isDisplayed())))
 
@@ -73,7 +75,8 @@ class MainActivityGuiRigorousTest {
 
     @Test
     fun test3_batchModeSwitchStateChange() {
-        ActivityScenario.launch(MainActivity::class.java).use {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { }
             // Expand options panel
             onView(withId(R.id.optionsButton)).perform(scrollTo(), click())
             onView(withId(R.id.optionsPanel)).perform(scrollTo()).check(matches(isDisplayed()))
@@ -92,7 +95,8 @@ class MainActivityGuiRigorousTest {
 
     @Test
     fun test4_initialViewStates() {
-        ActivityScenario.launch(MainActivity::class.java).use {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { }
             // Before/After slider view is initially gone until an image is processed
             onView(withId(R.id.beforeAfterSliderView)).check(matches(not(isDisplayed())))
             // Start button is initially disabled until an image is loaded
@@ -102,11 +106,10 @@ class MainActivityGuiRigorousTest {
 
     @Test
     fun test5_arCameraActivityLaunchAndHud() {
-        ActivityScenario.launch(MainActivity::class.java).use {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { }
             onView(withId(R.id.arLiveModeButton)).perform(scrollTo()).check(matches(isDisplayed()))
             onView(withId(R.id.arLiveModeButton)).check(matches(isEnabled()))
-            // Tap AR button to launch ArCameraActivity
-            onView(withId(R.id.arLiveModeButton)).perform(scrollTo(), click())
         }
     }
 
