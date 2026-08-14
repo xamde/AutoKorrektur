@@ -29,9 +29,11 @@ class BeforeAfterSliderView @JvmOverloads constructor(
     // Normalized slider position between 0.0 (all After) and 1.0 (all Before)
     private var sliderPosition: Float = 0.5f
 
+    private val density: Float by lazy { context.resources.displayMetrics.density }
+
     private val dividerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
-        strokeWidth = 6f
+        strokeWidth = 3f * context.resources.displayMetrics.density
         style = Paint.Style.STROKE
     }
 
@@ -42,13 +44,13 @@ class BeforeAfterSliderView @JvmOverloads constructor(
 
     private val handleBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
-        strokeWidth = 4f
+        strokeWidth = 2f * context.resources.displayMetrics.density
         style = Paint.Style.STROKE
     }
 
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
-        textSize = 28f
+        textSize = 14f * context.resources.displayMetrics.scaledDensity
         typeface = android.graphics.Typeface.DEFAULT_BOLD
     }
 
@@ -59,7 +61,7 @@ class BeforeAfterSliderView @JvmOverloads constructor(
 
     private val badgeTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
-        textSize = 24f
+        textSize = 12f * context.resources.displayMetrics.scaledDensity
         typeface = android.graphics.Typeface.DEFAULT_BOLD
     }
 
@@ -108,43 +110,56 @@ class BeforeAfterSliderView @JvmOverloads constructor(
     }
 
     /**
-     * Updates the normalized slider position (0.0 to 1.0).
+     * Sets slider position programmatically (0.0 to 1.0).
      */
     fun setSliderPosition(position: Float) {
-        this.sliderPosition = position.coerceIn(0f, 1f)
+        this.sliderPosition = position.coerceIn(0.0f, 1.0f)
         invalidate()
     }
 
+    /**
+     * Returns current slider position (0.0 to 1.0).
+     */
     fun getSliderPosition(): Float = sliderPosition
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (width <= 0) return super.onTouchEvent(event)
+        val before = beforeBitmap ?: return super.onTouchEvent(event)
+        val viewW = width.toFloat()
+        val viewH = height.toFloat()
+        if (viewW <= 0 || viewH <= 0) return super.onTouchEvent(event)
+
+        val srcW = before.width.toFloat()
+        val srcH = before.height.toFloat()
+        val srcAspect = srcW / srcH
+        val destAspect = viewW / viewH
+
+        val left: Float
+        val right: Float
+        if (srcAspect > destAspect) {
+            left = 0f
+            right = viewW
+        } else {
+            val drawW = viewH * srcAspect
+            left = (viewW - drawW) / 2f
+            right = left + drawW
+        }
 
         when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-                revealAnimator?.cancel()
-                updateSliderPosition(event.x)
+            MotionEvent.ACTION_DOWN,
+            MotionEvent.ACTION_MOVE -> {
                 parent?.requestDisallowInterceptTouchEvent(true)
+                val clampedX = event.x.coerceIn(left, right)
+                sliderPosition = if (right > left) (clampedX - left) / (right - left) else 0.5f
+                invalidate()
                 return true
             }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+            MotionEvent.ACTION_UP,
+            MotionEvent.ACTION_CANCEL -> {
                 parent?.requestDisallowInterceptTouchEvent(false)
-                performClick()
                 return true
             }
         }
         return super.onTouchEvent(event)
-    }
-
-    override fun performClick(): Boolean {
-        super.performClick()
-        return true
-    }
-
-    private fun updateSliderPosition(x: Float) {
-        sliderPosition = (x / width.toFloat()).coerceIn(0f, 1f)
-        contentDescription = "Before/After slider at ${(sliderPosition * 100).toInt()}%"
-        invalidate()
     }
 
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
@@ -166,83 +181,90 @@ class BeforeAfterSliderView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        val before = beforeBitmap
-        val after = afterBitmap
-
-        if (before == null || after == null || width <= 0 || height <= 0) return
+        val before = beforeBitmap ?: return
+        val after = afterBitmap ?: return
 
         val viewW = width.toFloat()
         val viewH = height.toFloat()
-        val splitX = viewW * sliderPosition
+        if (viewW <= 0 || viewH <= 0) return
 
-        // Calculate aspect ratio fit bounding box (FIT_CENTER)
+        // Compute aspect-fit destination rectangle inside this View
         val srcW = before.width.toFloat()
         val srcH = before.height.toFloat()
         val srcAspect = srcW / srcH
         val destAspect = viewW / viewH
 
-        val drawRect = RectF()
         if (srcAspect > destAspect) {
             val drawH = viewW / srcAspect
             val top = (viewH - drawH) / 2f
-            drawRect.set(0f, top, viewW, top + drawH)
+            viewRect.set(0f, top, viewW, top + drawH)
         } else {
             val drawW = viewH * srcAspect
             val left = (viewW - drawW) / 2f
-            drawRect.set(left, 0f, left + drawW, viewH)
+            viewRect.set(left, 0f, left + drawW, viewH)
         }
+
+        val splitX = viewRect.left + (viewRect.width() * sliderPosition)
 
         // 1. Draw After Bitmap across destination fit rectangle
         srcCrop.set(0, 0, after.width, after.height)
-        canvas.drawBitmap(after, srcCrop, drawRect, bitmapPaint)
+        canvas.drawBitmap(after, srcCrop, viewRect, bitmapPaint)
 
         // 2. Clip and draw Before Bitmap on the left side of splitX
         canvas.withClip(0f, 0f, splitX, viewH) {
             srcCrop.set(0, 0, before.width, before.height)
-            drawBitmap(before, srcCrop, drawRect, bitmapPaint)
+            drawBitmap(before, srcCrop, viewRect, bitmapPaint)
         }
 
         // 3. Draw vertical divider line across image area
-        canvas.drawLine(splitX, drawRect.top, splitX, drawRect.bottom, dividerPaint)
+        canvas.drawLine(splitX, viewRect.top, splitX, viewRect.bottom, dividerPaint)
 
         // 4. Draw circular handle thumb in center of divider
-        val handleRadius = 40f
-        val handleCenterY = (drawRect.top + drawRect.bottom) / 2f
+        val handleRadius = 20f * density
+        val handleCenterY = (viewRect.top + viewRect.bottom) / 2f
         canvas.drawCircle(splitX, handleCenterY, handleRadius, handleBgPaint)
         canvas.drawCircle(splitX, handleCenterY, handleRadius, handleBorderPaint)
 
         // Draw left/right arrows inside handle thumb ("◀  ▶")
         textPaint.getTextBounds(handleText, 0, handleText.length, textBounds)
         val textX = splitX - (textBounds.width() / 2f)
-        val textY = handleCenterY + (textBounds.height() / 2f) - 2f
+        val textY = handleCenterY + (textBounds.height() / 2f) - (1f * density)
         canvas.drawText(handleText, textX, textY, textPaint)
 
         // 5. Draw "VORHER" badge on left if visible
-        if (splitX > drawRect.left + 80f) {
-            drawBadge(canvas, "VORHER", drawRect.left + 24f, drawRect.top + 24f)
+        val badgeMargin = 40f * density
+        val badgeOffset = 12f * density
+        if (splitX > viewRect.left + badgeMargin) {
+            drawBadge(canvas, "VORHER", viewRect.left + badgeOffset, viewRect.top + badgeOffset)
         }
 
         // 6. Draw "NACHHER" badge on right if visible
-        if (splitX < drawRect.right - 80f) {
+        if (splitX < viewRect.right - badgeMargin) {
             val badgeW = calculateBadgeWidth("NACHHER")
-            drawBadge(canvas, "NACHHER", drawRect.right - badgeW - 24f, drawRect.top + 24f)
+            drawBadge(canvas, "NACHHER", viewRect.right - badgeW - badgeOffset, viewRect.top + badgeOffset)
         }
     }
 
     private fun calculateBadgeWidth(text: String): Float {
         badgeTextPaint.getTextBounds(text, 0, text.length, textBounds)
-        return textBounds.width() + 32f
+        return textBounds.width() + (16f * density)
     }
 
     private fun drawBadge(canvas: Canvas, text: String, left: Float, top: Float) {
         badgeTextPaint.getTextBounds(text, 0, text.length, textBounds)
-        val badgeW = textBounds.width() + 32f
-        val badgeH = textBounds.height() + 20f
+        val badgeW = textBounds.width() + (16f * density)
+        val badgeH = textBounds.height() + (10f * density)
         badgeRect.set(left, top, left + badgeW, top + badgeH)
-        canvas.drawRoundRect(badgeRect, 12f, 12f, badgeBgPaint)
-        val textX = left + 16f
-        val textY = top + badgeH - 12f
+        canvas.drawRoundRect(badgeRect, 6f * density, 6f * density, badgeBgPaint)
+        val textX = left + (8f * density)
+        val textY = top + badgeH - (6f * density)
         canvas.drawText(text, textX, textY, badgeTextPaint)
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        revealAnimator?.cancel()
+        revealAnimator = null
     }
 
     override fun onSaveInstanceState(): android.os.Parcelable {

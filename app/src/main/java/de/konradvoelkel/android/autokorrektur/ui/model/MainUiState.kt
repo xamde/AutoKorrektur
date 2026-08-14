@@ -8,7 +8,7 @@ import de.konradvoelkel.android.autokorrektur.pipeline.PipelineResult
  * Sealed class representing the different UI states for the Main Fragment.
  */
 sealed class MainUiState {
-    object Idle : MainUiState()
+    data object Idle : MainUiState()
 
     data class Loading(
         val stage: String,

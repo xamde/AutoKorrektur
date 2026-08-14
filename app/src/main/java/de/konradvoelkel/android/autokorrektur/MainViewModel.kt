@@ -42,30 +42,47 @@ class MainViewModel(
     )
 
     private val _uiState = MutableStateFlow<MainUiState>(MainUiState.Idle)
+    /** Current UI state of the editor fragment (Idle, Loading, Success, Error). */
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
     private val _properties = MutableStateFlow(MainUiProperties())
+    /** Configurable editor parameters and selected image references. */
     val properties: StateFlow<MainUiProperties> = _properties.asStateFlow()
 
     private var inferenceJob: Job? = null
 
+    /**
+     * Sets the URI of the single source photo to process.
+     */
     fun setSelectedImageUri(uri: Uri?) {
         _properties.update { it.copy(selectedImageUri = uri) }
         _uiState.value = MainUiState.Idle
     }
 
+    /**
+     * Sets the collection of image URIs for batch processing.
+     */
     fun setSelectedImageUris(uris: List<Uri>) {
         _properties.update { it.copy(selectedImageUris = uris) }
     }
 
+    /**
+     * Updates the Before/After comparison slider position (0.0 to 1.0).
+     */
     fun setSliderPosition(position: Float) {
         _properties.update { it.copy(sliderPosition = position) }
     }
 
+    /**
+     * Enables or disables multi-image batch processing mode.
+     */
     fun setBatchMode(enabled: Boolean) {
         _properties.update { it.copy(isBatchMode = enabled) }
     }
 
+    /**
+     * Launches vehicle removal and inpainting inference for the current selection.
+     */
     fun startInference(
         downscaleMp: Float?,
         maskUpscale: Float,
@@ -198,6 +215,9 @@ class MainViewModel(
         _properties.update { it.copy(batchProcessingResults = results) }
     }
 
+    /**
+     * Cancels active inference jobs and resets editor state to idle defaults.
+     */
     fun clearState() {
         inferenceJob?.cancel()
         _properties.value = MainUiProperties()
