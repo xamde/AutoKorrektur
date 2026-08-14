@@ -60,3 +60,6 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: ./gradlew connectedDebugAndroidTest
+
+      - name: Build Production Release App Bundle (AAB)
+        run: ./gradlew :app:bundleRelease

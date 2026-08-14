@@ -18,6 +18,15 @@
 -keep class org.tensorflow.lite.** { *; }
 -dontwarn org.tensorflow.lite.**
 
+# Preserve WorkManager Worker Classes (instantiated via reflection)
+-keep public class * extends androidx.work.ListenableWorker {
+    public <init>(android.content.Context, androidx.work.WorkerParameters);
+}
+
+# Preserve Model Data Classes for JSON Serialization
+-keepclassmembers class de.konradvoelkel.android.autokorrektur.model.** { *; }
+-keepclassmembers class de.konradvoelkel.android.autokorrektur.ml.model.** { *; }
+
 # Preserve OkHttp / Okio Symbols
 -keepattributes Signature
 -keepattributes *Annotation*
@@ -27,5 +36,6 @@
 -dontwarn okhttp3.**
 -dontwarn okio.**
 
-# Preserve Line Numbers for Debug Stack Traces
+# Preserve Line Numbers and Source Attributes for Crash Reporting
 -keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
