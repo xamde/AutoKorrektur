@@ -1,0 +1,44 @@
+# Changelog
+
+All notable changes to the AutoKorrektur project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [Unreleased]
+
+### Added
+- GitHub Actions CI workflow executing backend pytest, Android lint, unit tests, JaCoCo coverage, and headless Android emulator tests.
+- Comprehensive JaCoCo coverage reporting via `./gradlew jacocoTestReport`.
+- Dedicated unit and instrumented tests for `ImageProcessor`, `YoloTFLiteEngine`, `ServerInpainter`, `ConsentManager`, `QuotaManager`, `MainViewModel`, and UI delegates.
+- Pre-commit configuration for Python linting and formatting.
+- Comprehensive `ARCHITECTURE.md` specification detailing mask polarity, color spaces, coordinate transformations, and neural pipeline lifecycle.
+
+### Changed
+- Refactored `BatchProcessingWorker` to store batch URIs in temporary JSON files, bypassing WorkManager's 10KB Data payload limit.
+- Standardized backend diffusion inpainting configuration setting to `sd_model_id`.
+- Replaced Canvas-based Bitmap downsampling with hardware Matrix-based scaling.
+- Replaced ThreadLocal prototype channel buffers in `YoloMaskAssembler` to reduce per-frame GC allocations.
+
+### Fixed
+- Fixed bitmap memory leaks in `BatchProcessingWorker` batch iteration loop.
+- Fixed bitmap leaks in `ImageProcessor` upon coroutine cancellation.
+- Eliminated all unsafe `!!` operators in `YoloTFLiteEngine`.
+- Fixed blocking Play Integrity gRPC calls stalling FastAPI async event loop.
+- Enforced streaming chunk upload size limits in cloud inpainting endpoint.
+- Added native matrix cleanup fallback in `TemporalBackgroundAccumulator`.
+
+---
+
+## [1.0.0] - 2026-08-14
+
+### Added
+- Complete on-device vehicle detection and segmentation pipeline powered by YOLOv11-seg (TFLite).
+- High-quality neural inpainting using on-device MI-GAN (ONNX Runtime) and remote Stable Diffusion XL (SDXL).
+- Real-time AR mode with temporal background accumulation for live vehicle erasure.
+- Instagram social comparison graphic export with 1:1, 4:5, and 9:16 aspect ratios.
+- Multi-image background batch processing via Android WorkManager with CSV export.
+- Desktop and on-device benchmark harnesses evaluating IoU, Dice $F_1$, Boundary-IoU, and PSNR/SSIM.
+- Play Integrity attestation and daily free quota enforcement for cloud SDXL requests.

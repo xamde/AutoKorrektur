@@ -44,15 +44,13 @@ object BitmapMemoryUtils {
         val newHeight = max(1, (height * scale).roundToInt())
 
         AppLogger.info("Downscaling bitmap for memory safety: ${width}x${height} -> ${newWidth}x${newHeight}")
-        val scaled = Bitmap.createBitmap(newWidth, newHeight, Bitmap.Config.ARGB_8888)
+        val matrix = android.graphics.Matrix().apply {
+            postScale(newWidth.toFloat() / width.toFloat(), newHeight.toFloat() / height.toFloat())
+        }
+        val scaled = Bitmap.createBitmap(bitmap, 0, 0, width, height, matrix, true)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             scaled.gainmap = null
         }
-        val canvas = android.graphics.Canvas(scaled)
-        val paint = android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG or android.graphics.Paint.ANTI_ALIAS_FLAG)
-        val srcRect = android.graphics.Rect(0, 0, width, height)
-        val dstRect = android.graphics.Rect(0, 0, newWidth, newHeight)
-        canvas.drawBitmap(bitmap, srcRect, dstRect, paint)
         return scaled
     }
 

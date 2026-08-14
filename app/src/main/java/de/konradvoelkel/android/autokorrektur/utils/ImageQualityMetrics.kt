@@ -13,7 +13,6 @@ import kotlin.math.log10
 /**
  * Utility functions for calculating image quality metrics (PSNR and SSIM).
  */
-@Suppress("MagicNumber", "MaxLineLength", "LongMethod")
 object ImageQualityMetrics {
 
     private const val MAX_8BIT_VAL = 255.0

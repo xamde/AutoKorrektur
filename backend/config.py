@@ -27,9 +27,13 @@ class BackendSettings(BaseSettings):
         default=True,
         description="Whether to load the neural inpainting pipeline into GPU/CPU RAM at startup",
     )
-    sdxl_model_id: str = Field(
+    sd_model_id: str = Field(
         default="runwayml/stable-diffusion-inpainting",
         description="HuggingFace repository ID or local path for the diffusion inpainting model (defaults to lightweight SD 1.5 inpainting fallback; can be configured to diffusers/stable-diffusion-xl-1.0-inpainting-0.1)",
+    )
+    inpainting_prompt: str = Field(
+        default="seamless background, clean street, photorealistic",
+        description="Default positive prompt passed to diffusion inpainting pipeline",
     )
     strict_integrity_check: bool = Field(
         default=True,

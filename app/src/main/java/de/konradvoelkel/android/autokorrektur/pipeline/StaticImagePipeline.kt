@@ -14,6 +14,8 @@ import de.konradvoelkel.android.autokorrektur.ml.config.YoloConfig
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import de.konradvoelkel.android.autokorrektur.utils.DevicePerformanceHelper
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import org.opencv.android.Utils
 import org.opencv.core.Mat
@@ -97,6 +99,8 @@ class StaticImagePipeline(
         var processedImage: ImageProcessor.ProcessedImage? = null
         var maskMat: Mat? = null
         try {
+            currentCoroutineContext().ensureActive()
+
             // 1. Process Input
             onProgressUpdate?.invoke("Loading & Preprocessing Image", 25)
             processedImage = imageProcessor.processInputImage(
@@ -106,6 +110,8 @@ class StaticImagePipeline(
                 downscaleMp = downscaleMp
             )
             
+            currentCoroutineContext().ensureActive()
+
             // 2. YOLO Mask Generation
             onProgressUpdate?.invoke("Running YOLO Segmentation", 50)
             val config = YoloConfig(scoreThreshold = scoreThreshold)
@@ -129,6 +135,8 @@ class StaticImagePipeline(
             Utils.matToBitmap(maskMat, maskBitmap)
             onMaskGenerated?.invoke(maskBitmap)
 
+            currentCoroutineContext().ensureActive()
+
             // 3. Neural Inpainting
             onProgressUpdate?.invoke(if (useServerSdxl) "Running Cloud SDXL Inpainting" else "Running On-Device Inpainting", 75)
             val inpaintedBitmap = if (useServerSdxl) {
@@ -147,6 +155,8 @@ class StaticImagePipeline(
                 outBmp
             }
             
+            currentCoroutineContext().ensureActive()
+
             onProgressUpdate?.invoke("Completed", 100)
             return@withContext PipelineResult(
                 originalBitmap = processedImage.originalBitmap,
@@ -156,6 +166,7 @@ class StaticImagePipeline(
             )
             
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             AppLogger.error("StaticImagePipeline Error", e)
             return@withContext PipelineResult(
                 originalBitmap = processedImage?.originalBitmap ?: createBitmap(1, 1),

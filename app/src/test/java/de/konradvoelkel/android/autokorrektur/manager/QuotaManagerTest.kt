@@ -101,14 +101,22 @@ class QuotaManagerTest {
     }
 
     @Test
-    fun testConsentManager() {
-        val consentManager = ConsentManager(context)
-        assertFalse(consentManager.isConsentGranted())
+    fun testDailyQuotaResetsOnNextDay() {
+        var currentDate = "2026-08-14"
+        val quotaManager = QuotaManager(context, dateProvider = { currentDate })
 
-        consentManager.setConsentGranted(true)
-        assertTrue(consentManager.isConsentGranted())
+        // Exhaust all 5 quota points on Day 1
+        repeat(5) {
+            assertTrue(quotaManager.consumeQuota())
+        }
+        assertEquals(0, quotaManager.getRemainingDailyQuota())
+        assertFalse(quotaManager.hasAvailableQuota())
 
-        consentManager.setConsentGranted(false)
-        assertFalse(consentManager.isConsentGranted())
+        // Advance to Day 2
+        currentDate = "2026-08-15"
+        assertEquals(5, quotaManager.getRemainingDailyQuota())
+        assertTrue(quotaManager.hasAvailableQuota())
+        assertTrue(quotaManager.consumeQuota())
+        assertEquals(4, quotaManager.getRemainingDailyQuota())
     }
 }

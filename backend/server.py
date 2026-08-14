@@ -32,16 +32,19 @@ class InpaintingDomainError(Exception):
 
 
 class InvalidImagePayloadError(InpaintingDomainError):
+    """Raised when an uploaded image/mask payload is corrupted or has an invalid format."""
     def __init__(self, message: str):
         super().__init__(message, status_code=400)
 
 
 class ImageDimensionExceededError(InpaintingDomainError):
+    """Raised when uploaded image dimensions exceed maximum resolution limits (2048x2048)."""
     def __init__(self, message: str):
         super().__init__(message, status_code=400)
 
 
 class IntegrityVerificationError(InpaintingDomainError):
+    """Raised when Google Play Integrity attestation token verification fails or is rejected."""
     def __init__(self, message: str):
         super().__init__(message, status_code=403)
 
@@ -86,10 +89,10 @@ async def lifespan(app: FastAPI):
         logger.info(f"PyTorch detected with device: {device}")
         if settings.enable_sdxl_load:
             sdxl_pipeline = AutoPipelineForInpainting.from_pretrained(
-                settings.sdxl_model_id,
+                settings.sd_model_id,
                 torch_dtype=torch.float16 if device == "cuda" else torch.float32,
             ).to(device)
-            logger.info(f"Loaded inpainting model: {settings.sdxl_model_id} on {device}")
+            logger.info(f"Loaded inpainting model: {settings.sd_model_id} on {device}")
     except Exception as e:
         logger.info(f"SDXL pipeline initialized in mock/test mode: {e}")
 
@@ -225,7 +228,7 @@ def process_inpainting_payload(
     mask_img = validate_and_open(mask_bytes, "mask").convert("L")
 
     if sdxl_pipeline is not None:
-        prompt = "seamless background, clean street, photorealistic"
+        prompt = settings.inpainting_prompt
         result = sdxl_pipeline(prompt=prompt, image=init_img, mask_image=mask_img).images[0]
     else:
         # Mock/dev environment mode: use preview if available, else original
@@ -313,28 +316,39 @@ async def inpaint_image(
     logger.info(f"Received request for /v1/inpaint from {device_uuid} at {client_ip}")
 
     try:
-        verify_token(device_uuid, play_integrity_token)
+        await asyncio.to_thread(verify_token, device_uuid, play_integrity_token)
     except InpaintingDomainError as e:
         raise HTTPException(status_code=e.status_code, detail=e.message) from e
 
     await check_rate_limit(device_uuid, client_ip)
 
-    # A7: Upload size limit check
+    # A7: Upload size limit check (pre-check if headers provide size)
     total_size = (image.size or 0) + (mask.size or 0) + ((preview.size or 0) if preview else 0)
     if total_size > settings.max_upload_bytes:
         raise HTTPException(status_code=413, detail=f"Total upload size exceeds {settings.max_upload_bytes} bytes")
 
     try:
-        image_data = await image.read()
-        mask_data = await mask.read()
+        total_read = 0
 
-        preview_data = None
-        if preview:
-            preview_data = await preview.read()
+        async def read_limited(upload: UploadFile) -> bytes:
+            nonlocal total_read
+            chunks = []
+            chunk_size = 64 * 1024
+            while True:
+                chunk = await upload.read(chunk_size)
+                if not chunk:
+                    break
+                total_read += len(chunk)
+                if total_read > settings.max_upload_bytes:
+                    raise HTTPException(
+                        status_code=413, detail=f"Total upload size exceeds {settings.max_upload_bytes} bytes"
+                    )
+                chunks.append(chunk)
+            return b"".join(chunks)
 
-        actual_total_size = len(image_data) + len(mask_data) + (len(preview_data) if preview_data else 0)
-        if actual_total_size > settings.max_upload_bytes:
-            raise HTTPException(status_code=413, detail=f"Total upload size exceeds {settings.max_upload_bytes} bytes")
+        image_data = await read_limited(image)
+        mask_data = await read_limited(mask)
+        preview_data = await read_limited(preview) if preview else None
 
         logger.info(f"Loaded image ({len(image_data)} bytes) and mask ({len(mask_data)} bytes) into memory")
 

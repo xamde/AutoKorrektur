@@ -23,12 +23,6 @@ interface InpaintingEngine {
     @Throws(IOException::class)
     suspend fun inpaint(imageMat: Mat, maskMat: Mat): Mat
 
-    /**
-     * Deprecated alias for [inpaint].
-     */
-    @Deprecated("Use inpaint() instead", ReplaceWith("inpaint(imageMat, maskMat)"))
-    @Throws(IOException::class)
-    suspend fun inferMiGan(imageMat: Mat, maskMat: Mat): Mat = inpaint(imageMat, maskMat)
 
     /**
      * Releases model sessions and associated native buffers.

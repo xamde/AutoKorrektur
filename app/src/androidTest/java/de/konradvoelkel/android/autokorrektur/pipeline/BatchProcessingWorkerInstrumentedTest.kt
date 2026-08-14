@@ -9,6 +9,8 @@ import androidx.work.workDataOf
 import de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest
 import io.mockk.coEvery
 import io.mockk.mockkConstructor
+import io.mockk.unmockkAll
+import org.junit.After
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -18,6 +20,11 @@ import android.graphics.Bitmap
 
 @RunWith(AndroidJUnit4::class)
 class BatchProcessingWorkerInstrumentedTest : AndroidInstrumentedBaseTest() {
+
+    @After
+    fun tearDown() {
+        unmockkAll()
+    }
 
     @Test
     fun testBatchProcessingWorker_emptyInput_fails() {
