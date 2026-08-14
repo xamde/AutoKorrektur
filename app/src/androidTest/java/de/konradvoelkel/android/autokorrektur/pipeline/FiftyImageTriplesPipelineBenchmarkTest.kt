@@ -131,7 +131,8 @@ class FiftyImageTriplesPipelineBenchmarkTest : AndroidInstrumentedBaseTest() {
                 val invMat = miGan.inferMiGan(processedImage.originalMat, invMask)
                 val invBmp = Bitmap.createBitmap(invMat.cols(), invMat.rows(), Bitmap.Config.ARGB_8888)
                 Utils.matToBitmap(invMat, invBmp)
-                val invFile = File("/sdcard/Download", "triple_01_migan_inverted_mask.png")
+                val invFile = File(appContext.cacheDir, "triple_01_migan_inverted_mask.png")
+                tempFiles.add(invFile)
                 val invStream = invFile.outputStream()
                 invBmp.compress(Bitmap.CompressFormat.PNG, 100, invStream)
                 invStream.close()
@@ -140,8 +141,8 @@ class FiftyImageTriplesPipelineBenchmarkTest : AndroidInstrumentedBaseTest() {
                 invBmp.recycle()
             }
 
-            val tempOutFile = File("/sdcard/Download", "${prefix}_migan_inpainted.png")
-            tempOutFile.parentFile?.mkdirs()
+            val tempOutFile = File(appContext.cacheDir, "${prefix}_migan_inpainted.png")
+            tempFiles.add(tempOutFile)
             val outStream = tempOutFile.outputStream()
             inpaintedBitmap.compress(Bitmap.CompressFormat.PNG, 100, outStream)
             outStream.close()

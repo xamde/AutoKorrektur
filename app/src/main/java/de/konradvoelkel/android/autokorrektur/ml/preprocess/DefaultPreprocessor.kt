@@ -19,7 +19,11 @@ class DefaultPreprocessor(
 
     override fun prepare(rgbMat: Mat, targetW: Int, targetH: Int): PreprocessResult {
         // 1) Make dimensions divisible by stride to preserve downsample alignment
-        val (w, h) = ImageProcessingUtils.divStride(stride, rgbMat.cols(), rgbMat.rows())
+        val safeCols = rgbMat.cols().coerceAtLeast(1)
+        val safeRows = rgbMat.rows().coerceAtLeast(1)
+        val (wRaw, hRaw) = ImageProcessingUtils.divStride(stride, safeCols, safeRows)
+        val w = wRaw.coerceAtLeast(stride)
+        val h = hRaw.coerceAtLeast(stride)
         val resizedMat = Mat()
         Imgproc.resize(
             rgbMat,
