@@ -131,7 +131,8 @@ class YoloTFLiteEngine(private val context: Context) : YoloEngine {
             inputBuffer = ByteBuffer.allocateDirect(inBytes).order(ByteOrder.nativeOrder())
         }
         val totalRawBytes = inputH * inputW * inputC
-        if (pixelBuffer == null || pixelBuffer!!.size < totalRawBytes) {
+        val pxBuf = pixelBuffer
+        if (pxBuf == null || pxBuf.size < totalRawBytes) {
             pixelBuffer = ByteArray(totalRawBytes)
         }
         // Assume float32 outputs
@@ -290,8 +291,9 @@ class YoloTFLiteEngine(private val context: Context) : YoloEngine {
 
             // Copy pixels using pre-allocated buffer
             val totalBytes = rows * cols * channels
-            val pixels = if (pixelBuffer != null && pixelBuffer!!.size >= totalBytes) {
-                pixelBuffer!!
+            val pxBuf = pixelBuffer
+            val pixels = if (pxBuf != null && pxBuf.size >= totalBytes) {
+                pxBuf
             } else {
                 ByteArray(totalBytes).also { pixelBuffer = it }
             }

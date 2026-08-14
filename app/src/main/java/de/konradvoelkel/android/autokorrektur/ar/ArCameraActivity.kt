@@ -24,7 +24,8 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 /**
- * Activity for Real-Time 30 FPS AR Car Removal with Temporal Background Accumulation.
+ * CameraX-driven Augmented Reality activity that performs real-time vehicle segmentation
+ * and replaces detected vehicle pixels using temporal background accumulation.
  */
 class ArCameraActivity : AppCompatActivity() {
 
@@ -33,6 +34,9 @@ class ArCameraActivity : AppCompatActivity() {
     private val accumulator = TemporalBackgroundAccumulator()
     private lateinit var yoloInference: YoloService
 
+    /**
+     * Sets up CameraX view binding, buttons, and launches asynchronous YOLO engine initialization.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityArCameraBinding.inflate(layoutInflater)

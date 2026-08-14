@@ -181,8 +181,17 @@ object YoloPostprocessor {
         return if (union > MIN_UNION_EPSILON) interArea / union else 0f
     }
 
-    /** Convenience wrapper using a config object. */
-    @Suppress("unused")
+    /**
+     * Convenience post-processing wrapper that parses detections and applies non-maximum suppression (NMS)
+     * using the supplied [YoloConfig].
+     *
+     * @param detectionsBuffer Direct ByteBuffer containing raw model output tensors.
+     * @param numProposals Total number of bounding box proposals.
+     * @param featuresPerProposal Dimensions per proposal vector.
+     * @param numClasses Total dataset classes (80 for COCO).
+     * @param config YOLO detection, filtering, and NMS parameters.
+     * @return Filtered and suppressed list of [Detection] objects.
+     */
     fun postprocess(
         detectionsBuffer: ByteBuffer,
         numProposals: Int,

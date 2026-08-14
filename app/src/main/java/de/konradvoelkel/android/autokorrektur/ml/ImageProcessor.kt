@@ -81,9 +81,9 @@ class ImageProcessor(context: Context) : ImagePreprocessingService {
                 yRatio = prep.yRatio
             )
         } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
             originalBitmap?.recycle()
             transformedBitmap?.recycle()
+            if (e is kotlinx.coroutines.CancellationException) throw e
             throw if (e is IOException) e else IOException(
                 "Image processing failed: ${e.message}",
                 e

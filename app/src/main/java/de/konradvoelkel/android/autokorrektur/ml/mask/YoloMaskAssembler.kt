@@ -45,6 +45,8 @@ object YoloMaskAssembler {
         return prototypeMasks
     }
 
+    private val threadLocalChannelBuffer = ThreadLocal<FloatArray>()
+
     /** De-interleave prototype data into per-channel Mats (once per inference). */
     fun deinterleavePrototypes(prototypeMasksData: FloatArray, protoShape: IntArray): List<Mat> {
         require(protoShape.size == 4) { "Prototype tensor shape must be [1, H, W, C]" }
@@ -56,8 +58,12 @@ object YoloMaskAssembler {
             "Prototype data size mismatch: expected ${numPrototypesChannels * pixelsPerChannel}, got ${prototypeMasksData.size}"
         }
 
-        // B8 & RF-36: Reuse single pre-allocated channel buffer to eliminate 31 intermediate GC allocations per frame
-        val channelBuffer = FloatArray(pixelsPerChannel)
+        // B8 & RF-36 & CR-29: Reuse ThreadLocal channel buffer to eliminate intermediate GC allocations per frame
+        var channelBuffer = threadLocalChannelBuffer.get()
+        if (channelBuffer == null || channelBuffer.size < pixelsPerChannel) {
+            channelBuffer = FloatArray(pixelsPerChannel)
+            threadLocalChannelBuffer.set(channelBuffer)
+        }
         val resultList = ArrayList<Mat>(numPrototypesChannels)
         for (c in 0 until numPrototypesChannels) {
             for (i in 0 until pixelsPerChannel) {

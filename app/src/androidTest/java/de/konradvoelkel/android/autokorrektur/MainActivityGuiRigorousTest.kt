@@ -1,13 +1,5 @@
 package de.konradvoelkel.android.autokorrektur
 
-import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.action.ViewActions.click
-import androidx.test.espresso.action.ViewActions.scrollTo
-import androidx.test.espresso.assertion.ViewAssertions.doesNotExist
-import androidx.test.espresso.assertion.ViewAssertions.matches
-import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
-import androidx.test.espresso.matcher.ViewMatchers.isEnabled
-import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
@@ -20,6 +12,7 @@ import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import org.hamcrest.CoreMatchers.not
+import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -32,7 +25,7 @@ import org.junit.runner.RunWith
 class MainActivityGuiRigorousTest {
 
     @Test
-    fun test1_mainScreenButtonsDisplayedAndClickable() {
+    fun testMainScreenButtonsDisplayedAndClickable() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { }
             onView(withId(R.id.fileSelect)).perform(scrollTo()).check(matches(isDisplayed()))
@@ -48,7 +41,7 @@ class MainActivityGuiRigorousTest {
     }
 
     @Test
-    fun test2_optionsPanelToggleAndSliderInteractions() {
+    fun testOptionsPanelToggleAndSliderInteractions() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { }
             // Options panel is initially hidden
@@ -74,7 +67,7 @@ class MainActivityGuiRigorousTest {
     }
 
     @Test
-    fun test3_batchModeSwitchStateChange() {
+    fun testBatchModeSwitchStateChange() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { }
             // Expand options panel
@@ -94,7 +87,7 @@ class MainActivityGuiRigorousTest {
     }
 
     @Test
-    fun test4_initialViewStates() {
+    fun testInitialViewStates() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { }
             // Before/After slider view is initially gone until an image is processed
@@ -105,7 +98,7 @@ class MainActivityGuiRigorousTest {
     }
 
     @Test
-    fun test5_arCameraActivityLaunchAndHud() {
+    fun testArCameraActivityLaunchButton() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { }
             onView(withId(R.id.arLiveModeButton)).perform(scrollTo()).check(matches(isDisplayed()))
@@ -113,7 +106,7 @@ class MainActivityGuiRigorousTest {
         }
     }
 
-    @org.junit.After
+    @After
     fun tearDown() {
         System.gc()
     }

@@ -14,16 +14,38 @@ import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import androidx.core.net.toUri
 
 /**
- * Background WorkManager worker to process multiple queued vehicle photos sequentially.
+ * Background [CoroutineWorker] that executes batch vehicle detection and neural inpainting.
+ *
+ * Receives input image URIs via [KEY_IMAGE_URIS_FILE] (temporary JSON list on disk) or [KEY_IMAGE_URIS],
+ * initializes an isolated [StaticImagePipeline], sequentially processes each image with progress broadcasts,
+ * and outputs batch metrics via [KEY_SUCCESS_COUNT].
  */
 class BatchProcessingWorker(
     context: Context,
     params: WorkerParameters
 ) : CoroutineWorker(context, params) {
 
+    /**
+     * Executes the sequential background image inpainting pipeline, broadcasting progress
+     * notifications and safely freeing memory buffers per iteration.
+     */
     override suspend fun doWork(): Result {
-        val imageUrisStr = inputData.getStringArray(KEY_IMAGE_URIS)
+        val queueFilePath = inputData.getString(KEY_IMAGE_URIS_FILE)
+        val queueFile = queueFilePath?.let { java.io.File(it) }
+        val imageUrisStr: Array<String>? = when {
+            queueFile != null && queueFile.exists() -> {
+                try {
+                    val jsonArr = org.json.JSONArray(queueFile.readText())
+                    Array(jsonArr.length()) { i -> jsonArr.getString(i) }
+                } catch (e: Exception) {
+                    queueFile.readLines().filter { it.isNotBlank() }.toTypedArray()
+                }
+            }
+            else -> inputData.getStringArray(KEY_IMAGE_URIS)
+        }
+
         if (imageUrisStr.isNullOrEmpty()) {
+            queueFile?.delete()
             AppLogger.info("BatchProcessingWorker: No image URIs provided")
             return Result.failure(workDataOf(KEY_ERROR to "No image URIs provided"))
         }
@@ -71,8 +93,14 @@ class BatchProcessingWorker(
                     useServerSdxl = useServerSdxl
                 )
 
-                if (result.inpaintedBitmap != null && result.errorMessage == null) {
-                    successCount++
+                try {
+                    if (result.inpaintedBitmap != null && result.errorMessage == null) {
+                        successCount++
+                    }
+                } finally {
+                    result.originalBitmap.recycle()
+                    result.maskBitmap.recycle()
+                    result.inpaintedBitmap?.recycle()
                 }
             }
 
@@ -91,12 +119,14 @@ class BatchProcessingWorker(
             AppLogger.error("BatchProcessingWorker failed", e)
             Result.failure(workDataOf(KEY_ERROR to (e.message ?: "Unknown batch error")))
         } finally {
+            queueFile?.delete()
             pipeline.close()
         }
     }
 
     companion object {
         const val KEY_IMAGE_URIS = "image_uris"
+        const val KEY_IMAGE_URIS_FILE = "image_uris_file"
         const val KEY_USE_SERVER_SDXL = "use_server_sdxl"
         const val KEY_SCORE_THRESHOLD = "score_threshold"
         const val KEY_MASK_UPSCALE = "mask_upscale"

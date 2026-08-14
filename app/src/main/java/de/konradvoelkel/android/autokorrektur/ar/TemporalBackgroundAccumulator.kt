@@ -74,4 +74,13 @@ class TemporalBackgroundAccumulator : AutoCloseable {
     override fun close() {
         reset()
     }
+
+    protected fun finalize() {
+        if (backgroundMat != null) {
+            de.konradvoelkel.android.autokorrektur.utils.AppLogger.warn(
+                "TemporalBackgroundAccumulator was not closed before garbage collection. Releasing native Mat."
+            )
+            reset()
+        }
+    }
 }

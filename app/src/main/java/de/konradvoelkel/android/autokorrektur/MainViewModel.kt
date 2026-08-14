@@ -15,6 +15,13 @@ import de.konradvoelkel.android.autokorrektur.pipeline.StaticImagePipeline
 import de.konradvoelkel.android.autokorrektur.ui.model.MainUiProperties
 import de.konradvoelkel.android.autokorrektur.ui.model.MainUiState
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
+import androidx.work.Data
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import de.konradvoelkel.android.autokorrektur.pipeline.BatchProcessingWorker
+import org.json.JSONArray
+import java.io.File
+import java.util.UUID
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -224,21 +231,24 @@ class MainViewModel(
         scoreThreshold: Float = 0.25f,
         maskUpscale: Float = 1.0f,
         downscaleMp: Float? = null
-    ): java.util.UUID {
-        val uriStrings = uris.map { it.toString() }.toTypedArray()
-        @Suppress("UNCHECKED_CAST")
-        val dataBuilder = androidx.work.Data.Builder()
-            .putStringArray(de.konradvoelkel.android.autokorrektur.pipeline.BatchProcessingWorker.KEY_IMAGE_URIS, uriStrings as Array<String?>)
-            .putBoolean(de.konradvoelkel.android.autokorrektur.pipeline.BatchProcessingWorker.KEY_USE_SERVER_SDXL, useServerSdxl)
-            .putFloat(de.konradvoelkel.android.autokorrektur.pipeline.BatchProcessingWorker.KEY_SCORE_THRESHOLD, scoreThreshold)
-            .putFloat(de.konradvoelkel.android.autokorrektur.pipeline.BatchProcessingWorker.KEY_MASK_UPSCALE, maskUpscale)
+    ): UUID {
+        val queueId = UUID.randomUUID()
+        val queueFile = File(getApplication<Application>().cacheDir, "batch_queue_$queueId.json")
+        val jsonArray = JSONArray(uris.map { it.toString() })
+        queueFile.writeText(jsonArray.toString())
+
+        val dataBuilder = Data.Builder()
+            .putString(BatchProcessingWorker.KEY_IMAGE_URIS_FILE, queueFile.absolutePath)
+            .putBoolean(BatchProcessingWorker.KEY_USE_SERVER_SDXL, useServerSdxl)
+            .putFloat(BatchProcessingWorker.KEY_SCORE_THRESHOLD, scoreThreshold)
+            .putFloat(BatchProcessingWorker.KEY_MASK_UPSCALE, maskUpscale)
         if (downscaleMp != null) {
-            dataBuilder.putFloat(de.konradvoelkel.android.autokorrektur.pipeline.BatchProcessingWorker.KEY_DOWNSCALE_MP, downscaleMp)
+            dataBuilder.putFloat(BatchProcessingWorker.KEY_DOWNSCALE_MP, downscaleMp)
         }
-        val request = androidx.work.OneTimeWorkRequestBuilder<de.konradvoelkel.android.autokorrektur.pipeline.BatchProcessingWorker>()
+        val request = OneTimeWorkRequestBuilder<BatchProcessingWorker>()
             .setInputData(dataBuilder.build())
             .build()
-        androidx.work.WorkManager.getInstance(getApplication()).enqueue(request)
+        WorkManager.getInstance(getApplication()).enqueue(request)
         return request.id
     }
 

@@ -4,6 +4,10 @@ import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
 
+/**
+ * Hardware capability probe that analyzes device RAM capacity, processor core counts,
+ * and Android OS levels to dynamically adjust ML model tier selection and inference hardware delegates.
+ */
 object DevicePerformanceHelper {
     /**
      * Determines if the current device is considered "weak" or "old" based on RAM and CPU cores.

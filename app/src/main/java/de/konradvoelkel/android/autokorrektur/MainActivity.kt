@@ -10,11 +10,17 @@ import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import de.konradvoelkel.android.autokorrektur.databinding.ActivityMainBinding
 
+/**
+ * Main application host activity managing the toolbar, navigation graph, and global option menus.
+ */
 class MainActivity : AppCompatActivity() {
 
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityMainBinding
 
+    /**
+     * Initializes activity layout, toolbar, and Android Jetpack Navigation host fragment.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -29,8 +35,10 @@ class MainActivity : AppCompatActivity() {
         setupActionBarWithNavController(navController, appBarConfiguration)
     }
 
+    /**
+     * Inflates the top-level app options menu containing About and settings actions.
+     */
     override fun onCreateOptionsMenu(optionsMenu: Menu): Boolean {
-        // Inflate the optionsMenu; this adds items to the action bar if it is present.
         menuInflater.inflate(R.menu.menu_main, optionsMenu)
         return true
     }

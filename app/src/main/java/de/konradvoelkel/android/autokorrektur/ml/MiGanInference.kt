@@ -517,10 +517,15 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
      */
     override fun close() {
         synchronized(globalLock) {
-            miGanSession?.close()
-            miGanSession = null
-            sharedSession = null
-            AppLogger.debug("MiGanInference: Released ONNX session.")
+            try {
+                miGanSession?.close()
+            } catch (e: Exception) {
+                AppLogger.warn("MiGanInference: Exception while closing OrtSession: ${e.message}")
+            } finally {
+                miGanSession = null
+                sharedSession = null
+                AppLogger.debug("MiGanInference: Released ONNX session.")
+            }
         }
     }
 }

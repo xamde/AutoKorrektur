@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.detekt)
+    id("jacoco")
 }
 
 android {
@@ -122,6 +123,7 @@ dependencies {
     androidTestImplementation(libs.androidx.work.testing)
     androidTestImplementation(libs.mockwebserver)
     androidTestImplementation(libs.mockkandroid)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestUtil(libs.androidx.test.orchestrator)
 
     // CameraX
@@ -129,4 +131,32 @@ dependencies {
     implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
+}
+
+tasks.register<JacocoReport>("jacocoTestReport") {
+    dependsOn("testDebugUnitTest")
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+
+    val fileFilter = listOf(
+        "**/R.class",
+        "**/R$*.class",
+        "**/BuildConfig.*",
+        "**/Manifest*.*",
+        "**/*Test*.*",
+        "android/**/*.*",
+        "androidx/**/*.*"
+    )
+    val debugTree = fileTree("${layout.buildDirectory.get()}/tmp/kotlin-classes/debug") {
+        exclude(fileFilter)
+    }
+    val mainSrc = "${project.projectDir}/src/main/java"
+
+    sourceDirectories.setFrom(files(mainSrc))
+    classDirectories.setFrom(files(debugTree))
+    executionData.setFrom(fileTree(layout.buildDirectory.get()) {
+        include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
+    })
 }

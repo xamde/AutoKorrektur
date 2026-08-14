@@ -10,7 +10,16 @@ import java.util.UUID
 /**
  * Manages daily free quota and device identification for Cloud SDXL Premium Inpainting.
  */
-class QuotaManager(context: Context) {
+class QuotaManager(
+    context: Context,
+    private val dateProvider: () -> String = {
+        try {
+            java.time.LocalDate.now().toString()
+        } catch (_: Throwable) {
+            SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+        }
+    }
+) {
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences(PreferencesConstants.PREFS_NAME, Context.MODE_PRIVATE)
@@ -69,11 +78,7 @@ class QuotaManager(context: Context) {
     }
 
     private fun getTodayKey(): String {
-        return try {
-            java.time.LocalDate.now().toString()
-        } catch (_: Throwable) {
-            SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-        }
+        return dateProvider()
     }
 
     companion object {
