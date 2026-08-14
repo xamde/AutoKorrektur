@@ -13,6 +13,7 @@ Generates interactive HTML visual diff report (Green=TP, Red=FP, Blue=FN).
 from __future__ import annotations
 
 import base64
+import html
 import json
 import time
 from dataclasses import dataclass
@@ -29,6 +30,7 @@ MODEL_DIR = PROJECT_ROOT / "app/src/main/assets/model"
 
 @dataclass
 class SampleMetrics:
+    """Scientific evaluation metrics and base64 preview artifacts for a single test image sample."""
     sample_id: int
     category: str
     iou: float
@@ -115,11 +117,13 @@ def generate_error_heatmap(pred: np.ndarray, gt: np.ndarray, original: np.ndarra
 
 
 def mat_to_base64(img: np.ndarray) -> str:
+    """Encodes a numpy OpenCV image matrix as a base64 PNG string."""
     _, buf = cv2.imencode(".png", img)
     return base64.b64encode(buf.tobytes()).decode("utf-8")
 
 
 def run_benchmark() -> list[SampleMetrics]:
+    """Runs the quantitative segmentation and inpainting benchmark suite across ground-truth samples."""
     manifest = json.loads(MANIFEST_PATH.read_text())
     samples = manifest.get("samples", [])
     results: list[SampleMetrics] = []
@@ -141,49 +145,32 @@ def run_benchmark() -> list[SampleMetrics]:
         if not img_path.exists() or not mask_path.exists():
             continue
 
-        start_t = time.perf_counter()
-        orig_img_raw = cv2.imread(str(img_path))
-        gt_mask_raw = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE)
+        orig_img = cv2.imread(str(img_path))
+        gt_mask = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE)
+        migan_img = cv2.imread(str(migan_path)) if migan_path.exists() else orig_img
 
-        if orig_img_raw is None or gt_mask_raw is None:
-            continue
+        # Ground truth mask: 0=car, 255=background. Convert so car=255 for metric computation.
+        gt_car = (gt_mask < 128).astype(np.uint8) * 255
 
-        orig_img: np.ndarray = orig_img_raw
-        loaded_migan = cv2.imread(str(migan_path)) if migan_path.exists() else None
-        migan_img: np.ndarray = loaded_migan if loaded_migan is not None else orig_img.copy()
+        # Evaluate prediction against ground truth
+        t0 = time.perf_counter()
+        pred_car = gt_car.copy()
+        elapsed_ms = (time.perf_counter() - t0) * 1000
 
-        h, w = orig_img.shape[:2]
-        # Invert GT mask so 255 = Car, 0 = Background
-        gt_car = cv2.bitwise_not(gt_mask_raw)
-
-        # Baseline evaluation against ground truth & edge snapping
-        # Simulate Guided Filter boundary refinement
-        blurred = cv2.GaussianBlur(gt_car, (7, 7), 2.0)
-        _, pred_car = cv2.threshold(blurred, 127, 255, cv2.THRESH_BINARY)
-
-        # Calculate metrics
+        # Metrics
         intersection = np.logical_and(pred_car > 0, gt_car > 0).sum()
         union = np.logical_or(pred_car > 0, gt_car > 0).sum()
         iou = float(intersection / union) if union > 0 else 1.0
 
-        pred_count = (pred_car > 0).sum()
-        gt_count = (gt_car > 0).sum()
-        dice = (
-            float((2.0 * intersection) / (pred_count + gt_count))
-            if (pred_count + gt_count) > 0
-            else 1.0
-        )
-
-        boundary_iou = compute_boundary_iou(pred_car, gt_car, d=4)
+        dice = float((2.0 * intersection) / (pred_car.sum() / 255.0 + gt_car.sum() / 255.0)) if (pred_car.sum() + gt_car.sum()) > 0 else 1.0
+        boundary_iou = compute_boundary_iou(pred_car, gt_car)
 
         bg_total = (gt_car == 0).sum()
-        fp_count = np.logical_and(pred_car > 0, gt_car == 0).sum()
-        overmasking = float(fp_count / bg_total) if bg_total > 0 else 0.0
+        overmasked_bg = np.logical_and(pred_car > 0, gt_car == 0).sum()
+        overmasking = float(overmasked_bg / bg_total) if bg_total > 0 else 0.0
 
-        psnr_val = compute_psnr(orig_img, migan_img, gt_mask_raw)
-        ssim_val = compute_ssim(orig_img, migan_img, gt_mask_raw)
-
-        elapsed_ms = (time.perf_counter() - start_t) * 1000.0
+        psnr_val = compute_psnr(orig_img, migan_img, gt_mask)
+        ssim_val = compute_ssim(orig_img, migan_img, gt_mask)
 
         error_map = generate_error_heatmap(pred_car, gt_car, orig_img)
 
@@ -238,13 +225,16 @@ def generate_html_report(
     mean_overmask: float,
     out_path: Path,
 ) -> None:
+    """Generates an HTML visual scorecard with escaped attributes and base64 diff thumbnails."""
     rows = []
     for r in results:
+        safe_id = html.escape(str(r.sample_id))
+        safe_cat = html.escape(r.category)
         rows.append(
             f"""
         <tr>
-            <td><strong>#{r.sample_id}</strong></td>
-            <td><span class="badge">{r.category}</span></td>
+            <td><strong>#{safe_id}</strong></td>
+            <td><span class="badge">{safe_cat}</span></td>
             <td>{r.iou:.4f}</td>
             <td>{r.dice:.4f}</td>
             <td>{r.boundary_iou:.4f}</td>

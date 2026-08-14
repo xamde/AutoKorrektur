@@ -24,10 +24,13 @@ VALID_JPEG = bytes.fromhex(
 
 @pytest.fixture(autouse=True)
 def reset_rate_limits() -> Generator[None, None, None]:
-    """Reset rate limiting dictionary between tests."""
+    """Reset rate limiting dictionary between tests and configure mock tokens."""
     rate_limits.clear()
+    orig_tokens = list(settings.allowed_integrity_tokens)
+    settings.allowed_integrity_tokens = ["mock-valid-token"]
     yield
     rate_limits.clear()
+    settings.allowed_integrity_tokens = orig_tokens
 
 
 def test_health_check() -> None:
@@ -48,7 +51,7 @@ def test_backend_settings() -> None:
     """Test pydantic-settings defaults and configuration."""
     cfg = BackendSettings()
     assert cfg.max_daily_requests == 10
-    assert "mock-valid-token" in cfg.allowed_integrity_tokens
+    assert cfg.allowed_integrity_tokens == []
     assert settings.max_daily_requests == 10
 
 
@@ -196,4 +199,58 @@ def test_fifty_image_triples_inpaint_suite(triple_index: int) -> None:
         response = client.post("/v1/inpaint", data=data, files=files)
         assert response.status_code == 200, f"Triple {triple_index} failed inpaint request"
         assert response.headers["content-type"] in ("image/jpeg", "image/png")
+
+
+def test_invalid_integrity_token_rejected() -> None:
+    """Test that requests with unapproved Play Integrity tokens return 403."""
+    dummy_image = VALID_JPEG
+    dummy_mask = VALID_JPEG
+    files = {
+        "image": ("test.jpg", io.BytesIO(dummy_image), "image/jpeg"),
+        "mask": ("mask.jpg", io.BytesIO(dummy_mask), "image/jpeg"),
+    }
+    data = {
+        "device_uuid": "test-device-unauthorized",
+        "play_integrity_token": "unknown-or-forged-token",
+    }
+    response = client.post("/v1/inpaint", data=data, files=files)
+    assert response.status_code == 403
+    assert "Invalid Google Play Integrity attestation token" in response.json()["detail"]
+
+
+def test_oversized_upload_rejected() -> None:
+    """Test that uploads exceeding max_upload_bytes return 413."""
+    orig_max = settings.max_upload_bytes
+    try:
+        settings.max_upload_bytes = 100  # 100 bytes limit
+        dummy_image = VALID_JPEG  # > 100 bytes
+        files = {
+            "image": ("test.jpg", io.BytesIO(dummy_image), "image/jpeg"),
+            "mask": ("mask.jpg", io.BytesIO(dummy_image), "image/jpeg"),
+        }
+        data = {
+            "device_uuid": "test-device-oversized",
+            "play_integrity_token": "mock-valid-token",
+        }
+        response = client.post("/v1/inpaint", data=data, files=files)
+        assert response.status_code == 413
+        assert "exceeds" in response.json()["detail"].lower()
+    finally:
+        settings.max_upload_bytes = orig_max
+
+
+def test_invalid_magic_bytes_rejected() -> None:
+    """Test that uploaded files with non-image magic bytes return 400."""
+    fake_payload = b"NOT_A_VALID_IMAGE_HEADER_DATA_STREAM"
+    files = {
+        "image": ("test.bin", io.BytesIO(fake_payload), "application/octet-stream"),
+        "mask": ("mask.bin", io.BytesIO(fake_payload), "application/octet-stream"),
+    }
+    data = {
+        "device_uuid": "test-device-magic",
+        "play_integrity_token": "mock-valid-token",
+    }
+    response = client.post("/v1/inpaint", data=data, files=files)
+    assert response.status_code == 400
+
 

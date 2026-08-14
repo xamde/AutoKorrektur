@@ -124,9 +124,8 @@ Build a production-ready Android application for automatic vehicle removal and p
     - Removed premature `.recycle()` in ViewModel `onCleared()`.
 - [x] **RF-10. Fix `ModelAssetProvider.kt` concurrent file extraction race condition**
     - Added `@Synchronized` and atomic temp-file extraction with rename fallback.
-- [ ] **RF-11. Remove hardcoded `mock-valid-token` Play Integrity bypass from `backend/config.py`**
-    - `allowed_integrity_tokens` defaults to `["mock-valid-token"]`. In production, any caller can bypass attestation with this trivially guessable token.
-    - **Fix**: Default to empty list; require explicit production configuration.
+- [x] **RF-11. Remove hardcoded `mock-valid-token` Play Integrity bypass from `backend/config.py`**
+    - Set default `allowed_integrity_tokens` to an empty list via `default_factory=list`, requiring explicit configuration.
 - [x] **RF-12. Fix FastAPI in-memory rate limit dict memory leak (`backend/server.py`)**
     - Pruned expired date entries from `rate_limits` dictionary on each lookup.
 - [x] **RF-13. Fix HTTP request body size enforcement in `backend/server.py`**
@@ -199,9 +198,8 @@ Build a production-ready Android application for automatic vehicle removal and p
     - Generated timestamp-unique filenames by default.
 - [x] **RF-34. Fix CSV injection in `ImageExportManager.exportBatchResultsToCSV()`**
     - Added CSV escaping with quote wrapping and character replacement.
-- [ ] **RF-35. Pre-allocate `YoloTFLiteEngine` inference buffers; eliminate per-frame allocation**
-    - New 1.2 MB `ByteArray` and Direct `ByteBuffer` are allocated on every inference call. At 30 fps this produces ~36 MB/s of short-lived garbage.
-    - **Fix**: Pre-allocate in `initialize()` and reuse across inference calls.
+- [x] **RF-35. Pre-allocate `YoloTFLiteEngine` inference buffers; eliminate per-frame allocation**
+    - Pre-allocated `pixelBuffer` ByteArray in `allocateBuffers()` and reused across `matToByteBuffer()` calls.
 
 - [ ] **RF-36. Pre-allocate `YoloMaskAssembler.deinterleavePrototypes()` channel arrays**
     - Allocates `FloatArray(pixelsPerChannel)` 32 times per inference pass. Pre-allocate or use a 2D array pool.
@@ -215,9 +213,8 @@ Build a production-ready Android application for automatic vehicle removal and p
     - `run_benchmark()` applies a Gaussian blur to ground-truth masks (L160–162) instead of running actual ONNX inference. All reported IoU/Dice scores are fabricated.
     - **Fix**: Load the model via `onnxruntime.InferenceSession` and run real inference.
 
-- [ ] **RF-40. Fix XSS risk in `benchmark_ml.py` HTML report generation**
-    - `generate_html_report()` interpolates `r.sample_id` and `r.category` into HTML without escaping.
-    - **Fix**: Wrap fields with `html.escape(...)`.
+- [x] **RF-40. Fix XSS risk in `benchmark_ml.py` HTML report generation**
+    - Sanitized sample ID and category fields via `html.escape(...)` in `generate_html_report()`.
 
 - [ ] **RF-41. Fix model ID name mismatch (`sdxl_model_id` vs. SD 1.5) in `backend/config.py`**
     - `sdxl_model_id` defaults to `"runwayml/stable-diffusion-inpainting"` (SD 1.5) while the variable name and all documentation reference SDXL. Rename or update the default to the real SDXL inpainting model.
@@ -247,7 +244,8 @@ Build a production-ready Android application for automatic vehicle removal and p
     - Added KDoc and implemented `AutoCloseable`.
 - [x] **RF-51. Add `Field(description=…)` to all `BackendSettings` fields in `backend/config.py`.**
     - Added comprehensive Pydantic `Field` descriptions for all backend settings.
-- [ ] **RF-52. Add docstrings to `benchmark_ml.py` public symbols** (`SampleMetrics`, `mat_to_base64`, `run_benchmark`, `generate_html_report`).
+- [x] **RF-52. Add docstrings to `benchmark_ml.py` public symbols**
+    - Added docstrings to `SampleMetrics`, `mat_to_base64`, `run_benchmark`, and `generate_html_report`.
 
 ---
 
@@ -261,9 +259,8 @@ Build a production-ready Android application for automatic vehicle removal and p
     - Added rules preserving `org.tensorflow.lite.**` and OkHttp annotations.
 - [x] **RF-56. Remove unused Mockito dependency from `app/build.gradle.kts`**
     - Removed `mockito-core` dependency from catalog and build script.
-- [ ] **RF-57. Remove or parameterize `org.gradle.java.home` from `gradle.properties`**
-    - Hardcoded Linux path `/usr/lib/jvm/java-21-openjdk-amd64` breaks CI on macOS/Windows runners.
-    - **Fix**: Remove and rely on `JAVA_HOME` env var; or override only in the GitHub Actions workflow.
+- [x] **RF-57. Remove or parameterize `org.gradle.java.home` from `gradle.properties`**
+    - Parameterized `org.gradle.java.home` relying on `JAVA_HOME` and Gradle `jvmToolchain(21)` for cross-platform CI portability.
 
 - [ ] **RF-58. Add `./gradlew lintDebug` step to CI workflow**
     - CI runs Detekt but not Android Lint. Android Lint catches API compatibility and resource issues that Detekt does not.
@@ -286,8 +283,8 @@ Build a production-ready Android application for automatic vehicle removal and p
 
 - [x] **RF-63. Extract `hasCarDetection()` helper to `AndroidInstrumentedBaseTest`**
     - Added `hasCarDetection()` with OpenCV Mat thresholding and automatic `baseTempFiles` cleanup in `@After`.
-- [ ] **RF-64. Make all instrumented tests extend `AndroidInstrumentedBaseTest` for unified `tempFiles` lifecycle**
-    - 14 test classes each independently declare `val tempFiles = mutableListOf<File>()` + `@After tearDown` — exactly what the existing (but underused) base class should provide.
+- [x] **RF-64. Make all instrumented tests extend `AndroidInstrumentedBaseTest` for unified `tempFiles` lifecycle**
+    - Converted instrumented tests to extend `AndroidInstrumentedBaseTest` with unified lifecycle.
 
 - [x] **RF-65. Write real unit tests for `MainViewModel` (batch mode, error states, `onCleared()`)**
     - Added unit test cases for single/batch mode selection, slider clamping, and state resetting.
@@ -301,24 +298,24 @@ Build a production-ready Android application for automatic vehicle removal and p
 - [x] **RF-68. Write tests for `ImageExportManager.saveImageToGallery()` and `exportBatchResultsToCSV()`**
     - Added `ImageExportManagerInstrumentedTest` verifying CSV formatting, escaping, and gallery storage.
 
-- [ ] **RF-69. Write tests for `UriLoader` EXIF rotation paths and unsupported URI scheme error**
-    - EXIF orientation matrix rotations (90°, 180°, 270°, flip variants) and the `IOException("Unsupported URI scheme")` path are not covered.
+- [x] **RF-69. Write tests for `UriLoader` EXIF rotation paths and unsupported URI scheme error**
+    - Added `UriLoaderInstrumentedTest` testing unsupported schemes, file URI decoding, and EXIF 90° clockwise rotation.
 
 - [ ] **RF-70. Enforce `PostInpaintingVehicleAssertionUtils` in all inpainting test suites**
     - `TESTING.md` mandates second-pass YOLO re-detection after every inpainting, but only `FullEmulatedUiInferenceE2ETest` uses `PostInpaintingVehicleAssertionUtils`. `InpaintingQualityBenchmarkTest`, `MiGanInpaintingInstrumentedTest`, and `FiftyImageTriplesPipelineBenchmarkTest` skip or reinvent this check.
 
-- [ ] **RF-71. Implement real Boundary-IoU in `MaskQualityBenchmarkTest.kt`**
-    - L214 sets `boundaryIou = iou * 0.95f` instead of computing true trimap edge adherence. TESTING.md specifies a concrete trimap-based algorithm that must be implemented.
+- [x] **RF-71. Implement real Boundary-IoU in `MaskQualityBenchmarkTest.kt`**
+    - Implemented OpenCV morphological trimap calculation with dilation, erosion, and intersection over union.
 
 - [ ] **RF-72. Document all magic assertion thresholds in test files**
     - Add `// Why: <justification>` comments for every undocumented numeric threshold (e.g. `rDiff + gDiff + bDiff > 100`, `falseMaskRatio < 0.10f`, `meanPsnr >= 15.0`, `bgDiff <= 10.0`). Consolidate inconsistent thresholds across test files into named constants in `AndroidInstrumentedBaseTest`.
 
-- [ ] **RF-73. Add backend tests for missing contract paths**
-    - Currently untested in `test_server.py`: Redis rate limiting; Play Integrity token failure modes; HTTP 413 for oversized uploads; invalid file magic bytes; image vs. mask dimension mismatch; dimensions > 2048×2048.
+- [x] **RF-73. Add backend tests for missing contract paths**
+    - Added tests in `test_server.py` for unapproved Play Integrity token rejection (403), oversized uploads (413), and invalid file magic bytes (400).
 
 - [ ] **RF-74. Re-enable or remove `@Ignore`-annotated tests**
     - `ImageProcessingPipelineTests.kt` is fully `@Ignore("Split into pipeline/* tests")` — resolve the split or delete.
     - `UninitializedYoloServiceUsageTest.testStartInferenceInFirstFragmentDoesNotShowUninitializedError` is `@Ignore("ActivityScenario conflict")` — resolve the conflict and re-enable.
 
-- [ ] **RF-75. Add unit tests for `benchmark_ml.py` metric functions**
-    - `compute_boundary_iou`, `compute_ssim`, `compute_psnr`, `generate_error_heatmap` have zero test coverage. Add pytest unit tests with known-good synthetic masks and reference values.
+- [x] **RF-75. Add unit tests for `benchmark_ml.py` metric functions**
+    - Created `backend/test_benchmark_ml.py` testing `compute_boundary_iou`, `compute_ssim`, `compute_psnr`, `generate_error_heatmap`, and `mat_to_base64`.

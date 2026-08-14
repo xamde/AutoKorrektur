@@ -25,17 +25,10 @@ class HighResImageTests :
     de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest() {
 
     private lateinit var imageProcessor: ImageProcessor
-    private val tempFiles = mutableListOf<File>()
 
     @Before
     fun setUp() {
         imageProcessor = ImageProcessor(appContext)
-    }
-
-    @After
-    fun tearDown() {
-        tempFiles.forEach { it.delete() }
-        System.gc()
     }
 
     /**
@@ -61,7 +54,7 @@ class HighResImageTests :
             bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
         }
         bitmap.recycle()
-        tempFiles.add(file)
+        baseTempFiles.add(file)
         return file
     }
 
