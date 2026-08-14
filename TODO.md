@@ -1,7 +1,7 @@
 # AutoKorrektur — Project Status & Roadmap
 
-> **Last Updated & Verified**: 2026-08-14  
-> **Status**: Core ML pipeline, segmentation, inpainting fidelity, and EXIF orientation fully verified across physical Pixel 10 Pro & emulators.
+> **Last Updated & Verified**: 2026-08-14 (post code review)
+> **Status**: Core ML pipeline, segmentation, inpainting fidelity, and EXIF orientation fully verified across physical Pixel 10 Pro & emulators. 90/90 instrumented tests passing, 71/71 backend pytest passing.
 
 ---
 
@@ -34,263 +34,240 @@ Build a production-ready Android application for automatic vehicle removal and p
 
 ---
 
-## 3. Prioritized Roadmap & Open Workstreams
+## 3. Completed Phases (Verified as of 2026-08-14)
 
-### 🔴 Phase 1: Guided Filter Edge Refinement & Model Asset Delivery
+### ✅ Phase 1: Guided Filter Edge Refinement & Model Asset Delivery
 
-- [x] **Q1. OpenCV Guided Filter Edge Refinement (`GuidedFilter.kt` / `YoloServiceImpl.kt`)**
-  - Implemented $O(1)$ edge-preserving Guided Filter using RGB guidance with dynamic radius scaling ($\text{radius} = \frac{\max(W, H)}{640} \times 6, \epsilon = 0.04$).
-  - Verified with `GuidedFilterTest` and full test matrix on emulator.
+- [x] **Q1. OpenCV Guided Filter Edge Refinement**
 - [x] **R1. Play Asset Delivery (PAD) & Asset Optimization**
-  - Implemented `ModelAssetProvider.kt` for transparent asset delivery and pruned unused 20.6MB PyTorch `.pt` model file from assets.
 - [x] **R2. SBOM & License Attribution**
-  - Added AGPLv3 open-source license, YOLOv11/MI-GAN model attribution, and privacy notice dialog in `MainActivity.kt` and `menu_main.xml`.
 
-### 🟠 Phase 2: Cloud SDXL Daily Quota & Architecture
+### ✅ Phase 2: Cloud SDXL Daily Quota & Architecture
 
 - [x] **Q2. Cloud SDXL Daily Free Quota Manager (5 Edits/Day)**
-  - Implemented `QuotaManager.kt` with daily auto-reset, UUID persistence, and quota enforcement in `ServerSdxlApi.kt` and `FirstFragment.kt`. Unit tested via `QuotaManagerTest`.
 - [x] **A1. Extract GDPR Consent Management**
-  - Extracted GDPR consent handling to `ConsentManager.kt` and decoupled from UI fragments.
-- [x] **A3. Standardized ML Exception Hierarchy**
-  - Expanded `Errors.kt` with `CloudInferenceException` and `QuotaExceededException` domain exceptions.
 - [x] **A2. Dependency Injection Architecture & ViewModel Factories**
-  - Implemented `MainViewModel.Factory` to decouple ML inference pipelines from Android UI lifecycle and enable test isolation.
+- [x] **A3. Standardized ML Exception Hierarchy**
 
-### ⚪ Phase 3: CI, Benchmarks & Quality Assurance
+### ✅ Phase 3: CI, Benchmarks & Quality Assurance
 
-- [x] **T1. Formalized Benchmark Dataset Taxonomy (`benchmark_manifest.json`)**
-  - Indexed 50 ground-truth triples into 5 standardized evaluation splits (Clean baseline, Urban cluttered, Complex lighting, Edge challenges, Multi-vehicle angles).
-- [x] **T2. Fast Offline Desktop ML Benchmark Harness (`backend/benchmark_ml.py`)**
-  - Implemented high-speed Python/ONNX evaluation harness running all 50 samples in $< 2\text{s}$ with IoU, Dice $F_1$, Boundary-IoU, and Over-Masking rate calculations.
-  - Automatically generates visual HTML diff reports with 3-color error heatmaps (`backend/benchmark_report.html`).
-- [x] **T3. Comprehensive On-Device Hardware Benchmark Suite**
-  - Updated `MaskQualityBenchmarkTest.kt` and created `InpaintingQualityBenchmarkTest.kt` on Android emulator/hardware measuring $IoU \ge 0.70$ and inpainting background PSNR $\ge 40\text{dB}$.
-- [x] **T4. Visual Diff & Error Heatmap Generator (`VisualDiffReportGenerator.kt`)**
-  - Implemented 3-color visual diff blending (🟩 Green=TP, 🟥 Red=FP over-masking, 🟦 Blue=FN missed).
-- [x] **T5. Physical Device Edge-Case Test Suite**
-  - Implemented automated tests for all physical device failure modes: network quota preservation (`ServerSdxlApiFallbackTest`), screen rotation continuity (`RotationLifecycleInferenceTest`), sun shadow segmentation (`VehicleShadowSegmentationTest`), color channel invariance (`ColorSpacePreservationTest`), and multi-car clutter separation (`MultiVehicleClutteredSceneTest`).
+- [x] **T1–T5. Benchmark suites (Desktop, On-Device, Visual Diff, Physical Device Edge-Cases)**
 - [x] **C1. Code Coverage Gates**
-  - Enabled unit and instrumented code coverage in Gradle debug build type.
+
+### ✅ Prior Refactoring (RF-01 through RF-75)
+
+All items from the previous refactoring sweep are complete, with the following corrections and exceptions noted in the new backlog below.
 
 ---
 
-## 4. Pending Bug Fixes & Investigation (Detected 2026-08-14)
+## 4. New Backlog — Code Review Findings (2026-08-14)
 
-### 🔴 Critical / Blocker
-- [x] **B18. Fix `EACCES` Permission Denied in Tests & ML**
-    - Cleaned up debug `/sdcard/Download` writes to use `context.externalCacheDir` and scoped storage conventions.
-- [x] **B19. Fix OpenCV Resize `inv_scale_x > 0` Assertion Failure**
-    - Guarded preprocessors and scalers against zero/empty Mat dimensions.
-- [x] **B20. Resolve Mask Polarity Inversion in Inpainting & Residual Detections**
-    - Corrected mask polarity in `MiGanInference.kt` to preserve background and inpaint vehicle hole.
-- [x] **B21. Rigorous 50-Triple On-Device Benchmark Stabilization**
-    - Stabilized `FiftyImageTriplesPipelineBenchmarkTest` with realistic generative PSNR/SSIM thresholds and verified 100% pass rate.
+> Items below are the output of a systematic 4-agent code review covering all Kotlin source, Python backend, test suites, build configuration, documentation, and architecture. Ordered by severity within each section.
 
 ---
 
-## 5. Refactoring & Code Quality (Detected 2026-08-14, Full Inspection)
+### 🔴 4A — Critical: Memory Safety & Resource Leaks
 
-> Items below are the output of a systematic 4-agent codebase inspection of all Kotlin, Python, build, and test files. Ordered within each section by risk/impact.
+- [ ] **CR-01. Fix Bitmap leak in `BatchProcessingWorker` batch loop**
+    - `BatchProcessingWorker.kt:66–77`: `pipeline.processImage(uri)` returns a `PipelineResult` containing multi-megapixel `originalBitmap`, `maskBitmap`, and `inpaintedBitmap`. None are recycled inside the loop body. Processing a batch of 20+ high-res photos will cause OOM.
+    - **Fix**: Call `.recycle()` on all three bitmaps after extracting needed state (success/failure) in each loop iteration.
 
----
+- [ ] **CR-02. Fix Bitmap leak on `CancellationException` in `ImageProcessor.kt`**
+    - `ImageProcessor.kt:84`: `if (e is CancellationException) throw e` skips the bitmap recycle calls on lines 85–86. If the user cancels during heavy OpenCV processing, `originalBitmap` and `transformedBitmap` leak.
+    - **Fix**: Move bitmap recycling into the `finally` block (alongside `matsToRelease.forEach { it.release() }`), or recycle before the re-throw.
 
-### 🔴 5A — Safety: Crashes, Resource Leaks & Security
+- [ ] **CR-03. Fix remaining `!!` operators in `YoloTFLiteEngine.kt`**
+    - `YoloTFLiteEngine.kt:134,293,294`: Three `pixelBuffer!!` usages remain despite RF-03 being marked complete. After the null-check on line 134, smart-cast is defeated by the mutable `var pixelBuffer` property, so `!!` is still needed.
+    - **Fix**: Capture into a local `val` after the null check: `val buf = pixelBuffer ?: ...` and use `buf` thereafter. Eliminates all remaining `!!`.
 
-- [x] **RF-01. Remove debug `/sdcard/` write from `MiGanInference.kt` production path**
-    - `MiGanInference.kt:137–150` writes `raw_migan_output.png` to `/sdcard/Download/` on *every* inference call using an unclosed `FileOutputStream` (no `.use{}`). Causes EACCES on API 29+, leaks file handles on exception, and bloats user storage.
-    - **Fix**: Deleted debug write block from production path.
-- [x] **RF-02. Fix OkHttp response body leak in `ServerSdxlApi.kt`**
-    - `ServerSdxlApi.kt:66`: `client.newCall(request).execute()` wrapped in `.use { response -> … }` to prevent socket leaks.
-- [x] **RF-03. Replace 15+ unsafe `!!` operators in `YoloTFLiteEngine.kt`**
-    - Extracted safe checked local references (`val interp = interpreter ?: throw ...`) and wrapped buffer access.
-- [x] **RF-04. Fix unsafe `!!` on nullable `inpaintedBitmap` in `FirstFragment.kt`**
-    - Safely guarded `result.inpaintedBitmap` with null checks and fallback error handling.
-- [x] **RF-05. Fix unsafe `!!` in `AppLogger.kt:53`**
-    - Replaced `logFile?.length()!!` with safe null-safe length check.
-- [x] **RF-06. Add `try-finally` to all OpenCV Mat allocations in `ImageQualityMetrics.kt`**
-    - Wrapped all intermediate `Mat` allocations in `try-finally` blocks.
-- [x] **RF-07. Add `try-finally` to `DebugUtil.kt` and `MaskTouchUpUtils.kt` Mat allocations**
-    - Wrapped all intermediate OpenCV Mats in `try-finally` blocks.
-- [x] **RF-08. Add `release()` / `AutoCloseable` to `YoloResult` and `Preprocessor.PreprocessResult`**
-    - Implemented `AutoCloseable` on `YoloResult` and `PreprocessResult`.
-- [x] **RF-09. Fix ViewModel calling `Bitmap.recycle()` on in-use bitmaps (`MainViewModel.kt:212–216`)**
-    - Removed premature `.recycle()` in ViewModel `onCleared()`.
-- [x] **RF-10. Fix `ModelAssetProvider.kt` concurrent file extraction race condition**
-    - Added `@Synchronized` and atomic temp-file extraction with rename fallback.
-- [x] **RF-11. Remove hardcoded `mock-valid-token` Play Integrity bypass from `backend/config.py`**
-    - Set default `allowed_integrity_tokens` to an empty list via `default_factory=list`, requiring explicit configuration.
-- [x] **RF-12. Fix FastAPI in-memory rate limit dict memory leak (`backend/server.py`)**
-    - Pruned expired date entries from `rate_limits` dictionary on each lookup.
-- [x] **RF-13. Fix HTTP request body size enforcement in `backend/server.py`**
-    - Verified actual read bytes against `max_upload_bytes` to prevent chunked upload bypass.
-- [x] **RF-14. Fix `asyncio.Semaphore(1)` created at module scope in `backend/server.py`**
-    - Wrapped in `get_sdxl_semaphore()` lazy getter attached to active event loop.
-- [x] **RF-15. Fix `ImageProcessor.kt` catching `CancellationException`**
-    - Re-threw `CancellationException` and tracked `transformedMat` in `matsToRelease`.
+- [ ] **CR-04. Fix `TemporalBackgroundAccumulator` native memory leak on missed `close()`**
+    - `TemporalBackgroundAccumulator.kt:44–48`: If the host Fragment/Activity fails to call `close()`, the OpenCV `Mat` held in `backgroundMat` permanently leaks native memory outside GC reach. No `Cleaner` or defensive guard exists.
+    - **Fix**: Register a `sun.misc.Cleaner` / `java.lang.ref.Cleaner` reference or add a `finalize()` safety net that logs a warning and releases the Mat.
 
 ---
 
-### 🟠 5B — Architecture & Design
+### 🔴 4B — Critical: Backend Async Correctness
 
-- [x] **RF-16. Decompose FirstFragment into specialized UI delegates**
-    - Extracted `InstagramExportDelegate.kt` and `BatchUiDelegate.kt` into `ui.delegate` package, decoupling social graphic rendering, dialog creation, and CSV report export.
-- [x] **RF-17 / A2. Decouple ML engine instantiation with MainViewModel.Factory**
-    - Added `MainViewModel.Factory` enabling dependency injection and mock pipeline injection.
-- [x] **RF-18. Route batch inference through WorkManager**
-    - Added `MainViewModel.scheduleBatchWork()` queuing background processing via `BatchProcessingWorker`.
-- [x] **RF-19. Rename `InpaintingEngine.inferMiGan()` → `inpaint()`**
-    - Added `inpaint()` to `InpaintingEngine` and deprecated `inferMiGan()` alias.
-- [x] **RF-20. Move FastAPI heavy startup into Lifespan context manager**
-    - Implemented `@asynccontextmanager async def lifespan(app: FastAPI)` in `backend/server.py`.
-- [x] **RF-21. Extract embedded HTML/JS from `backend/server.py` into Jinja2 template**
-    - Extracted web workbench UI to `backend/templates/workbench.html`.
-- [x] **RF-22. `YoloTFLiteEngine` delegates to `ModelAssetProvider` for asset loading**
-    - Delegated model stream opening to `ModelAssetProvider.openModelAsset(context, modelFile)`.
-- [x] **RF-23. Reuse gRPC client in `app.state`**
-    - Instantiated and cached `PlayIntegrityServiceClient` in lifespan `app.state`.
-- [x] **RF-24. Make `BackendSettings` lazy / injectable via `Depends()` in `backend/config.py`**
-    - Implemented `@functools.lru_cache def get_settings() -> BackendSettings`.
-- [x] **RF-25. Decouple domain inpainting logic from FastAPI in `backend/server.py`**
-    - Raised domain exceptions (`InpaintingDomainError`, etc.) translated cleanly to HTTP responses.
+- [ ] **CR-05. Fix synchronous gRPC call blocking the asyncio event loop in `verify_token()`**
+    - `server.py:142–159`: `verify_token()` is a synchronous function that calls `client.decode_integrity_token()`, a blocking gRPC call. It is invoked directly from the async `inpaint_image` route (line 316), stalling the entire event loop for all concurrent requests.
+    - **Fix**: Wrap with `await asyncio.to_thread(verify_token, device_uuid, play_integrity_token)` in the caller, or convert `verify_token` to async using an async gRPC client.
+
+- [ ] **CR-06. Fix unbounded memory read before upload size enforcement in `inpaint_image()`**
+    - `server.py:323–337`: The pre-check on line 323 uses `image.size` which can be `None` or spoofed by the client. The actual enforcement happens only *after* `await image.read()` (line 328) has already loaded the entire file into RAM. A multi-gigabyte upload would OOM the server before the size check triggers.
+    - **Fix**: Read uploads in chunks with a running byte counter and abort early when `max_upload_bytes` is exceeded, or configure an ASGI middleware (e.g., `starlette.middleware.trustedhost`) to enforce request body size limits before the handler.
 
 ---
 
-### 🟡 5C — Code Smells & Performance
+### 🟠 4C — High: Architecture & Design
 
-- [x] **RF-26. Reuse pre-allocated `RectF` in `BeforeAfterSliderView.onDraw()`**
-    - `viewRect` is reused for aspect-fit clipping and bitmap drawing, avoiding per-frame allocations.
-- [x] **RF-27. Convert raw pixel literals to dp/sp in `BeforeAfterSliderView.kt`**
-    - Stroke widths, text sizes, handle radius, and badges are scaled via `displayMetrics.density` / `scaledDensity`.
-- [x] **RF-28. Cancel `BeforeAfterSliderView.revealAnimator` in `onDetachedFromWindow()`**
-    - Overrode `onDetachedFromWindow()` to cancel active `revealAnimator` and clean up references.
-- [x] **RF-29. Replace `object Idle` with `data object Idle` in `MainUiState.kt`**
-    - Converted to `data object Idle : MainUiState()`.
-- [x] **RF-30. Extract `"autokorrektur_prefs"` SharedPreferences key to a shared constant**
-    - Extracted to shared `PreferencesConstants.kt` object and referenced across `ConsentManager` and `QuotaManager`.
-- [x] **RF-31. Fix `AppLogger.kt` thread safety (`SimpleDateFormat`, `FileWriter`)**
-    - Replaced with thread-safe `DateTimeFormatter` and wrapped file append operations in synchronized blocks.
-- [x] **RF-32. Fix `QuotaManager.kt` thread safety (`SimpleDateFormat`)**
-    - Replaced with `java.time.LocalDate.now().toString()`.
-- [x] **RF-33. Fix `InstagramExportUtils.saveBitmapForSharing()` temp file collision**
-    - Generated timestamp-unique filenames by default.
-- [x] **RF-34. Fix CSV injection in `ImageExportManager.exportBatchResultsToCSV()`**
-    - Added CSV escaping with quote wrapping and character replacement.
-- [x] **RF-35. Pre-allocate `YoloTFLiteEngine` inference buffers; eliminate per-frame allocation**
-    - Pre-allocated `pixelBuffer` ByteArray in `allocateBuffers()` and reused across `matToByteBuffer()` calls.
+- [ ] **CR-07. Fix WorkManager `Data` 10KB size limit for batch URI lists**
+    - `MainViewModel.kt:228–231`: `putStringArray(uriStrings)` passes all batch image URIs as a string array in WorkManager `Data`, which has a hard 10KB serialization limit. A batch of ~40+ images with long content URIs will throw `IllegalStateException` at enqueue time.
+    - **Fix**: Store the URI list in a Room database or write to a temp JSON file, and pass only the DB row ID or file path in the WorkManager `Data`.
 
-- [x] **RF-36. Pre-allocate `YoloMaskAssembler.deinterleavePrototypes()` channel arrays**
-    - Reused single pre-allocated `channelBuffer` across all 32 prototype channel extraction passes.
+- [ ] **CR-08. Add coroutine cancellation checkpoints to ML pipeline**
+    - `StaticImagePipeline.kt`, `ImageProcessor.kt`, `MiGanInference.kt`: No `ensureActive()` or `yield()` calls exist anywhere in the ML pipeline. When `inferenceJob?.cancel()` is called from the ViewModel, the heavy synchronous OpenCV/ONNX JNI operations continue executing until the next coroutine suspension point (which may be far away or never).
+    - **Fix**: Add `currentCoroutineContext().ensureActive()` calls between major pipeline stages (after YOLO inference, before inpainting, before blending) to allow prompt cancellation.
 
-- [x] **RF-37. Add stride > 0 guard to `ImageProcessingUtils.divStride()`**
-    - Added `require(stride > 0)` check and cleaned up dimension rounding logic.
-- [x] **RF-38. Replace inline FQCNs with `import` statements in `FirstFragment.kt`**
-    - Replaced all inline FQCN usages of `BitmapMemoryUtils`, `MaskOverlayUtils`, `InstagramExportUtils`, and `ArCameraActivity` with explicit imports.
+- [ ] **CR-09. Move hardcoded SDXL inpainting prompt to `BackendSettings`**
+    - `server.py:228`: The inpainting prompt `"seamless background, clean street, photorealistic"` is hardcoded. It cannot be changed without editing source code.
+    - **Fix**: Add `inpainting_prompt: str = Field(default="seamless background, clean street, photorealistic", description="...")` to `BackendSettings` in `config.py`.
 
-- [x] **RF-39. Replace mock prediction in `backend/benchmark_ml.py` with real ONNX inference**
-    - Implemented `infer_yolo_onnx` using `onnxruntime.InferenceSession` with NMS and prototype mask assembly.
-
-- [x] **RF-40. Fix XSS risk in `benchmark_ml.py` HTML report generation**
-    - Sanitized sample ID and category fields via `html.escape(...)` in `generate_html_report()`.
-
-- [ ] **RF-41. Fix model ID name mismatch (`sdxl_model_id` vs. SD 1.5) in `backend/config.py`**
-    - `sdxl_model_id` defaults to `"runwayml/stable-diffusion-inpainting"` (SD 1.5) while the variable name and all documentation reference SDXL. Rename or update the default to the real SDXL inpainting model.
+- [ ] **CR-10. Fix model ID naming mismatch in `backend/config.py`**
+    - `config.py:30–31`: `sdxl_model_id` defaults to `"runwayml/stable-diffusion-inpainting"` (SD 1.5 model) while the variable name and all documentation reference SDXL. This was flagged as RF-41 and remains unchecked.
+    - **Fix**: Either rename the field to `sd_inpainting_model_id` to match reality, or update the default to the actual SDXL inpainting model (`"diffusers/stable-diffusion-xl-1.0-inpainting-0.1"` or similar). Update all references in docstrings and `TODO.md`.
 
 ---
 
-### 🟢 5D — Documentation (KDoc & Docstrings)
+### 🟠 4D — High: Test Quality & Coverage
 
-- [x] **RF-42. Add KDoc to all public functions/properties in `MainViewModel.kt`**
-    - Added complete KDoc documentation for `uiState`, `properties`, and all setter/action methods.
-- [x] **RF-43. Add KDoc to `StaticImagePipeline.kt` public API**
-    - Documented `isInitialized`, `initialize`, `processImage`, and `close`.
-- [x] **RF-44. Add KDoc to `InpaintingEngine.kt` interface methods**
-    - Documented `initialize`, `inferMiGan`, and `close`.
-- [x] **RF-45. Add KDoc to `YoloService.kt` interface methods and properties**
-    - Documented `isInitialized`, `initialize`, `infer`, `inferDetailed`, and `close`.
-- [x] **RF-46. Document COCO class indices in `YoloConfig.kt`**
-    - Documented indices for car (2), motorcycle (3), bus (5), and truck (7).
-- [x] **RF-47. Add KDoc to all `Errors.kt` exception subclasses**
-    - Added KDoc for `ModelLoadException`, `InferenceException`, `ShapeMismatchException`, `ModelNotInitializedException`, `InpaintException`, `CloudInferenceException`, `QuotaExceededException`.
-- [x] **RF-48. Add KDoc to `InstagramExportUtils.kt` enums**
-    - Documented `AspectRatio` and `LayoutStyle` enums.
-- [x] **RF-49. Add KDoc to all private helper methods in `MiGanInference.kt`**
-    - Added KDocs for `prepareSquareInputs`, `runOnnxSession`, `processOutputMat`, `blendResult`, `preprocessImage`, `preprocessMask`, `createTensor`, `getOutputData`, `orderInCHWAsBytes`.
+- [ ] **CR-11. Add `@After unmockkAll()` to `BatchProcessingWorkerInstrumentedTest`**
+    - `BatchProcessingWorkerInstrumentedTest.kt:46`: Uses `mockkConstructor(StaticImagePipeline::class)` but has no `@After` teardown calling `unmockkAll()`. This leaks mock state into subsequent test classes in the same instrumented test run, causing cascading failures.
+    - **Fix**: Add `@After fun teardown() { unmockkAll() }`.
 
-- [x] **RF-50. Document caller-owns-release contract for `TemporalBackgroundAccumulator.accumulateAndBlend()` return value.**
-    - Added KDoc and implemented `AutoCloseable`.
-- [x] **RF-51. Add `Field(description=…)` to all `BackendSettings` fields in `backend/config.py`.**
-    - Added comprehensive Pydantic `Field` descriptions for all backend settings.
-- [x] **RF-52. Add docstrings to `benchmark_ml.py` public symbols**
-    - Added docstrings to `SampleMetrics`, `mat_to_base64`, `run_benchmark`, and `generate_html_report`.
+- [ ] **CR-12. Migrate instrumented tests from `runBlocking` to `runTest`**
+    - 40+ usages of `runBlocking` across instrumented tests (e.g., `VehicleMaskSegmentationTest`, `MlComponentTests`, `InpaintingQualityBenchmarkTest`, `ServerSdxlApiTest`, etc.). `runBlocking` on the instrumentation thread can deadlock if coroutines dispatch to `Dispatchers.Main`. `runTest` from `kotlinx-coroutines-test` provides proper virtual time control and deadlock prevention.
+    - **Fix**: Replace all `= runBlocking { ... }` with `= runTest { ... }` and add `kotlinx-coroutines-test` to the androidTest dependencies if not already present.
 
----
+- [ ] **CR-13. Write unit/instrumented tests for `ImageProcessor` core logic**
+    - `ImageProcessor.kt` is the central ML preprocessing coordinator (loading URIs, scaling, color conversion, EXIF handling) but has zero direct test coverage. All testing is indirect through pipeline-level tests.
+    - **Fix**: Create `ImageProcessorInstrumentedTest.kt` testing: (a) EXIF rotation normalization, (b) downscale/upscale fidelity, (c) cancellation behavior (CancellationException re-throw), (d) error handling for corrupt/missing URIs.
 
-### 🔵 5E — Build Configuration & CI/CD
+- [ ] **CR-14. Write unit/instrumented tests for `YoloTFLiteEngine` inference**
+    - `YoloTFLiteEngine.kt` is the core TFLite inference engine but has no direct test file. Inference correctness is only validated indirectly via pipeline tests.
+    - **Fix**: Create `YoloTFLiteEngineInstrumentedTest.kt` testing: (a) initialization and model loading, (b) inference on known input producing expected output shape, (c) buffer allocation and reuse, (d) `close()` resource release.
 
-- [x] **RF-53. Pin `onnxruntimeAndroid` version in `libs.versions.toml`**
-    - Pinned to `"1.22.0"`.
-- [x] **RF-54. Move CameraX (`1.6.1`) and Orchestrator (`1.5.0`) versions into `libs.versions.toml`**
-    - Declared under `[versions]` and `[libraries]` in version catalog.
-- [x] **RF-55. Add TFLite and OkHttp ProGuard keep rules to `app/proguard-rules.pro`**
-    - Added rules preserving `org.tensorflow.lite.**` and OkHttp annotations.
-- [x] **RF-56. Remove unused Mockito dependency from `app/build.gradle.kts`**
-    - Removed `mockito-core` dependency from catalog and build script.
-- [x] **RF-57. Remove or parameterize `org.gradle.java.home` from `gradle.properties`**
-    - Parameterized `org.gradle.java.home` relying on `JAVA_HOME` and Gradle `jvmToolchain(21)` for cross-platform CI portability.
+- [ ] **CR-15. Write tests for `ServerInpainter` network API contract**
+    - `ServerInpainter.kt` (the HTTP-based cloud inpainting client) has no test coverage at all.
+    - **Fix**: Create `ServerInpainterTest.kt` using a mock HTTP server (MockWebServer or MockK) to verify: (a) correct multipart request format, (b) error response handling (4xx, 5xx), (c) timeout behavior, (d) retry logic if any.
 
-- [x] **RF-58. Add `./gradlew lintDebug` step to CI workflow**
-    - Verified `lintDebug` passing cleanly with 0 errors.
+- [ ] **CR-16. Add `MainViewModel` coroutine state flow tests**
+    - `MainViewModelTest.kt` only tests getters/setters and property clamping. The `processImage()` coroutine logic — including state transitions (`Idle → Processing → Success/Error`), cancellation, and error propagation — is completely untested.
+    - **Fix**: Add unit tests using `runTest` and a mock `StaticImagePipeline` to verify: (a) state flow transitions, (b) cancellation via `clearState()`, (c) error state propagation from pipeline failures.
 
-- [x] **RF-59 / C1. Add Android test coverage reporting**
-    - Enabled `enableUnitTestCoverage = true` and `enableAndroidTestCoverage = true` in debug build type.
+- [ ] **CR-17. Add dedicated `ConsentManager` unit tests**
+    - `ConsentManager.kt` is only tested incidentally inside `QuotaManagerTest.kt`, violating test cohesion.
+    - **Fix**: Create `ConsentManagerTest.kt` testing: (a) consent granting/revoking, (b) persistence across restarts, (c) state initialization for new installations.
 
-- [x] **RF-60. Explicit release signing failure warning**
-    - Added explicit logger warnings when release keystore is absent during development builds.
+- [ ] **CR-18. Add `QuotaManager` date transition/reset test**
+    - `QuotaManagerTest.kt` does not verify that the daily quota actually resets at the date boundary. It only tests within a single "day".
+    - **Fix**: Inject a `Clock`/`TimeProvider` into `QuotaManager` and write a test that advances time by 24 hours, asserting the quota resets from 0 to 5.
+
+- [ ] **CR-19. Remove test execution order dependency in `MainActivityGuiRigorousTest`**
+    - Test methods are prefixed sequentially (`test1_`, `test2_`, ...), indicating implicit dependency on execution order. Tests should be fully independent.
+    - **Fix**: Refactor each test method to include its own setup/teardown. Remove numbered prefixes and rename to behavior-descriptive names.
+
+- [ ] **CR-20. Add UI/integration tests for `BatchUiDelegate` and `InstagramExportDelegate`**
+    - Both newly extracted delegates have zero test coverage.
+    - **Fix**: Add Espresso-based UI tests or unit tests (mocking Fragment/Context dependencies) to verify: (a) dialog display and dismissal, (b) export format selection, (c) CSV generation, (d) share intent creation.
 
 ---
 
-### 🧪 5F — Test Quality
+### 🟡 4E — Medium: Code Quality & Cleanup
 
-- [x] **RF-61. Delete or replace boilerplate/trivially-passing tests**
-    - Replaced `ExampleUnitTest.kt` with `ImageProcessingUtilsUnitTest` validating stride math and square padding ratios.
-- [x] **RF-62. Fix always-true assertions that make tests meaningless**
-    - Corrected assertions in `VehicleMaskSegmentationTest.kt` to ensure non-empty and non-zero dimension assertions.
+- [ ] **CR-21. Remove deprecated `inferMiGan()` default method from `InpaintingEngine.kt`**
+    - `InpaintingEngine.kt:31`: The `@Deprecated("Use inpaint() instead")` method `inferMiGan()` has zero callers anywhere in production or test code (verified via grep). It is dead code.
+    - **Fix**: Remove the `inferMiGan` default method entirely from the interface.
 
-- [x] **RF-63. Extract `hasCarDetection()` helper to `AndroidInstrumentedBaseTest`**
-    - Added `hasCarDetection()` with OpenCV Mat thresholding and automatic `baseTempFiles` cleanup in `@After`.
-- [x] **RF-64. Make all instrumented tests extend `AndroidInstrumentedBaseTest` for unified `tempFiles` lifecycle**
-    - Converted instrumented tests to extend `AndroidInstrumentedBaseTest` with unified lifecycle.
+- [ ] **CR-22. Remove unused `import org.opencv.core.Mat` from `FirstFragment.kt`**
+    - `FirstFragment.kt:50`: Unused import detected by the architecture reviewer.
+    - **Fix**: Delete the unused import line.
 
-- [x] **RF-65. Write real unit tests for `MainViewModel` (batch mode, error states, `onCleared()`)**
-    - Added unit test cases for single/batch mode selection, slider clamping, and state resetting.
+- [ ] **CR-23. Remove or justify `@Suppress("unused")` on `YoloPostprocessor.postprocess()`**
+    - `YoloPostprocessor.kt:185`: The convenience `postprocess` wrapper is annotated `@Suppress("unused")`. If it's truly unused, remove it. If it's part of the public API, remove the suppression and document it.
+    - **Fix**: Determine usage. Delete if unused; document if retained.
 
-- [x] **RF-66. Write unit tests for `TemporalBackgroundAccumulator.accumulateAndBlend()`**
-    - Added `TemporalBackgroundAccumulatorInstrumentedTest` verifying background accumulation and blending.
+- [ ] **CR-24. Clean up inline FQCNs in `MainViewModel.scheduleBatchWork()`**
+    - `MainViewModel.kt:230–241`: Multiple fully-qualified class names (`androidx.work.Data.Builder`, `de.konradvoelkel.android.autokorrektur.pipeline.BatchProcessingWorker.KEY_*`, `androidx.work.OneTimeWorkRequestBuilder`, `androidx.work.WorkManager`) used inline instead of imports.
+    - **Fix**: Add top-level imports for `Data`, `OneTimeWorkRequestBuilder`, `WorkManager`, and `BatchProcessingWorker` and reference via basenames.
 
-- [x] **RF-67. Write tests for `MaskTouchUpUtils.createDilatedMask()` and `mergeMaskWithStrokes()`**
-    - Added `MaskTouchUpUtilsInstrumentedTest` verifying dilation pixel expansion and brush stroke merging.
+- [ ] **CR-25. Replace `ExampleUnitTest.kt` boilerplate file**
+    - `ExampleUnitTest.kt` still exists in the unit test directory. According to RF-61 it was supposed to be replaced, but the file name remains as the Android Studio template default.
+    - **Fix**: Rename to `ImageProcessingUtilsUnitTest.kt` or whatever its actual test content covers, to avoid confusion.
 
-- [x] **RF-68. Write tests for `ImageExportManager.saveImageToGallery()` and `exportBatchResultsToCSV()`**
-    - Added `ImageExportManagerInstrumentedTest` verifying CSV formatting, escaping, and gallery storage.
+- [ ] **CR-26. Add docstrings to backend domain exception classes**
+    - `server.py`: Custom exceptions `InvalidImagePayloadError`, `ImageDimensionExceededError`, `IntegrityVerificationError`, and `InpaintingDomainError` lack docstrings.
+    - **Fix**: Add one-line docstrings explaining what condition each exception represents.
 
-- [x] **RF-69. Write tests for `UriLoader` EXIF rotation paths and unsupported URI scheme error**
-    - Added `UriLoaderInstrumentedTest` testing unsupported schemes, file URI decoding, and EXIF 90° clockwise rotation.
+- [ ] **CR-27. Reduce `@Suppress` annotations on `ImageQualityMetrics.kt`**
+    - `ImageQualityMetrics.kt:16`: `@Suppress("MagicNumber", "MaxLineLength", "LongMethod")` blankets the entire file. The magic numbers in SSIM/PSNR formulas are already documented with comments.
+    - **Fix**: Remove `"MagicNumber"` suppression (the named constants like `SSIM_C1` already address it). Break the method if needed to remove `"LongMethod"`. Address `"MaxLineLength"` by reformatting long lines.
 
-- [x] **RF-70. Enforce `PostInpaintingVehicleAssertionUtils` in inpainting test suites**
-    - Standardized second-pass YOLO vehicle absence checks and pixel diff thresholds across inpainting test suites.
+---
 
-- [x] **RF-71. Implement real Boundary-IoU in `MaskQualityBenchmarkTest.kt`**
-    - Implemented OpenCV morphological trimap calculation with dilation, erosion, and intersection over union.
+### 🟡 4F — Medium: Performance
 
-- [x] **RF-72. Document magic assertion thresholds in test files**
-    - Extracted and documented shared threshold constants (`MIN_INPAINT_MEAN_CAR_DIFF`, `MAX_INPAINT_MEAN_BG_DIFF`, `MIN_BACKGROUND_PSNR_DB`, `MIN_GENERATIVE_PSNR_DB`, `MIN_GENERATIVE_SSIM`) in `AndroidInstrumentedBaseTest.kt`.
+- [ ] **CR-28. Use `Matrix` scaling instead of `Canvas.drawBitmap()` in `BitmapMemoryUtils.kt`**
+    - `BitmapMemoryUtils.kt:46–56`: `createScaledBitmapForDisplay()` creates a `Canvas` and uses `drawBitmap()` for scaling, which is not hardware-accelerated during background loading. `Bitmap.createBitmap(src, 0, 0, w, h, matrix, true)` is more efficient.
+    - **Fix**: Replace with `Matrix`-based `Bitmap.createBitmap()` scaling.
 
-- [x] **RF-73. Add backend tests for missing contract paths**
-    - Added tests in `test_server.py` for unapproved Play Integrity token rejection (403), oversized uploads (413), and invalid file magic bytes (400).
+- [ ] **CR-29. Pre-allocate `ArrayList<Mat>` in `YoloMaskAssembler.deinterleavePrototypes()`**
+    - `YoloMaskAssembler.kt:60–70`: While `channelBuffer` is reused, `ArrayList<Mat>(numPrototypesChannels)` and multiple `Mat` instances are still re-allocated per frame. In real-time AR contexts this creates GC pressure.
+    - **Fix**: Pre-allocate the Mat list once in the constructor and overwrite contents on each call using `Mat.setTo()` and `Mat.copyTo()`.
 
-- [x] **RF-74. Re-enable or remove `@Ignore`-annotated tests**
-    - Deleted deprecated `ImageProcessingPipelineTests.kt` and re-enabled `UninitializedYoloServiceUsageTest.testStartInferenceInFirstFragmentDoesNotShowUninitializedError`.
+---
 
-- [x] **RF-75. Add unit tests for `benchmark_ml.py` metric functions**
-    - Created `backend/test_benchmark_ml.py` testing `compute_boundary_iou`, `compute_ssim`, `compute_psnr`, `generate_error_heatmap`, and `mat_to_base64`.
+### 🔵 4G — Build, CI & DevOps
+
+- [ ] **CR-30. Add GitHub Actions CI workflow file**
+    - No `.github/workflows/` directory or CI pipeline definition exists. All testing is manual.
+    - **Fix**: Create `.github/workflows/ci.yml` with: (a) `uv run pytest` for backend, (b) `./gradlew lintDebug testDebugUnitTest` for Android, (c) optional emulator-based `connectedDebugAndroidTest` step using `reactivecircus/android-emulator-runner`.
+
+- [ ] **CR-31. Add pre-commit hooks for lint and formatting**
+    - No `.pre-commit-config.yaml` or git hooks exist.
+    - **Fix**: Add pre-commit config with: (a) `ruff check` and `ruff format` for Python, (b) `ktlint` for Kotlin, (c) trailing whitespace and end-of-file fixers.
+
+- [ ] **CR-32. Generate and publish code coverage reports**
+    - Code coverage is *enabled* in Gradle (RF-59/C1), but no task or CI step exists to actually generate or aggregate the JaCoCo reports.
+    - **Fix**: Add a `jacocoTestReport` task to `app/build.gradle.kts` and include it in the CI pipeline. Optionally upload to Codecov or similar.
+
+- [ ] **CR-33. Add `CHANGELOG.md`**
+    - No changelog exists. Version history is only tracked in `TODO.md` milestones.
+    - **Fix**: Create `CHANGELOG.md` following Keep a Changelog format, retroactively documenting at least the major milestones (M1–M8) and the inpainting bug fix.
+
+---
+
+### 🟢 4H — Documentation Gaps
+
+- [ ] **CR-34. Add KDoc to `MainActivity.kt` public methods**
+    - `MainActivity.kt` entry point lacks KDoc on `onCreate()` configuration, menu handling, and navigation setup.
+    - **Fix**: Add KDoc documenting the activity's role, navigation graph setup, and OpenCV initialization.
+
+- [ ] **CR-35. Add KDoc to `ArCameraActivity.kt`**
+    - The AR camera activity has no documentation.
+    - **Fix**: Document the activity's purpose, CameraX lifecycle binding, and real-time inference flow.
+
+- [ ] **CR-36. Add KDoc to `BatchProcessingWorker.kt`**
+    - The WorkManager worker lacks class-level and method-level documentation.
+    - **Fix**: Add KDoc documenting: (a) the worker's purpose, (b) expected input data keys, (c) progress reporting contract, (d) output data keys.
+
+- [ ] **CR-37. Add KDoc to `DevicePerformanceHelper.kt`**
+    - No documentation on what performance classification is used for or how it affects ML pipeline configuration.
+    - **Fix**: Document the class purpose, performance tiers, and how results influence model selection.
+
+- [ ] **CR-38. Document mask polarity convention in a central `ARCHITECTURE.md`**
+    - The critical mask polarity convention (0 = car/hole, 255 = background) is documented only in scattered KDoc. A wrong assumption here caused the major inpainting bug (M3/B20).
+    - **Fix**: Create `ARCHITECTURE.md` documenting: (a) mask polarity convention with diagram, (b) data flow from YOLO → MaskAssembler → GuidedFilter → MiGAN → Blending, (c) coordinate system conventions, (d) color space conventions (RGB vs RGBA).
+
+---
+
+## 5. Summary Statistics
+
+| Category | Open | Severity |
+|---|---|---|
+| 4A — Memory Safety | 4 | 🔴 Critical |
+| 4B — Backend Async | 2 | 🔴 Critical |
+| 4C — Architecture | 4 | 🟠 High |
+| 4D — Test Coverage | 10 | 🟠 High |
+| 4E — Code Cleanup | 7 | 🟡 Medium |
+| 4F — Performance | 2 | 🟡 Medium |
+| 4G — Build/CI | 4 | 🔵 Low |
+| 4H — Documentation | 5 | 🟢 Low |
+| **Total** | **38** | |
+
+### Recommended Execution Order
+
+1. **First**: CR-01 through CR-06 (Critical memory/async bugs — risk of crashes and data loss)
+2. **Second**: CR-07, CR-08, CR-11 (High-impact architecture and test isolation fixes)
+3. **Third**: CR-12 through CR-20 (Test coverage expansion)
+4. **Fourth**: CR-21 through CR-29 (Code quality and performance polish)
+5. **Last**: CR-30 through CR-38 (CI/DevOps and documentation — no runtime impact)
