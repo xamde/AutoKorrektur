@@ -9,6 +9,8 @@ import org.junit.runners.Parameterized
 import org.opencv.android.Utils
 import org.opencv.imgcodecs.Imgcodecs
 
+import org.opencv.imgproc.Imgproc
+
 @RunWith(Parameterized::class)
 class ImageOverlayTests(
     private val threshold: Int,
@@ -30,16 +32,11 @@ class ImageOverlayTests(
 
     @Test
     fun overlay_should_not_tint_entire_image_and_should_tint_lower_left_region() {
-        // Load reference mask from assets
+        // Load reference mask from assets directly into Bitmap
         val maskFile = de.konradvoelkel.android.autokorrektur.shared.AndroidTestUtils
             .copyAssetToCache(appContext, "photo_with_car_1_mask.png")
-        val maskMat = Imgcodecs.imread(maskFile.absolutePath, Imgcodecs.IMREAD_GRAYSCALE)
-        require(!maskMat.empty()) { "Failed to load reference mask" }
-
-        // Convert to bitmap
-        val maskBitmap =
-            Bitmap.createBitmap(maskMat.cols(), maskMat.rows(), Bitmap.Config.ARGB_8888)
-        Utils.matToBitmap(maskMat, maskBitmap)
+        val maskBitmap = android.graphics.BitmapFactory.decodeFile(maskFile.absolutePath)
+        requireNotNull(maskBitmap) { "Failed to load reference mask" }
 
         // Create a white base image and draw overlay
         val base = Bitmap.createBitmap(maskBitmap.width, maskBitmap.height, Bitmap.Config.ARGB_8888)
@@ -93,7 +90,6 @@ class ImageOverlayTests(
         )
 
         // Cleanup
-        maskMat.release()
         base.recycle()
         maskBitmap.recycle()
     }

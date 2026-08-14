@@ -35,33 +35,15 @@ class ImageProcessingPipelineTests :
 
 
     companion object {
-        private lateinit var sharedYolo: YoloService
-        private lateinit var sharedImageProcessor: ImageProcessor
-        private lateinit var sharedMiGan: de.konradvoelkel.android.autokorrektur.ml.MiGanInference
-
         @BeforeClass
         @JvmStatic
         fun beforeAll() {
             de.konradvoelkel.android.autokorrektur.shared.AndroidTestUtils.initOpenCV()
-            val ctx = InstrumentationRegistry.getInstrumentation().targetContext
-            sharedYolo = YoloServiceImpl(YoloTFLiteEngine(ctx))
-            sharedImageProcessor = ImageProcessor(ctx)
-            sharedMiGan = de.konradvoelkel.android.autokorrektur.ml.MiGanInference(ctx)
-            runBlocking {
-                sharedYolo.initialize("yolo11s")
-                sharedMiGan.initialize()
-            }
         }
 
         @AfterClass
         @JvmStatic
         fun afterAll() {
-            if (this::sharedYolo.isInitialized) {
-                sharedYolo.close()
-            }
-            if (this::sharedMiGan.isInitialized) {
-                sharedMiGan.close()
-            }
         }
     }
 
@@ -79,10 +61,9 @@ class ImageProcessingPipelineTests :
 
     @Before
     fun setUp() {
-        // Reuse shared instances to avoid per-test initialization cost
-        yoloInference = sharedYolo
-        imageProcessor = sharedImageProcessor
-        miGanInference = sharedMiGan
+        yoloInference = YoloServiceImpl(YoloTFLiteEngine(appContext))
+        imageProcessor = ImageProcessor(appContext)
+        miGanInference = de.konradvoelkel.android.autokorrektur.ml.MiGanInference(appContext)
     }
 
     @After

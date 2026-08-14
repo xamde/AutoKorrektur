@@ -35,6 +35,7 @@ object AndroidTestUtils {
         val assetManager = testContext.assets
         val inputStream = assetManager.open(assetFileName)
         val tempFile = File(context.cacheDir, assetFileName)
+        tempFile.parentFile?.mkdirs()
         val outputStream = FileOutputStream(tempFile)
         inputStream.use { input ->
             outputStream.use { output ->

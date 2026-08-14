@@ -27,6 +27,14 @@ open class AndroidInstrumentedBaseTest {
         return f
     }
 
+    @org.junit.After
+    fun baseTearDown() {
+        try {
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        } catch (_: Exception) {}
+        System.gc()
+    }
+
     companion object {
         @BeforeClass
         @JvmStatic

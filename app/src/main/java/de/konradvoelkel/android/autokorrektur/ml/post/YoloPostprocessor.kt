@@ -99,7 +99,11 @@ object YoloPostprocessor {
         var bestClass = -1
         for (classId in 0 until numClasses) {
             val raw = floatArray[(NUM_BBOX_COORDS + classId) * numProposals + proposalIdx]
-            val prob = (1f / (1f + exp(-raw.toDouble()))).toFloat()
+            val prob = if (raw >= 0.0f && raw <= 1.0f) {
+                raw
+            } else {
+                (1f / (1f + exp(-raw.toDouble()))).toFloat()
+            }
             if (prob > maxProb) {
                 maxProb = prob
                 bestClass = classId

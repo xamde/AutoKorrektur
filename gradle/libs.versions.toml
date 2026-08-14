@@ -44,6 +44,7 @@ mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 mockkandroid = { group = "io.mockk", name = "mockk-android", version.ref = "mockk" }
 mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver", version.ref = "mockwebserver" }
 androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version = "1.8.0" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

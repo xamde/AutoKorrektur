@@ -179,7 +179,7 @@ object YoloMaskAssembler {
         dilateKernel.release()
 
         // Convert to 8-bit for overlay
-        resizedMask.convertTo(resizedMask, CvType.CV_8UC1, OPENCV_BYTE_SCALE)
+        resizedMask.convertTo(resizedMask, CvType.CV_8U, OPENCV_BYTE_SCALE)
         return resizedMask
     }
 

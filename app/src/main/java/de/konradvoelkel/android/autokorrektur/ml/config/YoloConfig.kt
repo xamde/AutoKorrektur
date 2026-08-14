@@ -6,7 +6,7 @@ package de.konradvoelkel.android.autokorrektur.ml.config
  * Defaults mirror the constants currently embedded in YoloInferenceTFLite.
  */
 data class YoloConfig(
-    val scoreThreshold: Float = 0.6f,
+    val scoreThreshold: Float = 0.25f,
     val iouThreshold: Float = 0.45f,
     val topAmountPerClass: Int = 100,
     val vehicleClassIndices: IntArray = intArrayOf(2, 3, 5, 7),

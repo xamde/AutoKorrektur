@@ -40,16 +40,53 @@ object MatScaler {
     }
 
     /**
-     * Converts a 3-channel RGB Mat into a displayable ARGB_8888 Bitmap.
+     * Converts an OpenCV Mat (1, 3, or 4 channels) into a displayable ARGB_8888 Bitmap safely.
      */
-    fun createDisplayBitmap(rgbMat: Mat): Bitmap {
-        val bgraMat = Mat()
-        Imgproc.cvtColor(rgbMat, bgraMat, Imgproc.COLOR_RGB2RGBA)
+    fun createDisplayBitmap(mat: Mat): Bitmap {
+        if (mat.empty() || mat.cols() <= 0 || mat.rows() <= 0) {
+            return createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        }
+        val rgbaMat = Mat()
+        try {
+            when (mat.channels()) {
+                1 -> Imgproc.cvtColor(mat, rgbaMat, Imgproc.COLOR_GRAY2RGBA)
+                3 -> Imgproc.cvtColor(mat, rgbaMat, Imgproc.COLOR_RGB2RGBA)
+                4 -> mat.copyTo(rgbaMat)
+                else -> {
+                    val channels = mutableListOf<Mat>()
+                    org.opencv.core.Core.split(mat, channels)
+                    if (channels.size >= 3) {
+                        val rgb3 = listOf(channels[0], channels[1], channels[2])
+                        val tempRgb = Mat()
+                        org.opencv.core.Core.merge(rgb3, tempRgb)
+                        Imgproc.cvtColor(tempRgb, rgbaMat, Imgproc.COLOR_RGB2RGBA)
+                        tempRgb.release()
+                    } else if (channels.isNotEmpty()) {
+                        Imgproc.cvtColor(channels[0], rgbaMat, Imgproc.COLOR_GRAY2RGBA)
+                    }
+                    channels.forEach { it.release() }
+                }
+            }
+        } catch (e: Exception) {
+            AppLogger.warn("createDisplayBitmap fallback: ${e.message}")
+            try {
+                if (rgbaMat.empty()) {
+                    Imgproc.cvtColor(mat, rgbaMat, Imgproc.COLOR_BGR2RGBA)
+                }
+            } catch (_: Exception) {}
+        }
 
-        val bitmap = createBitmap(bgraMat.cols(), bgraMat.rows(), Bitmap.Config.ARGB_8888)
-        Utils.matToBitmap(bgraMat, bitmap)
-
-        bgraMat.release()
+        val outMat = if (!rgbaMat.empty() && rgbaMat.cols() > 0 && rgbaMat.rows() > 0) rgbaMat else mat
+        val bitmap = createBitmap(outMat.cols(), outMat.rows(), Bitmap.Config.ARGB_8888)
+        try {
+            Utils.matToBitmap(outMat, bitmap)
+        } catch (e: Exception) {
+            AppLogger.error("createDisplayBitmap Utils.matToBitmap failed (outMat type=${outMat.type()}, channels=${outMat.channels()})", e)
+        } finally {
+            if (outMat === rgbaMat) {
+                rgbaMat.release()
+            }
+        }
         return bitmap
     }
 }

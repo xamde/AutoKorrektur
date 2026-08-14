@@ -43,7 +43,7 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("String", "BACKEND_URL", "\"http://10.0.2.2:8000/v1/inpaint\"")
+            buildConfigField("String", "BACKEND_URL", "\"http://127.0.0.1:8000/v1/inpaint\"")
         }
         release {
             isMinifyEnabled = true
@@ -110,6 +110,7 @@ dependencies {
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockk)
     testImplementation(libs.mockwebserver)
+    testImplementation(libs.kotlinx.coroutines.test)
 
     // Instrumented tests
     androidTestImplementation(libs.androidx.junit)
@@ -118,6 +119,7 @@ dependencies {
     androidTestImplementation(libs.androidx.work.testing)
     androidTestImplementation(libs.mockwebserver)
     androidTestImplementation(libs.mockkandroid)
+    androidTestUtil("androidx.test:orchestrator:1.5.0")
 
     // CameraX
     val cameraVersion = "1.6.1"

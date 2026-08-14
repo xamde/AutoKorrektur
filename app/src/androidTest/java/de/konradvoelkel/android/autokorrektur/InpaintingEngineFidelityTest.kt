@@ -61,7 +61,10 @@ class InpaintingEngineFidelityTest : AndroidInstrumentedBaseTest() {
             assertEquals("Height should match", height, outputMat.rows())
 
             val outputBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-            org.opencv.android.Utils.matToBitmap(outputMat, outputBitmap)
+            val rgbaMat = org.opencv.core.Mat()
+            org.opencv.imgproc.Imgproc.cvtColor(outputMat, rgbaMat, org.opencv.imgproc.Imgproc.COLOR_RGB2RGBA)
+            org.opencv.android.Utils.matToBitmap(rgbaMat, outputBitmap)
+            rgbaMat.release()
 
             // Verify unmasked corner pixel (10,10) is preserved without off-color tint
             val cornerPixel = outputBitmap.getPixel(10, 10)

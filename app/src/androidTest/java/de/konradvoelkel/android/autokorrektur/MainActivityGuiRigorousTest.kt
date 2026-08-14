@@ -95,4 +95,9 @@ class MainActivityGuiRigorousTest {
         // Tap AR button to launch ArCameraActivity
         onView(withId(R.id.arLiveModeButton)).perform(scrollTo(), click())
     }
+
+    @org.junit.After
+    fun tearDown() {
+        System.gc()
+    }
 }

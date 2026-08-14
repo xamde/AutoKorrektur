@@ -18,19 +18,35 @@ class MainViewModelInstrumentedTest {
     @Test
     fun viewModel_initialState_isEmpty() {
         val viewModel = MainViewModel(application)
-        val properties = viewModel.properties.value
-        assertNull(properties.selectedImageUri)
-        assertEquals(0.5f, properties.sliderPosition, 0.001f)
+        try {
+            val properties = viewModel.properties.value
+            assertNull(properties.selectedImageUri)
+            assertEquals(0.5f, properties.sliderPosition, 0.001f)
+        } finally {
+            closeViewModel(viewModel)
+        }
     }
 
     @Test
     fun viewModel_clearState_resetsAllFields() {
         val viewModel = MainViewModel(application)
-        viewModel.setSliderPosition(0.75f)
-        viewModel.clearState()
+        try {
+            viewModel.setSliderPosition(0.75f)
+            viewModel.clearState()
 
-        val properties = viewModel.properties.value
-        assertNull(properties.selectedImageUri)
-        assertEquals(0.5f, properties.sliderPosition, 0.001f)
+            val properties = viewModel.properties.value
+            assertNull(properties.selectedImageUri)
+            assertEquals(0.5f, properties.sliderPosition, 0.001f)
+        } finally {
+            closeViewModel(viewModel)
+        }
+    }
+
+    private fun closeViewModel(viewModel: MainViewModel) {
+        try {
+            val method = androidx.lifecycle.ViewModel::class.java.getDeclaredMethod("onCleared")
+            method.isAccessible = true
+            method.invoke(viewModel)
+        } catch (_: Exception) {}
     }
 }

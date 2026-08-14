@@ -32,7 +32,24 @@ class UriLoader(private val context: Context) {
             "content" -> loadBitmapFromContentProvider(imageUri, maxMegapixels)
             else -> throw IOException("Unsupported URI scheme: $scheme")
         }
-        return rotateBitmapIfRequired(loaded, imageUri)
+        val rotated = rotateBitmapIfRequired(loaded, imageUri)
+        return ensureStandardSoftwareArgb8888(rotated)
+    }
+
+    private fun ensureStandardSoftwareArgb8888(bitmap: Bitmap): Bitmap {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            bitmap.gainmap = null
+        }
+        val standard = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            standard.gainmap = null
+        }
+        val canvas = android.graphics.Canvas(standard)
+        canvas.drawBitmap(bitmap, 0f, 0f, null)
+        if (standard !== bitmap) {
+            bitmap.recycle()
+        }
+        return standard
     }
 
     private fun rotateBitmapIfRequired(bitmap: Bitmap, uri: Uri): Bitmap {
@@ -72,7 +89,13 @@ class UriLoader(private val context: Context) {
             else -> return bitmap
         }
 
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            bitmap.gainmap = null
+        }
         val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            rotated.gainmap = null
+        }
         if (rotated != bitmap) {
             bitmap.recycle()
         }
@@ -80,9 +103,7 @@ class UriLoader(private val context: Context) {
     }
 
     private fun loadBitmapFromFile(uri: Uri, maxMegapixels: Float): Bitmap {
-        val path = uri.path ?: throw IOException("File URI has no path: $uri")
-        if (!File(path).exists()) throw IOException("File not found: $path")
-
+        val path = uri.path ?: throw IOException("File path is null for URI: $uri")
         val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(path, options)
 
@@ -96,14 +117,18 @@ class UriLoader(private val context: Context) {
             inSampleSize = calculateInSampleSize(imageWidth, imageHeight, maxMegapixels)
             inPreferredConfig = Bitmap.Config.ARGB_8888
         }
-        return BitmapFactory.decodeFile(path, decodeOptions)
+        val bmp = BitmapFactory.decodeFile(path, decodeOptions)
             ?: throw IOException("BitmapFactory.decodeFile failed for path: $path")
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            bmp.gainmap = null
+        }
+        return bmp
     }
 
     private fun loadBitmapFromContentProvider(uri: Uri, maxMegapixels: Float): Bitmap {
         try {
             val source = ImageDecoder.createSource(context.contentResolver, uri)
-            return ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+            val bmp = ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
                 val sampleSize =
                     calculateInSampleSize(info.size.width, info.size.height, maxMegapixels)
                 if (sampleSize > 1) {
@@ -112,6 +137,10 @@ class UriLoader(private val context: Context) {
                 decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
                 decoder.isMutableRequired = true
             }
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                bmp.gainmap = null
+            }
+            return bmp
         } catch (e: Exception) {
             AppLogger.warn("UriLoader: ImageDecoder failed for $uri, falling back. ${e.message}")
         }
@@ -132,15 +161,12 @@ class UriLoader(private val context: Context) {
 
     private fun calculateInSampleSize(width: Int, height: Int, maxMegapixels: Float): Int {
         if (width <= 0 || height <= 0) return 1
-        val imageMegapixels = (width.toLong() * height.toLong()) / MEGAPIXEL
-        if (imageMegapixels <= maxMegapixels) return 1
-
-        val scaleFactor = sqrt(imageMegapixels / maxMegapixels)
+        val targetMaxPixels = (maxMegapixels * MEGAPIXEL).toLong()
         var sampleSize = 1
-        while (sampleSize * 2 <= scaleFactor) {
+        while ((width / sampleSize).toLong() * (height / sampleSize) > targetMaxPixels) {
             sampleSize *= 2
         }
-        AppLogger.info("UriLoader: Downsampling by ${sampleSize}x to fit ${maxMegapixels}MP limit")
+        AppLogger.info("UriLoader: Downsampling by ${sampleSize}x to fit ${maxMegapixels}MP limit (${width / sampleSize}x${height / sampleSize})")
         return sampleSize
     }
 }

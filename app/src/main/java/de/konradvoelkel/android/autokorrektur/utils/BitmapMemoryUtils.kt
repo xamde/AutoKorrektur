@@ -22,11 +22,15 @@ object BitmapMemoryUtils {
     /**
      * Scales down a Bitmap to fit within [maxDimension] while maintaining aspect ratio.
      * Returns the original bitmap if its dimensions are already within [maxDimension].
+     * Uses Canvas drawing to ensure compatibility with Bitmaps that lack a color space.
      */
     fun createScaledBitmapForDisplay(
         bitmap: Bitmap,
         maxDimension: Int = DEFAULT_MAX_DISPLAY_DIMENSION
     ): Bitmap {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            bitmap.gainmap = null
+        }
         val width = bitmap.width
         val height = bitmap.height
         val currentMax = max(width, height)
@@ -36,11 +40,20 @@ object BitmapMemoryUtils {
         }
 
         val scale = maxDimension.toFloat() / currentMax.toFloat()
-        val newWidth = (width * scale).roundToInt()
-        val newHeight = (height * scale).roundToInt()
+        val newWidth = max(1, (width * scale).roundToInt())
+        val newHeight = max(1, (height * scale).roundToInt())
 
         AppLogger.info("Downscaling bitmap for memory safety: ${width}x${height} -> ${newWidth}x${newHeight}")
-        return bitmap.scale(newWidth, newHeight)
+        val scaled = Bitmap.createBitmap(newWidth, newHeight, Bitmap.Config.ARGB_8888)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            scaled.gainmap = null
+        }
+        val canvas = android.graphics.Canvas(scaled)
+        val paint = android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG or android.graphics.Paint.ANTI_ALIAS_FLAG)
+        val srcRect = android.graphics.Rect(0, 0, width, height)
+        val dstRect = android.graphics.Rect(0, 0, newWidth, newHeight)
+        canvas.drawBitmap(bitmap, srcRect, dstRect, paint)
+        return scaled
     }
 
     /**

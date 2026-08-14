@@ -88,34 +88,14 @@ class MiGanInpaintingInstrumentedTest : AndroidInstrumentedBaseTest() {
             }
         }
 
-        // 1) Verify no car remains in the inpainted image via YOLO mask
-        val tempOutFile = File(appContext.cacheDir, "migan_inpainted_tmp.png")
-        val bgrTmp = Mat()
-        Imgproc.cvtColor(inpainted, bgrTmp, Imgproc.COLOR_RGB2BGR)
-        Imgcodecs.imwrite(tempOutFile.absolutePath, bgrTmp)
-        bgrTmp.release()
-        tempFiles.add(tempOutFile)
-        val outUri = Uri.fromFile(tempOutFile)
-
-        val processedOut = imageProcessor.processInputImage(
-            imageUri = outUri,
-            modelWidth = 640,
-            modelHeight = 640,
-            downscaleMp = null
-        )
-
-        val yoloMaskOnOutput = yolo.infer(
-            transformedMat = processedOut.transformedMat,
-            xRatio = processedOut.xRatio,
-            yRatio = processedOut.yRatio,
-            upscaleFactor = 1.02f,
-            originalWidth = processedOut.originalMat.cols(),
-            originalHeight = processedOut.originalMat.rows()
-        )
-
-        assertFalse(
-            "After Mi-GAN, there should be no car detected",
-            hasCarDetection(yoloMaskOnOutput)
+        // 1) Verify zero vehicles remain in the inpainted image via second-pass YOLO detection
+        de.konradvoelkel.android.autokorrektur.shared.PostInpaintingVehicleAssertionUtils.assertNoVehiclesRemain(
+            inpaintedMat = inpainted,
+            context = appContext,
+            yoloService = yolo,
+            imageProcessor = imageProcessor,
+            confidenceThreshold = 0.25f,
+            message = "After Mi-GAN inpainting, zero vehicle detections must remain"
         )
 
         // 2) Verify in non-car (white) regions, output roughly agrees with input
@@ -136,23 +116,9 @@ class MiGanInpaintingInstrumentedTest : AndroidInstrumentedBaseTest() {
         )
 
         // cleanup
-        inRgb8.release(); outRgb8.release(); yoloMaskOnOutput.release(); inpainted.release(); referenceMask.release()
-    }
-
-    private fun hasCarDetection(mask: Mat): Boolean {
-        val totalPixels = mask.rows() * mask.cols()
-        if (totalPixels == 0) return false
-        val carMask = Mat()
-        org.opencv.core.Core.inRange(
-            mask,
-            org.opencv.core.Scalar(0.0),
-            org.opencv.core.Scalar(10.0),
-            carMask
-        )
-        val carPixels = org.opencv.core.Core.countNonZero(carMask)
-        carMask.release()
-        val carPixelRatio = carPixels.toDouble() / totalPixels.toDouble()
-        android.util.Log.d("MiGanTest", "Car pixel ratio after inpainting: $carPixelRatio ($carPixels / $totalPixels)")
-        return carPixelRatio > 0.20
+        inRgb8.release()
+        outRgb8.release()
+        inpainted.release()
+        referenceMask.release()
     }
 }

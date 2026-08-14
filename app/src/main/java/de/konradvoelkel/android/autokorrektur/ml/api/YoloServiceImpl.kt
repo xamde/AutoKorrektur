@@ -4,6 +4,7 @@ import android.content.Context
 import de.konradvoelkel.android.autokorrektur.ml.config.YoloConfig
 import de.konradvoelkel.android.autokorrektur.ml.engine.YoloEngine
 import de.konradvoelkel.android.autokorrektur.ml.engine.YoloTFLiteEngine
+import de.konradvoelkel.android.autokorrektur.ml.mask.GuidedFilter
 import de.konradvoelkel.android.autokorrektur.ml.mask.YoloMaskAssembler
 import de.konradvoelkel.android.autokorrektur.ml.model.Detection
 import de.konradvoelkel.android.autokorrektur.ml.model.YoloResult
@@ -13,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
 import org.opencv.core.Rect
@@ -118,9 +120,23 @@ class YoloServiceImpl(
                     matsToRelease
                 )
 
+                // Edge-preserving Guided Filter refinement using input RGB as guidance
+                val refinedOverlay = if (kept.isNotEmpty()) {
+                    try {
+                        val filtered = GuidedFilter.filter(guide = transformedMat, srcMask = overlay)
+                        matsToRelease.add(filtered)
+                        filtered
+                    } catch (e: Exception) {
+                        AppLogger.warn("GuidedFilter fallback: ${e.message}")
+                        overlay
+                    }
+                } else {
+                    overlay
+                }
+
                 // 5) Final cropping and resizing
                 val resultMat = postProcessResultMask(
-                    overlay,
+                    refinedOverlay,
                     shapes,
                     xRatio,
                     yRatio,
@@ -141,14 +157,33 @@ class YoloServiceImpl(
         transformedMat: Mat,
         matsToRelease: MutableList<Mat>
     ): Mat {
-        return if (transformedMat.type() != CvType.CV_8UC3) {
+        var current = transformedMat
+        if (current.depth() != CvType.CV_8U) {
             val tmp = Mat().also { matsToRelease.add(it) }
-            val scale = if (transformedMat.type() == CvType.CV_32FC3) 255.0 else 1.0
-            transformedMat.convertTo(tmp, CvType.CV_8UC3, scale)
-            tmp
-        } else {
-            transformedMat
+            val scale = if (current.depth() == CvType.CV_32F) 255.0 else 1.0
+            current.convertTo(tmp, CvType.CV_8U, scale)
+            current = tmp
         }
+        if (current.channels() != 3) {
+            val tmp = Mat().also { matsToRelease.add(it) }
+            when (current.channels()) {
+                4 -> Imgproc.cvtColor(current, tmp, Imgproc.COLOR_RGBA2RGB)
+                1 -> Imgproc.cvtColor(current, tmp, Imgproc.COLOR_GRAY2RGB)
+                else -> {
+                    val channels = mutableListOf<Mat>()
+                    Core.split(current, channels)
+                    if (channels.size >= 3) {
+                        val rgb3 = listOf(channels[0], channels[1], channels[2])
+                        Core.merge(rgb3, tmp)
+                    } else if (channels.isNotEmpty()) {
+                        Imgproc.cvtColor(channels[0], tmp, Imgproc.COLOR_GRAY2RGB)
+                    }
+                    channels.forEach { it.release() }
+                }
+            }
+            current = tmp
+        }
+        return current
     }
 
     private fun parseDetectionsAndApplyNMS(
@@ -230,15 +265,25 @@ class YoloServiceImpl(
         originalWidth: Int?,
         originalHeight: Int?
     ): Mat {
+        if (overlay.empty() || overlay.cols() <= 0 || overlay.rows() <= 0) {
+            val targetW = originalWidth ?: shapes.inputW
+            val targetH = originalHeight ?: shapes.inputH
+            val emptyMask = Mat(targetH, targetW, CvType.CV_8UC1)
+            emptyMask.setTo(Scalar(255.0))
+            return emptyMask
+        }
         var resultMat = overlay.clone()
         try {
             val contentW =
-                kotlin.math.max(1, kotlin.math.min(shapes.inputW, (shapes.inputW / xRatio).toInt()))
+                kotlin.math.max(1, kotlin.math.min(resultMat.cols(), (shapes.inputW / xRatio).toInt()))
             val contentH =
-                kotlin.math.max(1, kotlin.math.min(shapes.inputH, (shapes.inputH / yRatio).toInt()))
+                kotlin.math.max(1, kotlin.math.min(resultMat.rows(), (shapes.inputH / yRatio).toInt()))
 
-            if (contentW != shapes.inputW || contentH != shapes.inputH) {
-                val cropped = Mat(resultMat, Rect(0, 0, contentW, contentH)).clone()
+            if (contentW < resultMat.cols() || contentH < resultMat.rows()) {
+                val safeRect = Rect(0, 0, contentW.coerceAtMost(resultMat.cols()), contentH.coerceAtMost(resultMat.rows()))
+                val sub = resultMat.submat(safeRect)
+                val cropped = sub.clone()
+                sub.release()
                 resultMat.release()
                 resultMat = cropped
             }
@@ -258,8 +303,13 @@ class YoloServiceImpl(
             }
             return resultMat
         } catch (e: Exception) {
+            AppLogger.warn("postProcessResultMask error, returning fallback: ${e.message}")
+            val targetW = originalWidth ?: shapes.inputW
+            val targetH = originalHeight ?: shapes.inputH
+            val fallback = Mat(targetH, targetW, CvType.CV_8UC1)
+            fallback.setTo(Scalar(255.0))
             resultMat.release()
-            throw e
+            return fallback
         }
     }
 

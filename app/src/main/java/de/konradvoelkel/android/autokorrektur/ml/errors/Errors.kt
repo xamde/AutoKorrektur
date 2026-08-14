@@ -12,4 +12,7 @@ class ShapeMismatchException(message: String, cause: Throwable? = null) :
 class ModelNotInitializedException(message: String) : YoloException(message)
 
 /** Exceptions related to inpainting operations. */
-class InpaintException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
+open class InpaintException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
+
+class CloudInferenceException(message: String, cause: Throwable? = null) : InpaintException(message, cause)
+class QuotaExceededException(message: String) : InpaintException(message)
