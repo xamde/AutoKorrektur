@@ -29,6 +29,7 @@ dependencies = [
     "onnxruntime>=1.28.0",
     "opencv-python-headless>=5.0.0.93",
     "ultralytics>=8.4.115",
+    "onnx>=1.22.0",
 ]
 
 [[tool.uv.index]]

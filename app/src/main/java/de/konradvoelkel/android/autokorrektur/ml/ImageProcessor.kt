@@ -23,7 +23,7 @@ class ImageProcessor(context: Context) : ImagePreprocessingService {
     private val preprocessor: Preprocessor = DefaultPreprocessor()
 
     companion object {
-        private const val DEFAULT_MAX_MEGAPIXELS = 16.0f
+        private const val DEFAULT_MAX_MEGAPIXELS = 8.0f
     }
 
     /**
@@ -66,7 +66,7 @@ class ImageProcessor(context: Context) : ImagePreprocessingService {
 
             // 6. Build normalized float Mat for engine
             val transformedMat = Mat()
-            prep.forEngine.convertTo(transformedMat, CvType.CV_32FC3, 1.0 / 255.0)
+            prep.forEngine.convertTo(transformedMat, CvType.CV_32F, 1.0 / 255.0)
 
             // Cleanup local refs we are returning
             matsToRelease.remove(workingMat)

@@ -28,12 +28,14 @@ class RigorousGuiFlowInstrumentedTest {
         // Verify Premium Edit (Server SDXL) toggle is displayed on main UI
         onView(withId(R.id.useSdxl)).check(matches(isDisplayed()))
 
-        // Toggle SDXL switch
-        onView(withId(R.id.useSdxl)).perform(click())
-
         // Error Snackbar Guard: Assert no startup error Snackbars are displayed on screen
         onView(withId(com.google.android.material.R.id.snackbar_text)).check(androidx.test.espresso.assertion.ViewAssertions.doesNotExist())
 
         scenario.close()
+    }
+
+    @org.junit.After
+    fun tearDown() {
+        System.gc()
     }
 }

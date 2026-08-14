@@ -1,6 +1,9 @@
 <resources>
     <string name="app_name">AutoKorrektur</string>
     <string name="action_settings">Einstellungen</string>
+    <string name="action_about">Über &amp; Lizenzen</string>
+    <string name="about_dialog_title">Über AutoKorrektur</string>
+    <string name="about_dialog_content">AutoKorrektur\n\nVersion: 1.0.0\nLizenz: GNU AGPLv3\n\nOpen-Source-Komponenten:\n• YOLOv11-seg: GNU AGPLv3 (Ultralytics)\n• MI-GAN: Apache 2.0\n• OpenCV Android SDK: Apache 2.0\n• ONNX Runtime: MIT-Lizenz\n\nDie lokale Bildverarbeitung arbeitet zu 100% offline und datenschutzkonform.</string>
     <string name="first_fragment_label">AutoKorrektur</string>
     <string name="next">Weiter</string>
     <string name="previous">Zurück</string>
@@ -38,6 +41,7 @@
     <string name="label_result">Ergebnis</string>
     <string name="label_image_numbered">Bild %1$d</string>
     <string name="label_original">Original</string>
+    <string name="label_mask">Erkannte Fahrzeuge (Masken-Vorschau)</string>
     <string name="loading_status">%1$s (%2$d%%)</string>
     <string name="btn_start_batch_processing">Batch-Verarbeitung starten</string>
     <string name="msg_image_saved">Bild in Galerie gespeichert</string>

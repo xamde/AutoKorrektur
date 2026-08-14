@@ -65,8 +65,14 @@ class YoloTFLiteEngine(private val context: Context) : YoloEngine {
                 "model/${modelName}-seg_saved_model/${modelName}-seg_float32.tflite"
             }
             try {
-                val modelBytes = context.assets.openFd(modelFile).use { afd ->
-                    afd.createInputStream().use { inputStream ->
+                val modelBytes = try {
+                    context.assets.openFd(modelFile).use { afd ->
+                        afd.createInputStream().use { inputStream ->
+                            inputStream.readBytes()
+                        }
+                    }
+                } catch (e: Exception) {
+                    context.assets.open(modelFile).use { inputStream ->
                         inputStream.readBytes()
                     }
                 }
@@ -252,31 +258,50 @@ class YoloTFLiteEngine(private val context: Context) : YoloEngine {
 
     /** Converts an 8UC3 RGB Mat into a float32 NHWC buffer scaled to 0..1. */
     private fun matToByteBuffer(mat: Mat, buffer: ByteBuffer) {
-        // Ensure type
-        require(mat.type() == CvType.CV_8UC3) { "Expected CV_8UC3 input Mat (RGB)" }
-        val rows = mat.rows()
-        val cols = mat.cols()
-        val channels = mat.channels()
-        if (channels != 3) throw ShapeMismatchException("Expected 3 channels, got $channels")
-
-        // Copy pixels
-        val pixels = ByteArray(rows * cols * channels)
-        mat.get(0, 0, pixels)
-        buffer.rewind()
-        // Write normalized floats in NHWC order
-        var idx = 0
-        val scale = 1f / 255f
-        repeat(rows) {
-            repeat(cols) {
-                val r = (pixels[idx].toInt() and 0xFF) * scale
-                val g = (pixels[idx + 1].toInt() and 0xFF) * scale
-                val b = (pixels[idx + 2].toInt() and 0xFF) * scale
-                buffer.putFloat(r)
-                buffer.putFloat(g)
-                buffer.putFloat(b)
-                idx += 3
+        var input = mat
+        val matsToRelease = mutableListOf<Mat>()
+        try {
+            if (input.type() != CvType.CV_8UC3) {
+                val tmp = Mat().also { matsToRelease.add(it) }
+                if (input.channels() == 4) {
+                    Imgproc.cvtColor(input, tmp, Imgproc.COLOR_RGBA2RGB)
+                } else if (input.channels() == 1) {
+                    Imgproc.cvtColor(input, tmp, Imgproc.COLOR_GRAY2RGB)
+                } else {
+                    val scale = if (input.depth() == CvType.CV_32F) 255.0 else 1.0
+                    input.convertTo(tmp, CvType.CV_8U, scale)
+                }
+                input = tmp
             }
+            val rows = input.rows()
+            val cols = input.cols()
+            val channels = input.channels()
+            if (channels != 3) throw ShapeMismatchException("Expected 3 channels, got $channels")
+
+            // Copy pixels
+            val totalBytes = rows * cols * channels
+            val pixels = ByteArray(totalBytes)
+            val reshaped = input.reshape(1, totalBytes)
+            reshaped.get(0, 0, pixels)
+            reshaped.release()
+            buffer.rewind()
+            // Write normalized floats in NHWC order
+            var idx = 0
+            val scale = 1f / 255f
+            repeat(rows) {
+                repeat(cols) {
+                    val r = (pixels[idx].toInt() and 0xFF) * scale
+                    val g = (pixels[idx + 1].toInt() and 0xFF) * scale
+                    val b = (pixels[idx + 2].toInt() and 0xFF) * scale
+                    buffer.putFloat(r)
+                    buffer.putFloat(g)
+                    buffer.putFloat(b)
+                    idx += 3
+                }
+            }
+            buffer.rewind()
+        } finally {
+            matsToRelease.forEach { it.release() }
         }
-        buffer.rewind()
     }
 }

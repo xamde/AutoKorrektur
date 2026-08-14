@@ -33,6 +33,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.snackbar.Snackbar
+import de.konradvoelkel.android.autokorrektur.manager.ConsentManager
+import de.konradvoelkel.android.autokorrektur.manager.QuotaManager
 import de.konradvoelkel.android.autokorrektur.databinding.FragmentFirstBinding
 import de.konradvoelkel.android.autokorrektur.ui.model.MainUiProperties
 import de.konradvoelkel.android.autokorrektur.ui.model.MainUiState
@@ -76,12 +78,16 @@ class FirstFragment : Fragment() {
         }
     }
 
+    private var pendingCameraUri: Uri? = null
+
     // Activity result launcher for camera
     private val takePictureLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            // Camera URI is already set in ViewModel via launchCamera()
+        ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            pendingCameraUri?.let { uri ->
+                viewModel.setSelectedImageUri(uri)
+            }
         }
     }
 
@@ -118,9 +124,9 @@ class FirstFragment : Fragment() {
 
         init {
             try {
-                System.loadLibrary("opencv_java4")
+                org.opencv.android.OpenCVLoader.initLocal()
                 Log.d(TAG, "OpenCV native library loaded successfully.")
-            } catch (e: UnsatisfiedLinkError) {
+            } catch (e: Exception) {
                 Log.e(TAG, "Failed to load OpenCV native library!", e)
             }
         }
@@ -153,6 +159,8 @@ class FirstFragment : Fragment() {
     private fun handleUiState(state: MainUiState) {
         when (state) {
             is MainUiState.Idle -> {
+                binding.beforeAfterSliderView.visibility = View.GONE
+                binding.imagesContainer.visibility = View.VISIBLE
                 updateInferenceButtonState(viewModel.properties.value)
                 binding.fileSelect.isEnabled = true
                 binding.batchMode.isEnabled = true
@@ -184,7 +192,22 @@ class FirstFragment : Fragment() {
                         )
                     binding.beforeAfterSliderView.setBitmaps(safeOrig, safeProc)
                     binding.beforeAfterSliderView.visibility = View.VISIBLE
-                    binding.imagesContainer.visibility = View.GONE
+
+                    // Render the mask overlay view so the user can verify the detected vehicle mask
+                    binding.imagesContainer.removeAllViews()
+                    val overlay = de.konradvoelkel.android.autokorrektur.utils.MaskOverlayUtils.createRedOverlayBitmap(
+                        result.maskBitmap,
+                        safeOrig.width,
+                        safeOrig.height
+                    )
+                    val combinedMask = Bitmap.createBitmap(safeOrig.width, safeOrig.height, Bitmap.Config.ARGB_8888)
+                    val canvas = android.graphics.Canvas(combinedMask)
+                    canvas.drawBitmap(safeOrig, 0f, 0f, null)
+                    canvas.drawBitmap(overlay, 0f, 0f, null)
+                    overlay.recycle()
+
+                    addImageToContainer(combinedMask, getString(R.string.label_mask))
+                    binding.imagesContainer.visibility = View.VISIBLE
                 }
                 updateInferenceButtonState(viewModel.properties.value)
                 binding.fileSelect.isEnabled = true
@@ -209,6 +232,10 @@ class FirstFragment : Fragment() {
             clearImagesContainer()
             props.selectedImageUri?.let { displayImage(it, getString(R.string.label_original)) }
             binding.fileSelect.text = getString(R.string.select_image)
+        }
+        if (viewModel.uiState.value !is MainUiState.Success) {
+            binding.beforeAfterSliderView.visibility = View.GONE
+            binding.imagesContainer.visibility = View.VISIBLE
         }
         updateInferenceButtonState(props)
         binding.beforeAfterSliderView.setSliderPosition(props.sliderPosition)
@@ -288,9 +315,10 @@ class FirstFragment : Fragment() {
 
         binding.useSdxl.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
-                val prefs = requireContext().getSharedPreferences("autokorrektur_prefs", android.content.Context.MODE_PRIVATE)
-                val consentGiven = prefs.getBoolean("sdxl_consent", false)
-                if (!consentGiven) {
+                val consentManager = ConsentManager(requireContext())
+                val quotaManager = QuotaManager(requireContext())
+                val remaining = quotaManager.getRemainingDailyQuota()
+                if (!consentManager.isConsentGranted()) {
                     val view = android.view.LayoutInflater.from(requireContext()).inflate(R.layout.dialog_gdpr_consent, null)
                     val checkbox = view.findViewById<android.widget.CheckBox>(R.id.rememberChoiceCheckbox)
                     AlertDialog.Builder(requireContext())
@@ -298,7 +326,7 @@ class FirstFragment : Fragment() {
                         .setView(view)
                         .setPositiveButton(R.string.btn_accept) { _, _ ->
                             if (checkbox.isChecked) {
-                                prefs.edit { putBoolean("sdxl_consent", true) }
+                                consentManager.setConsentGranted(true)
                             }
                         }
                         .setNegativeButton(R.string.cancel) { _, _ ->
@@ -402,11 +430,8 @@ class FirstFragment : Fragment() {
                 "${requireContext().packageName}.fileprovider",
                 file
             )
-            viewModel.setSelectedImageUri(uri)
-            val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
-                putExtra(MediaStore.EXTRA_OUTPUT, uri)
-            }
-            takePictureLauncher.launch(takePictureIntent)
+            pendingCameraUri = uri
+            takePictureLauncher.launch(uri)
         } catch (ex: Exception) {
             AppLogger.error(getString(R.string.error_create_file_failed), ex)
             showSnackbar(getString(R.string.error_create_file_message, ex.message))
@@ -440,19 +465,11 @@ class FirstFragment : Fragment() {
     }
 
     private fun decodePreviewBitmap(uri: Uri, targetW: Int, targetH: Int): Bitmap {
-        val source = ImageDecoder.createSource(requireContext().contentResolver, uri)
-        return ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
-            val srcW = info.size.width
-            val srcH = info.size.height
-            val scale = kotlin.math.min(
-                targetW.toFloat() / srcW.toFloat(),
-                targetH.toFloat() / srcH.toFloat()
-            ).coerceAtMost(1f)
-            decoder.setTargetSize(
-                kotlin.math.max(1, (srcW * scale).toInt()),
-                kotlin.math.max(1, (srcH * scale).toInt())
-            )
-        }
+        return de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.decodeSampledBitmapFromUri(
+            requireContext(),
+            uri,
+            kotlin.math.max(targetW, targetH)
+        )
     }
 
     private fun displayImage(uri: Uri, label: String) {

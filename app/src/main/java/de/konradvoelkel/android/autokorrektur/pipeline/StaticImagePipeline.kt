@@ -18,6 +18,7 @@ import kotlinx.coroutines.withContext
 import org.opencv.android.Utils
 import org.opencv.core.Mat
 import androidx.core.graphics.createBitmap
+import de.konradvoelkel.android.autokorrektur.ml.MatScaler
 import de.konradvoelkel.android.autokorrektur.ml.api.ServerSdxlApi
 
 /**
@@ -103,8 +104,7 @@ class StaticImagePipeline(
             maskMat = currentMaskMat
             
             // Convert mask to Bitmap
-            val maskBitmap = createBitmap(currentMaskMat.cols(), currentMaskMat.rows())
-            Utils.matToBitmap(currentMaskMat, maskBitmap)
+            val maskBitmap = MatScaler.createDisplayBitmap(currentMaskMat)
             
             onMaskGenerated?.invoke(maskBitmap)
 
@@ -116,8 +116,7 @@ class StaticImagePipeline(
                 // Generate a preview with MiGan first to use as structural prior
                 val miGanPreview =
                     miGanInference.inferMiGan(processedImage.originalMat, currentMaskMat)
-                val previewBitmap = createBitmap(miGanPreview.cols(), miGanPreview.rows())
-                Utils.matToBitmap(miGanPreview, previewBitmap)
+                val previewBitmap = MatScaler.createDisplayBitmap(miGanPreview)
                 miGanPreview.release()
                 
                 onProgressUpdate?.invoke("Server SDXL Premium Edit Processing", 85)
@@ -128,8 +127,7 @@ class StaticImagePipeline(
                 AppLogger.info("Using Local Mi-GAN for inpainting")
                 val miGanResult =
                     miGanInference.inferMiGan(processedImage.originalMat, currentMaskMat)
-                inpaintedBitmap = createBitmap(miGanResult.cols(), miGanResult.rows())
-                Utils.matToBitmap(miGanResult, inpaintedBitmap)
+                inpaintedBitmap = MatScaler.createDisplayBitmap(miGanResult)
                 miGanResult.release()
             }
             

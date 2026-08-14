@@ -41,12 +41,22 @@ class MainActivity : AppCompatActivity() {
         // as you specify a parent activity in AndroidManifest.xml.
         return when (item.itemId) {
             R.id.action_settings -> {
-                // Show a message about settings
                 true
             }
-
+            R.id.action_about -> {
+                showAboutDialog()
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    private fun showAboutDialog() {
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.about_dialog_title)
+            .setMessage(R.string.about_dialog_content)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
     }
 
     override fun onSupportNavigateUp(): Boolean {

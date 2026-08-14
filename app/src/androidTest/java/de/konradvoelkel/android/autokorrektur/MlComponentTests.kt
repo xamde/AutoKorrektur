@@ -13,10 +13,17 @@ import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 
+import org.junit.After
+
 @RunWith(AndroidJUnit4::class)
 @SmallTest
 class MlComponentTests :
     de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest() {
+
+    @After
+    fun tearDown() {
+        System.gc()
+    }
 
 
     @Test
@@ -61,23 +68,22 @@ class MlComponentTests :
     @Test
     fun testYoloServiceModels() = kotlinx.coroutines.runBlocking {
         try {
-            val yoloService = YoloServiceImpl(YoloTFLiteEngine(appContext))
-            assertNotNull("YoloService should not be null", yoloService)
-
+            val yoloService1 = YoloServiceImpl(YoloTFLiteEngine(appContext))
             try {
-                yoloService.initialize("yolo11s", useFP16 = true)
-                yoloService.close()
+                yoloService1.initialize("yolo11s", useFP16 = true)
             } catch (_: Exception) {
-                // ignore if FP16 model is not available
+            } finally {
+                yoloService1.close()
             }
 
+            val yoloService2 = YoloServiceImpl(YoloTFLiteEngine(appContext))
             try {
-                yoloService.initialize("yolo11s", useFP16 = false)
-                yoloService.close()
+                yoloService2.initialize("yolo11s", useFP16 = false)
             } catch (e: Exception) {
                 fail("YoloService (FP32) initialization failed: ${e.message}")
+            } finally {
+                yoloService2.close()
             }
-
         } catch (e: Exception) {
             fail("YoloService creation should not crash: ${e.message}")
         }

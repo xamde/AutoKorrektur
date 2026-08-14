@@ -32,6 +32,9 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
     companion object {
         private const val MODEL_INPUT_SIZE = 512
         private const val MODEL_FILE = "mi-gan-512.onnx"
+        @Volatile
+        private var sharedSession: OrtSession? = null
+        private val globalLock = Any()
     }
 
     /**
@@ -41,8 +44,11 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
      */
     @Throws(IOException::class)
     override suspend fun initialize() = withContext(kotlinx.coroutines.Dispatchers.IO) {
-        synchronized(lock) {
-            if (miGanSession != null) return@withContext
+        synchronized(globalLock) {
+            if (sharedSession != null) {
+                miGanSession = sharedSession
+                return@withContext
+            }
 
             AppLogger.debug("Initializing MiGanInference...")
 
@@ -56,7 +62,7 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
                 )
             }
 
-            miGanSession = try {
+            val session = try {
                 if (de.konradvoelkel.android.autokorrektur.utils.DevicePerformanceHelper.isNnapiSupported()) {
                     try {
                         val sessionOptions = OrtSession.SessionOptions().apply { addNnapi() }
@@ -74,6 +80,10 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
                 throw IOException("Failed to create Mi-GAN session: ${e.message}", e)
             }
 
+            sharedSession = session
+            miGanSession = session
+            AppLogger.info("MiGanInference session inputInfo: ${session.inputInfo}")
+            AppLogger.info("MiGanInference session outputInfo: ${session.outputInfo}")
             AppLogger.debug("MiGanInference initialized successfully.")
         }
     }
@@ -114,13 +124,31 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
                 )
 
                 // 2. Run ONNX Session
-                val outputHWC = runOnnxSession(session, resizedImage, resizedMask, tensorsToClose)
+                val outputHWC = synchronized(lock) {
+                    runOnnxSession(session, resizedImage, resizedMask, tensorsToClose, matsToRelease)
+                }
 
                 // 3. Process output Mat
                 val unpaddedInpaintedMat =
                     processOutputMat(outputHWC, maxSize, origWidth, origHeight, matsToRelease)
 
                 try {
+                    // Save raw model output before blending to inspect what Mi-GAN produces
+                    try {
+                        val debugBmp = android.graphics.Bitmap.createBitmap(
+                            unpaddedInpaintedMat.cols(),
+                            unpaddedInpaintedMat.rows(),
+                            android.graphics.Bitmap.Config.ARGB_8888
+                        )
+                        org.opencv.android.Utils.matToBitmap(unpaddedInpaintedMat, debugBmp)
+                        val debugFile = java.io.File("/sdcard/Download/raw_migan_output.png")
+                        debugFile.parentFile?.mkdirs()
+                        val fos = debugFile.outputStream()
+                        debugBmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, fos)
+                        fos.close()
+                        debugBmp.recycle()
+                    } catch (_: Exception) {}
+
                     // 4. Blend result
                     return@withContext blendResult(
                         processedImage,
@@ -149,7 +177,8 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
         Core.copyMakeBorder(processedImage, squareImage, 0, yPad, 0, xPad, Core.BORDER_REFLECT_101)
 
         val squareMask = Mat().also { matsToRelease.add(it) }
-        Core.copyMakeBorder(processedMask, squareMask, 0, yPad, 0, xPad, Core.BORDER_CONSTANT, org.opencv.core.Scalar(0.0))
+        // Pad mask with 255.0 (Preserved Background) so non-image padding is never inpainted
+        Core.copyMakeBorder(processedMask, squareMask, 0, yPad, 0, xPad, Core.BORDER_CONSTANT, org.opencv.core.Scalar(255.0))
 
         val modelInputSize = Size(MODEL_INPUT_SIZE.toDouble(), MODEL_INPUT_SIZE.toDouble())
         val resizedImage = Mat().also { matsToRelease.add(it) }
@@ -164,10 +193,15 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
         session: OrtSession,
         resizedImage: Mat,
         resizedMask: Mat,
-        tensorsToClose: MutableList<OnnxTensor>
+        tensorsToClose: MutableList<OnnxTensor>,
+        matsToRelease: MutableList<Mat>
     ): ByteArray {
+        val onnxMask = Mat().also { matsToRelease.add(it) }
+        // resizedMask has 0 on vehicle and 255 on background.
+        // Invert so onnxMask has 255 on vehicle hole and 0 on preserved background.
+        Core.bitwise_not(resizedMask, onnxMask)
         val imageArray = orderInCHWAsBytes(resizedImage)
-        val maskArray = orderInCHWAsBytes(resizedMask)
+        val maskArray = orderInCHWAsBytes(onnxMask)
 
         val imageTensor =
             createTensor(imageArray, 1, 3, MODEL_INPUT_SIZE.toLong(), MODEL_INPUT_SIZE.toLong())
@@ -176,12 +210,18 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
             createTensor(maskArray, 1, 1, MODEL_INPUT_SIZE.toLong(), MODEL_INPUT_SIZE.toLong())
                 .also { tensorsToClose.add(it) }
 
+        val nonZeroMaskCount = maskArray.count { it != 0.toByte() }
+        AppLogger.info("MiGanInference: maskArray nonZeroCount = $nonZeroMaskCount / ${maskArray.size}")
+
         val inputs = mapOf("image" to imageTensor, "mask" to maskTensor)
 
         return session.run(inputs).use { outputs ->
             val outputTensor = outputs[0]
             val outputData = getOutputData(outputTensor)
-            reorderToHWC(outputData, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE)
+            AppLogger.info("MiGanInference: outputTensor class = ${outputTensor.javaClass.name}, outputData class = ${outputData?.javaClass?.name}")
+            val hwc = reorderToHWC(outputData, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE)
+            AppLogger.info("MiGanInference: hwc nonZeroCount = ${hwc.count { it != 0.toByte() }} / ${hwc.size}")
+            hwc
         }
     }
 
@@ -209,24 +249,55 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
 
     private fun blendResult(processedImage: Mat, processedMask: Mat, unpaddedInpainted: Mat): Mat {
         val finalBlendedMat = processedImage.clone()
+        // processedMask has 0 on car and 255 on background.
+        // Invert so carMask has 255 on car, copying inpainting strictly onto the vehicle region.
         val carMask = Mat()
-        try {
-            Core.bitwise_not(processedMask, carMask)
-            unpaddedInpainted.copyTo(finalBlendedMat, carMask)
-        } finally {
-            carMask.release()
-        }
+        Core.bitwise_not(processedMask, carMask)
+        unpaddedInpainted.copyTo(finalBlendedMat, carMask)
+        carMask.release()
         return finalBlendedMat
     }
 
     private fun preprocessImage(imageMat: Mat): Mat {
-        val processedImage = Mat()
-        when (imageMat.type()) {
-            CvType.CV_8UC3 -> imageMat.copyTo(processedImage)
-            CvType.CV_8UC4 -> Imgproc.cvtColor(imageMat, processedImage, Imgproc.COLOR_RGBA2RGB)
-            else -> imageMat.convertTo(processedImage, CvType.CV_8UC3)
+        val converted = Mat()
+        var current = imageMat
+        if (current.depth() != CvType.CV_8U) {
+            val scale = if (current.depth() == CvType.CV_32F || current.depth() == CvType.CV_64F) 255.0 else 1.0
+            current.convertTo(converted, CvType.CV_8U, scale)
+            current = converted
         }
-        return processedImage
+        val rgb = Mat()
+        when (current.channels()) {
+            3 -> {
+                if (current !== imageMat) {
+                    current.copyTo(rgb)
+                    converted.release()
+                } else {
+                    return imageMat.clone()
+                }
+            }
+            4 -> {
+                Imgproc.cvtColor(current, rgb, Imgproc.COLOR_RGBA2RGB)
+                if (converted !== imageMat) converted.release()
+            }
+            1 -> {
+                Imgproc.cvtColor(current, rgb, Imgproc.COLOR_GRAY2RGB)
+                if (converted !== imageMat) converted.release()
+            }
+            else -> {
+                val channels = mutableListOf<Mat>()
+                Core.split(current, channels)
+                if (channels.size >= 3) {
+                    val rgb3 = listOf(channels[0], channels[1], channels[2])
+                    Core.merge(rgb3, rgb)
+                } else if (channels.isNotEmpty()) {
+                    Imgproc.cvtColor(channels[0], rgb, Imgproc.COLOR_GRAY2RGB)
+                }
+                channels.forEach { it.release() }
+                if (converted !== imageMat) converted.release()
+            }
+        }
+        return rgb
     }
 
     private fun preprocessMask(maskMat: Mat, imageMat: Mat): Mat {
@@ -234,14 +305,20 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
         if (maskMat.channels() == 1 && maskMat.type() == CvType.CV_8UC1) {
             maskMat.copyTo(processedMask)
         } else {
-            val gray = Mat()
-            when (maskMat.channels()) {
-                3 -> Imgproc.cvtColor(maskMat, gray, Imgproc.COLOR_RGB2GRAY)
-                4 -> Imgproc.cvtColor(maskMat, gray, Imgproc.COLOR_RGBA2GRAY)
-                else -> maskMat.convertTo(gray, CvType.CV_8UC1)
+            val gray = when (maskMat.channels()) {
+                1 -> maskMat
+                else -> {
+                    val g = Mat()
+                    val code = if (maskMat.channels() == 3) Imgproc.COLOR_RGB2GRAY else Imgproc.COLOR_RGBA2GRAY
+                    Imgproc.cvtColor(maskMat, g, code)
+                    g
+                }
             }
-            gray.convertTo(processedMask, CvType.CV_8UC1)
-            gray.release()
+            val scale = if (gray.type() == CvType.CV_32F || gray.type() == CvType.CV_32FC1) 255.0 else 1.0
+            gray.convertTo(processedMask, CvType.CV_8U, scale)
+            if (gray != maskMat) {
+                gray.release()
+            }
         }
 
         if (processedMask.rows() != imageMat.rows() || processedMask.cols() != imageMat.cols()) {
@@ -269,9 +346,12 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
         width: Long
     ): OnnxTensor {
         val shape = longArrayOf(batchSize, channels, height, width)
+        val directBuffer = java.nio.ByteBuffer.allocateDirect(data.size).order(java.nio.ByteOrder.nativeOrder())
+        directBuffer.put(data)
+        directBuffer.rewind()
         return OnnxTensor.createTensor(
             ortEnvironment,
-            ByteBuffer.wrap(data),
+            directBuffer,
             shape,
             OnnxJavaType.UINT8
         )
@@ -296,21 +376,24 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
 
 
     private fun orderInCHWAsBytes(mat: Mat): ByteArray {
-        val channels = ArrayList<Mat>()
-        Core.split(mat, channels)
-
-        val c = channels.size
+        val c = mat.channels()
         val h = mat.rows()
         val w = mat.cols()
-
         val chwArray = ByteArray(c * h * w)
 
+        if (c == 1) {
+            mat.get(0, 0, chwArray)
+            return chwArray
+        }
+
+        val planeSize = h * w
         for (i in 0 until c) {
-            val channelMat = channels[i]
-            val channelData = ByteArray(h * w)
+            val channelMat = Mat()
+            Core.extractChannel(mat, channelMat, i)
+            val channelData = ByteArray(planeSize)
             channelMat.get(0, 0, channelData)
-            System.arraycopy(channelData, 0, chwArray, i * h * w, h * w)
             channelMat.release()
+            System.arraycopy(channelData, 0, chwArray, i * planeSize, planeSize)
         }
 
         return chwArray
@@ -395,22 +478,42 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
     }
 
     /**
-     * Tries to extract flat data from nested array structure.
+     * Tries to extract flat data from multi-dimensional nested array structure.
      */
-    private fun tryExtractFlatData(outputData: Array<*>): Any? {
-        return when {
-            outputData.isNotEmpty() && outputData[0] is ByteArray -> outputData[0] as ByteArray
-            outputData.isNotEmpty() && outputData[0] is FloatArray -> outputData[0] as FloatArray
-            else -> null
+    private fun tryExtractFlatData(outputData: Any?): Any? {
+        if (outputData == null) return null
+        if (outputData is ByteArray) return outputData
+        if (outputData is FloatArray) return outputData
+        if (outputData is Array<*>) {
+            val byteList = mutableListOf<Byte>()
+            val floatList = mutableListOf<Float>()
+            var isFloat = false
+
+            fun flatten(item: Any?) {
+                when (item) {
+                    is ByteArray -> item.forEach { byteList.add(it) }
+                    is FloatArray -> {
+                        isFloat = true
+                        item.forEach { floatList.add(it) }
+                    }
+                    is Array<*> -> item.forEach { flatten(it) }
+                }
+            }
+            outputData.forEach { flatten(it) }
+            return if (isFloat) floatList.toFloatArray() else byteList.toByteArray()
         }
+        return null
     }
 
     /**
      * Releases resources used by the inference session.
      */
     override fun close() {
-        miGanSession?.close()
-        miGanSession = null
-        // B2: Do NOT close ortEnvironment as it is a process-wide singleton
+        synchronized(globalLock) {
+            miGanSession?.close()
+            miGanSession = null
+            sharedSession = null
+            AppLogger.debug("MiGanInference: Released ONNX session.")
+        }
     }
 }

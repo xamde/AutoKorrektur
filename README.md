@@ -31,6 +31,8 @@ Default processing is done 100% on-device. Usage is free.
 
 ## Development & Testing
 
+> **Last Verified**: 2026-08-14 (100% test pass on JVM unit tests, detekt, connected Android benchmarks, and backend pytest suite).
+
 See [TESTING.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/TESTING.md) for full testing instructions.
 
 * **Build Debug APK**:
@@ -40,6 +42,10 @@ See [TESTING.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/TESTING.m
 * **Run Android Unit Tests**:
   ```bash
   ./gradlew testDebugUnitTest
+  ```
+* **Run Connected Benchmark Tests**:
+  ```bash
+  ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=de.konradvoelkel.android.autokorrektur.ml.MaskQualityBenchmarkTest,de.konradvoelkel.android.autokorrektur.ml.NonCarOverMaskingTest
   ```
 * **Run Static Analysis (Detekt)**:
   ```bash
@@ -52,7 +58,8 @@ See [TESTING.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/TESTING.m
 
 ## Documentation
 
-* [TESTING.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/TESTING.md) — Testing guidelines and test suite execution.
+* [TODO.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/TODO.md) — Project status, completed milestones, and prioritized development roadmap.
+* [TESTING.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/TESTING.md) — Testing guidelines, benchmark metrics, and hardware matrix.
 * [backend/README.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/backend/README.md) — Backend API specification, GDPR privacy model, and Docker deployment.
 * [PRIVACY_POLICY.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/PRIVACY_POLICY.md) — Privacy policy and GDPR data retention terms.
 * [RELEASE_CHECKLIST.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/RELEASE_CHECKLIST.md) — Release preparation and Play Store checklist.

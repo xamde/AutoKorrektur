@@ -1,40 +1,49 @@
 <?xml version="1.0" ?>
 <SmellBaseline>
-  <ManuallySuppressedIssues></ManuallySuppressedIssues>
+  <ManuallySuppressedIssues/>
   <CurrentIssues>
     <ID>ComplexCondition:BeforeAfterSliderView.kt$BeforeAfterSliderView$before == null || after == null || width &lt;= 0 || height &lt;= 0</ID>
     <ID>ComplexCondition:TemporalBackgroundAccumulator.kt$TemporalBackgroundAccumulator$bg == null || bg.cols() != width || bg.rows() != height || bg.type() != frameMat.type()</ID>
-    <ID>CyclomaticComplexMethod:FirstFragment.kt$FirstFragment$private fun launchInferenceJob(useServerSdxl: Boolean): kotlinx.coroutines.Job</ID>
-    <ID>CyclomaticComplexMethod:FirstFragment.kt$FirstFragment$private fun setupUI()</ID>
-    <ID>CyclomaticComplexMethod:FirstFragment.kt$FirstFragment$private fun startBatchInferenceFlow(useServerSdxl: Boolean)</ID>
-    <ID>CyclomaticComplexMethod:ImageProcessor.kt$ImageProcessor$private fun rotateBitmapIfRequired(bitmap: Bitmap, uri: Uri): Bitmap</ID>
-    <ID>CyclomaticComplexMethod:YoloServiceImpl.kt$YoloServiceImpl$override fun inferDetailed( transformedMat: Mat, xRatio: Float, yRatio: Float, upscaleFactor: Float, originalWidth: Int?, originalHeight: Int?, overrideConfig: YoloConfig? ): YoloResult</ID>
+    <ID>ComplexCondition:YoloServiceImpl.kt$YoloServiceImpl$originalWidth != null &amp;&amp; originalHeight != null &amp;&amp; originalWidth &gt; 0 &amp;&amp; originalHeight &gt; 0</ID>
+    <ID>CyclomaticComplexMethod:GuidedFilter.kt$GuidedFilter$fun filter( guide: Mat, srcMask: Mat, radius: Int = 0, eps: Double = DEFAULT_EPSILON ): Mat</ID>
+    <ID>CyclomaticComplexMethod:UriLoader.kt$UriLoader$private fun rotateBitmapIfRequired(bitmap: Bitmap, uri: Uri): Bitmap</ID>
+    <ID>CyclomaticComplexMethod:YoloTFLiteEngine.kt$YoloTFLiteEngine$@Throws(ModelLoadException::class) override suspend fun initialize(modelName: String, useFP16: Boolean)</ID>
     <ID>EmptyFunctionBlock:FirstFragment.kt$FirstFragment.&lt;no name provided&gt;${}</ID>
     <ID>ImplicitDefaultLocale:FirstFragment.kt$FirstFragment.&lt;no name provided&gt;$String.format("%.2f", value)</ID>
     <ID>ImplicitDefaultLocale:FirstFragment.kt$FirstFragment.&lt;no name provided&gt;$String.format("%.3f", value)</ID>
-    <ID>InvalidPackageDeclaration:ImageProcessingUtils.kt$package de.konradvoelkel.android.autokorrektur.ml.preprocess</ID>
-    <ID>LargeClass:FirstFragment.kt$FirstFragment : Fragment</ID>
+    <ID>InstanceOfCheckForException:ImageProcessor.kt$ImageProcessor$e is IOException</ID>
+    <ID>InstanceOfCheckForException:ServerSdxlApi.kt$ServerSdxlApi$e is CloudInferenceException</ID>
+    <ID>InstanceOfCheckForException:ServerSdxlApi.kt$ServerSdxlApi$e is QuotaExceededException</ID>
+    <ID>LongMethod:BatchProcessingWorker.kt$BatchProcessingWorker$override suspend fun doWork(): Result</ID>
     <ID>LongMethod:FirstFragment.kt$FirstFragment$private fun exportInstagramGraphic()</ID>
-    <ID>LongMethod:FirstFragment.kt$FirstFragment$private fun launchInferenceJob(useServerSdxl: Boolean): kotlinx.coroutines.Job</ID>
     <ID>LongMethod:FirstFragment.kt$FirstFragment$private fun setupUI()</ID>
-    <ID>LongMethod:FirstFragment.kt$FirstFragment$private fun startBatchInferenceFlow(useServerSdxl: Boolean)</ID>
-    <ID>LongMethod:MiGanInference.kt$MiGanInference$@Throws(IOException::class) fun inferMiGan(imageMat: Mat, maskMat: Mat): Mat</ID>
+    <ID>LongMethod:GuidedFilter.kt$GuidedFilter$fun filter( guide: Mat, srcMask: Mat, radius: Int = 0, eps: Double = DEFAULT_EPSILON ): Mat</ID>
     <ID>LongMethod:StaticImagePipeline.kt$StaticImagePipeline$suspend fun processImage( uri: Uri, downscaleMp: Float?, maskUpscale: Float, scoreThreshold: Float, useServerSdxl: Boolean, onMaskGenerated: ((Bitmap) -&gt; Unit)? = null, onProgressUpdate: ((stage: String, percent: Int) -&gt; Unit)? = null ): PipelineResult</ID>
     <ID>LongMethod:YoloInferenceParseDetectionsTest.kt$YoloInferenceParseDetectionsTest$@Test fun parseDetections_returnsExpectedDetections_forSmallSyntheticBuffer()</ID>
-    <ID>LongMethod:YoloMaskAssembler.kt$YoloMaskAssembler$fun assembleMaskFromPrototypes( maskCoefficients: FloatArray, prototypeMats: List&lt;Mat&gt;, boxX: Float, boxY: Float, boxW: Float, boxH: Float, // Normalized (0-1) upscaleFactor: Float, inputWidth: Int, inputHeight: Int ): Mat</ID>
-    <ID>LongMethod:YoloServiceImpl.kt$YoloServiceImpl$override fun inferDetailed( transformedMat: Mat, xRatio: Float, yRatio: Float, upscaleFactor: Float, originalWidth: Int?, originalHeight: Int?, overrideConfig: YoloConfig? ): YoloResult</ID>
-    <ID>LongMethod:YoloTFLiteEngine.kt$YoloTFLiteEngine$@Throws(ModelLoadException::class) fun initialize(modelName: String = "yolo11s", useFP16: Boolean = false)</ID>
+    <ID>LongMethod:YoloServiceImpl.kt$YoloServiceImpl$override suspend fun inferDetailed( transformedMat: Mat, xRatio: Float, yRatio: Float, upscaleFactor: Float, originalWidth: Int?, originalHeight: Int?, overrideConfig: YoloConfig? ): YoloResult</ID>
+    <ID>LongMethod:YoloTFLiteEngine.kt$YoloTFLiteEngine$@Throws(InferenceException::class) override fun run(rgbMat: Mat): RawOutputs</ID>
+    <ID>LongMethod:YoloTFLiteEngine.kt$YoloTFLiteEngine$@Throws(ModelLoadException::class) override suspend fun initialize(modelName: String, useFP16: Boolean)</ID>
+    <ID>LongParameterList:ImageProcessingUtilsPaddingTest.kt$ImageProcessingUtilsPaddingTest$( private val w: Int, private val h: Int, private val expMax: Int, private val expXPad: Int, private val expYPad: Int, private val expXRatio: Float, private val expYRatio: Float )</ID>
+    <ID>LongParameterList:MainViewModel.kt$MainViewModel$( downscaleMp: Float?, maskUpscale: Float, scoreThreshold: Float, useServerSdxl: Boolean, downshift: Float = 0f, segModel: String = "" )</ID>
+    <ID>LongParameterList:MainViewModel.kt$MainViewModel$( uris: List&lt;Uri&gt;, downscaleMp: Float?, maskUpscale: Float, scoreThreshold: Float, useServerSdxl: Boolean, downshift: Float, segModel: String )</ID>
     <ID>LongParameterList:StaticImagePipeline.kt$StaticImagePipeline$( uri: Uri, downscaleMp: Float?, maskUpscale: Float, scoreThreshold: Float, useServerSdxl: Boolean, onMaskGenerated: ((Bitmap) -&gt; Unit)? = null, onProgressUpdate: ((stage: String, percent: Int) -&gt; Unit)? = null )</ID>
     <ID>LongParameterList:YoloMaskAssembler.kt$YoloMaskAssembler$( detection: Detection, overlayGray: Mat, upscaleFactor: Float, deinterleavedPrototypes: List&lt;Mat&gt;, inputWidth: Int, inputHeight: Int )</ID>
     <ID>LongParameterList:YoloMaskAssembler.kt$YoloMaskAssembler$( detection: Detection, overlayGray: Mat, upscaleFactor: Float, prototypeMasksData: FloatArray, inputWidth: Int, inputHeight: Int, protoShape: IntArray )</ID>
     <ID>LongParameterList:YoloMaskAssembler.kt$YoloMaskAssembler$( maskCoefficients: FloatArray, prototypeMasksData: FloatArray, // Flat array: C * H * W, interleaved per pixel boxX: Float, boxY: Float, boxW: Float, boxH: Float, // Normalized (0-1) upscaleFactor: Float, inputWidth: Int, inputHeight: Int, protoShape: IntArray )</ID>
+    <ID>LongParameterList:YoloMaskAssembler.kt$YoloMaskAssembler$( maskCoefficients: FloatArray, prototypeMats: List&lt;Mat&gt;, boxX: Float, boxY: Float, boxW: Float, boxH: Float )</ID>
     <ID>LongParameterList:YoloMaskAssembler.kt$YoloMaskAssembler$( maskCoefficients: FloatArray, prototypeMats: List&lt;Mat&gt;, boxX: Float, boxY: Float, boxW: Float, boxH: Float, // Normalized (0-1) upscaleFactor: Float, inputWidth: Int, inputHeight: Int )</ID>
+    <ID>LongParameterList:YoloMaskMath.kt$YoloMaskMath$( boxX: Float, boxY: Float, boxW: Float, boxH: Float, maskW: Int, maskH: Int, inputW: Int, inputH: Int )</ID>
+    <ID>LongParameterList:YoloMaskMath.kt$YoloMaskMath$( boxX: Float, boxY: Float, boxW: Float, boxH: Float, protoW: Int, protoH: Int )</ID>
     <ID>LongParameterList:YoloService.kt$YoloService$( transformedMat: Mat, xRatio: Float, yRatio: Float, upscaleFactor: Float = 1.0f, originalWidth: Int? = null, originalHeight: Int? = null )</ID>
     <ID>LongParameterList:YoloService.kt$YoloService$( transformedMat: Mat, xRatio: Float, yRatio: Float, upscaleFactor: Float = 1.0f, originalWidth: Int? = null, originalHeight: Int? = null, overrideConfig: YoloConfig? = null )</ID>
+    <ID>LongParameterList:YoloServiceImpl.kt$YoloServiceImpl$( kept: List&lt;Detection&gt;, deinterleaved: List&lt;Mat&gt;?, prototypes: FloatArray, protoShape: IntArray, shapes: de.konradvoelkel.android.autokorrektur.ml.model.Shapes, upscaleFactor: Float, warnings: MutableList&lt;String&gt;, matsToRelease: MutableList&lt;Mat&gt; )</ID>
+    <ID>LongParameterList:YoloServiceImpl.kt$YoloServiceImpl$( overlay: Mat, shapes: de.konradvoelkel.android.autokorrektur.ml.model.Shapes, xRatio: Float, yRatio: Float, originalWidth: Int?, originalHeight: Int? )</ID>
     <ID>MagicNumber:AppLogger.kt$AppLogger$95</ID>
-    <ID>MagicNumber:BatchProcessingWorker.kt$BatchProcessingWorker$0.6f</ID>
+    <ID>MagicNumber:BatchProcessingWorker.kt$BatchProcessingWorker$0.25f</ID>
     <ID>MagicNumber:BatchProcessingWorker.kt$BatchProcessingWorker$100</ID>
+    <ID>MagicNumber:BeforeAfterSliderView.kt$BeforeAfterSliderView$0.05f</ID>
     <ID>MagicNumber:BeforeAfterSliderView.kt$BeforeAfterSliderView$0.5f</ID>
+    <ID>MagicNumber:BeforeAfterSliderView.kt$BeforeAfterSliderView$100</ID>
     <ID>MagicNumber:BeforeAfterSliderView.kt$BeforeAfterSliderView$220</ID>
     <ID>MagicNumber:BeforeAfterSliderView.kt$BeforeAfterSliderView$32f</ID>
     <ID>MagicNumber:BeforeAfterSliderView.kt$BeforeAfterSliderView$40f</ID>
@@ -47,25 +56,16 @@
     <ID>MagicNumber:DevicePerformanceHelper.kt$DevicePerformanceHelper$6</ID>
     <ID>MagicNumber:FirstFragment.kt$FirstFragment$0.001</ID>
     <ID>MagicNumber:FirstFragment.kt$FirstFragment$0.01</ID>
-    <ID>MagicNumber:FirstFragment.kt$FirstFragment$0.5f</ID>
-    <ID>MagicNumber:FirstFragment.kt$FirstFragment$10.0f</ID>
-    <ID>MagicNumber:FirstFragment.kt$FirstFragment$100</ID>
     <ID>MagicNumber:FirstFragment.kt$FirstFragment$3</ID>
-    <ID>MagicNumber:FirstFragment.kt$FirstFragment$3.0f</ID>
-    <ID>MagicNumber:FirstFragment.kt$FirstFragment$4.0f</ID>
     <ID>MagicNumber:FirstFragment.kt$FirstFragment$400</ID>
-    <ID>MagicNumber:FirstFragment.kt$FirstFragment$5.0f</ID>
-    <ID>MagicNumber:FirstFragment.kt$FirstFragment$6.0f</ID>
-    <ID>MagicNumber:FirstFragment.kt$FirstFragment$7.0f</ID>
-    <ID>MagicNumber:FirstFragment.kt$FirstFragment$8.0f</ID>
-    <ID>MagicNumber:FirstFragment.kt$FirstFragment$9.0f</ID>
-    <ID>MagicNumber:FirstFragment.kt$FirstFragment$90</ID>
     <ID>MagicNumber:FirstFragment.kt$FirstFragment.&lt;no name provided&gt;$0.001</ID>
     <ID>MagicNumber:FirstFragment.kt$FirstFragment.&lt;no name provided&gt;$0.01</ID>
-    <ID>MagicNumber:ImageProcessor.kt$ImageProcessor$180f</ID>
+    <ID>MagicNumber:GuidedFilter.kt$GuidedFilter$0.5</ID>
+    <ID>MagicNumber:GuidedFilter.kt$GuidedFilter$255.0</ID>
+    <ID>MagicNumber:GuidedFilter.kt$GuidedFilter$3</ID>
+    <ID>MagicNumber:GuidedFilter.kt$GuidedFilter$4</ID>
+    <ID>MagicNumber:ImageExportManager.kt$ImageExportManager$90</ID>
     <ID>MagicNumber:ImageProcessor.kt$ImageProcessor$255.0</ID>
-    <ID>MagicNumber:ImageProcessor.kt$ImageProcessor$270f</ID>
-    <ID>MagicNumber:ImageProcessor.kt$ImageProcessor$90f</ID>
     <ID>MagicNumber:InstagramExportUtils.kt$InstagramExportUtils$100</ID>
     <ID>MagicNumber:InstagramExportUtils.kt$InstagramExportUtils$12f</ID>
     <ID>MagicNumber:InstagramExportUtils.kt$InstagramExportUtils$14f</ID>
@@ -82,13 +82,14 @@
     <ID>MagicNumber:InstagramExportUtils.kt$InstagramExportUtils.AspectRatio.SQUARE_1_1$1080</ID>
     <ID>MagicNumber:InstagramExportUtils.kt$InstagramExportUtils.AspectRatio.STORY_9_16$1080</ID>
     <ID>MagicNumber:InstagramExportUtils.kt$InstagramExportUtils.AspectRatio.STORY_9_16$1920</ID>
-    <ID>MagicNumber:MainViewModel.kt$MainViewModel$0.5f</ID>
     <ID>MagicNumber:MaskOverlayUtils.kt$MaskOverlayUtils$0xFF</ID>
     <ID>MagicNumber:MaskOverlayUtils.kt$MaskOverlayUtils$16</ID>
     <ID>MagicNumber:MaskOverlayUtils.kt$MaskOverlayUtils$24</ID>
     <ID>MagicNumber:MaskOverlayUtils.kt$MaskOverlayUtils$255</ID>
     <ID>MagicNumber:MaskOverlayUtils.kt$MaskOverlayUtils$8</ID>
     <ID>MagicNumber:MiGanInference.kt$MiGanInference$0xFF</ID>
+    <ID>MagicNumber:MiGanInference.kt$MiGanInference$100</ID>
+    <ID>MagicNumber:MiGanInference.kt$MiGanInference$255.0</ID>
     <ID>MagicNumber:MiGanInference.kt$MiGanInference$255.0f</ID>
     <ID>MagicNumber:MiGanInference.kt$MiGanInference$255f</ID>
     <ID>MagicNumber:MiGanInference.kt$MiGanInference$3</ID>
@@ -103,6 +104,9 @@
     <ID>MagicNumber:StaticImagePipeline.kt$StaticImagePipeline$70</ID>
     <ID>MagicNumber:StaticImagePipeline.kt$StaticImagePipeline$80</ID>
     <ID>MagicNumber:StaticImagePipeline.kt$StaticImagePipeline$85</ID>
+    <ID>MagicNumber:UriLoader.kt$UriLoader$180f</ID>
+    <ID>MagicNumber:UriLoader.kt$UriLoader$270f</ID>
+    <ID>MagicNumber:UriLoader.kt$UriLoader$90f</ID>
     <ID>MagicNumber:YoloConfig.kt$YoloConfig$3</ID>
     <ID>MagicNumber:YoloConfig.kt$YoloConfig$5</ID>
     <ID>MagicNumber:YoloConfig.kt$YoloConfig$7</ID>
@@ -111,77 +115,61 @@
     <ID>MagicNumber:YoloMaskAssembler.kt$YoloMaskAssembler$4</ID>
     <ID>MagicNumber:YoloMaskAssembler.kt$YoloMaskAssembler$5.0</ID>
     <ID>MagicNumber:YoloPostprocessor.kt$YoloPostprocessor$3</ID>
-    <ID>MagicNumber:YoloPostprocessor.kt$YoloPostprocessor$5</ID>
-    <ID>MagicNumber:YoloPostprocessor.kt$YoloPostprocessor$7</ID>
     <ID>MagicNumber:YoloServiceImpl.kt$YoloServiceImpl$1.05f</ID>
     <ID>MagicNumber:YoloServiceImpl.kt$YoloServiceImpl$255.0</ID>
+    <ID>MagicNumber:YoloServiceImpl.kt$YoloServiceImpl$3</ID>
+    <ID>MagicNumber:YoloServiceImpl.kt$YoloServiceImpl$4</ID>
     <ID>MagicNumber:YoloTFLiteEngine.kt$YoloTFLiteEngine$0xFF</ID>
+    <ID>MagicNumber:YoloTFLiteEngine.kt$YoloTFLiteEngine$255.0</ID>
     <ID>MagicNumber:YoloTFLiteEngine.kt$YoloTFLiteEngine$255f</ID>
     <ID>MagicNumber:YoloTFLiteEngine.kt$YoloTFLiteEngine$3</ID>
     <ID>MagicNumber:YoloTFLiteEngine.kt$YoloTFLiteEngine$4</ID>
     <ID>MagicNumber:YoloTFLiteEngine.kt$YoloTFLiteEngine$640</ID>
-    <ID>MaxLineLength:FirstFragment.kt$FirstFragment$"ONNX Runtime encountered an error during model execution.\n\nOriginal error: ${e.message}"</ID>
-    <ID>MaxLineLength:FirstFragment.kt$FirstFragment$"One or more ML models failed to load. Check logcat for detailed error information.\n\nOriginal error: ${e.message}"</ID>
-    <ID>MaxLineLength:FirstFragment.kt$FirstFragment$"OpenCV initialization failed. This might indicate a problem with image processing.\n\nOriginal error: ${e.message}"</ID>
-    <ID>MaxLineLength:FirstFragment.kt$FirstFragment$"The Mask model could not be loaded. Check logcat for details.\n\nOriginal error: ${e.message}"</ID>
-    <ID>MaxLineLength:FirstFragment.kt$FirstFragment$"The NMS model could not be loaded. Check logcat for details.\n\nOriginal error: ${e.message}"</ID>
-    <ID>MaxLineLength:FirstFragment.kt$FirstFragment$"The YOLO model could not be loaded. This might be due to:\n• Corrupted model file\n• Insufficient memory\n• Incompatible model format\n\nCheck logcat for detailed error information.\n\nOriginal error: ${e.message}"</ID>
     <ID>MaxLineLength:FirstFragment.kt$FirstFragment$0 -&gt; Pair(de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.AspectRatio.SQUARE_1_1, de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.LayoutStyle.SIDE_BY_SIDE)</ID>
     <ID>MaxLineLength:FirstFragment.kt$FirstFragment$1 -&gt; Pair(de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.AspectRatio.PORTRAIT_4_5, de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.LayoutStyle.STACKED)</ID>
-    <ID>MaxLineLength:FirstFragment.kt$FirstFragment$AppLogger.saveDebugScreencap(requireContext(), pipelineResult.inpaintedBitmap, "inpainted_result")</ID>
-    <ID>MaxLineLength:FirstFragment.kt$FirstFragment$Snackbar.make(binding.root, "Instagram graphic saved to gallery!", Snackbar.LENGTH_SHORT).show()</ID>
-    <ID>MaxLineLength:FirstFragment.kt$FirstFragment$csvContent.append("Image Name,Processing Time (ms),Mask Upscale,Score Threshold,Downshift,Downscale MP,Segmentation Model,Success,Error Message\n")</ID>
     <ID>MaxLineLength:FirstFragment.kt$FirstFragment$else -&gt; Pair(de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.AspectRatio.STORY_9_16, de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.LayoutStyle.SIDE_BY_SIDE)</ID>
     <ID>MaxLineLength:FirstFragment.kt$FirstFragment$if</ID>
-    <ID>MaxLineLength:FirstFragment.kt$FirstFragment$val</ID>
     <ID>MaxLineLength:FirstFragment.kt$FirstFragment$val intent = Intent(requireContext(), de.konradvoelkel.android.autokorrektur.ar.ArCameraActivity::class.java)</ID>
-    <ID>MaxLineLength:FirstFragment.kt$FirstFragment$val prefs = requireContext().getSharedPreferences("autokorrektur_prefs", android.content.Context.MODE_PRIVATE)</ID>
-    <ID>MaxLineLength:FirstFragment.kt$FirstFragment$val safeOrig = de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.createScaledBitmapForDisplay(origBmp)</ID>
-    <ID>MaxLineLength:FirstFragment.kt$FirstFragment$val safeProc = de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils.createScaledBitmapForDisplay(procBmp)</ID>
     <ID>MaxLineLength:FirstFragment.kt$FirstFragment$val shareUri = de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils.saveBitmapForSharing(requireContext(), graphic)</ID>
     <ID>MaxLineLength:FirstFragment.kt$FirstFragment$val view = android.view.LayoutInflater.from(requireContext()).inflate(R.layout.dialog_gdpr_consent, null)</ID>
-    <ID>MaxLineLength:ImageProcessor.kt$ImageProcessor$AppLogger.debug("ImageProcessor: Created transformed bitmap (${transformedBitmap.width}x${transformedBitmap.height})")</ID>
-    <ID>MaxLineLength:ImageProcessor.kt$ImageProcessor$AppLogger.info("ImageProcessor: Image is ${imageMegapixels}MP, downsampling by ${sampleSize}x to fit ${maxMegapixels}MP limit")</ID>
+    <ID>MaxLineLength:ImageExportManager.kt$ImageExportManager$csvContent.append("Image Name,Processing Time (ms),Mask Upscale,Score Threshold,Downshift,Downscale MP,Segmentation Model,Success,Error Message\n")</ID>
+    <ID>MaxLineLength:MiGanInference.kt$MiGanInference$AppLogger.info("MiGanInference: outputTensor class = ${outputTensor.javaClass.name}, outputData class = ${outputData?.javaClass?.name}")</ID>
+    <ID>MaxLineLength:MiGanInference.kt$MiGanInference$AppLogger.warn("MiGanInference: Failed to initialize NNAPI EP, falling back to CPU: ${e.message}")</ID>
     <ID>MaxLineLength:MiGanInference.kt$MiGanInference$Core.copyMakeBorder(processedMask, squareMask, 0, yPad, 0, xPad, Core.BORDER_CONSTANT, org.opencv.core.Scalar(0.0))</ID>
+    <ID>MaxLineLength:ServerSdxlApi.kt$ServerSdxlApi$AppLogger.info("ServerSdxlApi: Sending images to server for SDXL inpainting (Remaining: ${quotaManager.getRemainingDailyQuota()})...")</ID>
+    <ID>MaxLineLength:ServerSdxlApi.kt$ServerSdxlApi$AppLogger.info("ServerSdxlApi: Successfully received inpainted image (Remaining today: ${quotaManager.getRemainingDailyQuota()})")</ID>
+    <ID>MaxLineLength:ServerSdxlApi.kt$ServerSdxlApi$throw QuotaExceededException("Daily free SDXL limit reached (${QuotaManager.DEFAULT_DAILY_LIMIT} edits/day). Please try again tomorrow.")</ID>
     <ID>MaxLineLength:StaticImagePipeline.kt$StaticImagePipeline$AppLogger.info("StaticImagePipeline processImage called on uninitialized pipeline; auto-initializing now...")</ID>
     <ID>MaxLineLength:StaticImagePipeline.kt$StaticImagePipeline$inpaintedBitmap = serverSdxlApi.processWithSdxl(processedImage.originalBitmap, maskBitmap, previewBitmap)</ID>
-    <ID>MaxLineLength:YoloMaskAssembler.kt$YoloMaskAssembler$"Prototype data size mismatch: expected ${numPrototypesChannels * prototypeHeight * prototypeWidth}, got ${prototypeMasksData.size}"</ID>
-    <ID>MaxLineLength:YoloMaskAssembler.kt$YoloMaskAssembler$AppLogger.debug("Cropping prototypes: x=$cropX, y=$cropY, w=$cropW, h=$cropH (from ${prototypeWidth}x${prototypeHeight})")</ID>
-    <ID>MaxLineLength:YoloMaskAssembler.kt$YoloMaskAssembler$AppLogger.debug("Warning: ROI for mask placement is invalid or out of bounds. Skipping mask application for this detection.")</ID>
+    <ID>MaxLineLength:YoloMaskAssembler.kt$YoloMaskAssembler$"Prototype data size mismatch: expected ${numPrototypesChannels * pixelsPerChannel}, got ${prototypeMasksData.size}"</ID>
     <ID>MaxLineLength:YoloMaskAssembler.kt$YoloMaskAssembler$AppLogger.debug("assembleMask: Mask coeffs size mismatch. Expected $numPrototypesChannels, got ${maskCoefficients.size}")</ID>
     <ID>MaxLineLength:YoloMaskAssembler.kt$YoloMaskAssembler$throw IllegalStateException("Prototype masks buffer too small: ${buffer.capacity()} bytes, expected at least $expectedBufferSize bytes. Model output shape mismatch for prototypes?")</ID>
     <ID>MaxLineLength:YoloServiceImpl.kt$YoloServiceImpl$AppLogger.info("YoloServiceImpl inferDetailed called on uninitialized engine; auto-initializing default model...")</ID>
     <ID>MaxLineLength:YoloTFLiteEngine.kt$YoloTFLiteEngine$AppLogger.debug("Engine output shapes: det=${detShape.joinToString()}, proto=${protoShape.joinToString()}")</ID>
     <ID>MaxLineLength:YoloTFLiteEngine.kt$YoloTFLiteEngine$AppLogger.warn("YoloTFLiteEngine: NNAPI delegate initialization failed, falling back to CPU: ${e.message}")</ID>
     <ID>NestedBlockDepth:AppLogger.kt$AppLogger$private fun log(level: LogLevel, message: String, throwable: Throwable? = null)</ID>
-    <ID>NestedBlockDepth:MiGanInference.kt$MiGanInference$@Throws(IOException::class) fun initialize()</ID>
     <ID>NestedBlockDepth:MiGanInference.kt$MiGanInference$private fun reorderCHWToHWCFromBytes( uint8Data: ByteArray, width: Int, height: Int, hwcData: ByteArray )</ID>
     <ID>NestedBlockDepth:MiGanInference.kt$MiGanInference$private fun reorderCHWToHWCFromFloats( floatData: FloatArray, width: Int, height: Int, hwcData: ByteArray )</ID>
+    <ID>NestedBlockDepth:YoloTFLiteEngine.kt$YoloTFLiteEngine$private fun matToByteBuffer(mat: Mat, buffer: ByteBuffer)</ID>
     <ID>NewLineAtEndOfFile:AppLogger.kt$de.konradvoelkel.android.autokorrektur.utils.AppLogger.kt</ID>
     <ID>NewLineAtEndOfFile:DebugUtil.kt$de.konradvoelkel.android.autokorrektur.utils.DebugUtil.kt</ID>
     <ID>NewLineAtEndOfFile:ExampleUnitTest.kt$de.konradvoelkel.android.autokorrektur.ExampleUnitTest.kt</ID>
-    <ID>NewLineAtEndOfFile:ImageProcessingUtils.kt$de.konradvoelkel.android.autokorrektur.ml.preprocess.ImageProcessingUtils.kt</ID>
-    <ID>NewLineAtEndOfFile:ImageProcessingUtilsPaddingTest.kt$de.konradvoelkel.android.autokorrektur.ml.ImageProcessingUtilsPaddingTest.kt</ID>
-    <ID>NewLineAtEndOfFile:ImageProcessingUtilsTest.kt$de.konradvoelkel.android.autokorrektur.ml.ImageProcessingUtilsTest.kt</ID>
     <ID>NewLineAtEndOfFile:JvmTestUtils.kt$de.konradvoelkel.android.autokorrektur.shared.JvmTestUtils.kt</ID>
-    <ID>NewLineAtEndOfFile:MiGanInference.kt$de.konradvoelkel.android.autokorrektur.ml.MiGanInference.kt</ID>
     <ID>NewLineAtEndOfFile:YoloConfig.kt$de.konradvoelkel.android.autokorrektur.ml.config.YoloConfig.kt</ID>
-    <ID>NewLineAtEndOfFile:YoloMaskAssembler.kt$de.konradvoelkel.android.autokorrektur.ml.mask.YoloMaskAssembler.kt</ID>
     <ID>NewLineAtEndOfFile:YoloPostprocessor.kt$de.konradvoelkel.android.autokorrektur.ml.post.YoloPostprocessor.kt</ID>
     <ID>NewLineAtEndOfFile:YoloPostprocessorTest.kt$de.konradvoelkel.android.autokorrektur.ml.post.YoloPostprocessorTest.kt</ID>
-    <ID>NewLineAtEndOfFile:YoloService.kt$de.konradvoelkel.android.autokorrektur.ml.api.YoloService.kt</ID>
     <ID>NewLineAtEndOfFile:YoloServiceImpl.kt$de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl.kt</ID>
     <ID>NewLineAtEndOfFile:YoloTFLiteEngine.kt$de.konradvoelkel.android.autokorrektur.ml.engine.YoloTFLiteEngine.kt</ID>
     <ID>ReturnCount:BatchProcessingWorker.kt$BatchProcessingWorker$override suspend fun doWork(): Result</ID>
     <ID>ReturnCount:BeforeAfterSliderView.kt$BeforeAfterSliderView$override fun onTouchEvent(event: MotionEvent): Boolean</ID>
-    <ID>ReturnCount:FirstFragment.kt$FirstFragment$private fun performOnnxInference()</ID>
-    <ID>ReturnCount:ImageProcessor.kt$ImageProcessor$private fun calculateInSampleSize(width: Int, height: Int, maxMegapixels: Float): Int</ID>
-    <ID>ReturnCount:ImageProcessor.kt$ImageProcessor$private fun downscaleMatIfLarge(mat: Mat, maxMegapixels: Float?): Mat</ID>
-    <ID>ReturnCount:ImageProcessor.kt$ImageProcessor$private fun rotateBitmapIfRequired(bitmap: Bitmap, uri: Uri): Bitmap</ID>
+    <ID>ReturnCount:MatScaler.kt$MatScaler$fun downscaleIfLarge(mat: Mat, maxMegapixels: Float?): Mat</ID>
+    <ID>ReturnCount:MiGanInference.kt$MiGanInference$private fun tryExtractFlatData(outputData: Any?): Any?</ID>
+    <ID>ReturnCount:UriLoader.kt$UriLoader$private fun calculateInSampleSize(width: Int, height: Int, maxMegapixels: Float): Int</ID>
+    <ID>ReturnCount:UriLoader.kt$UriLoader$private fun rotateBitmapIfRequired(bitmap: Bitmap, uri: Uri): Bitmap</ID>
     <ID>ReturnCount:YoloMaskAssembler.kt$YoloMaskAssembler$fun assembleMaskFromPrototypes( maskCoefficients: FloatArray, prototypeMats: List&lt;Mat&gt;, boxX: Float, boxY: Float, boxW: Float, boxH: Float, // Normalized (0-1) upscaleFactor: Float, inputWidth: Int, inputHeight: Int ): Mat</ID>
-    <ID>SwallowedException:ImageProcessor.kt$ImageProcessor$e: Exception</ID>
-    <ID>ThrowsCount:ImageProcessor.kt$ImageProcessor$private fun loadBitmapFromContentProvider(uri: Uri): Bitmap</ID>
-    <ID>ThrowsCount:ImageProcessor.kt$ImageProcessor$private fun loadBitmapFromFile(uri: Uri): Bitmap</ID>
+    <ID>SwallowedException:UriLoader.kt$UriLoader$e: Exception</ID>
+    <ID>SwallowedException:YoloTFLiteEngine.kt$YoloTFLiteEngine$e: Exception</ID>
+    <ID>ThrowsCount:UriLoader.kt$UriLoader$private fun loadBitmapFromFile(uri: Uri, maxMegapixels: Float): Bitmap</ID>
     <ID>TooGenericExceptionCaught:AppLogger.kt$AppLogger$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ArCameraActivity.kt$ArCameraActivity$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ArCameraActivity.kt$ArCameraActivity$exc: Exception</ID>
@@ -189,23 +177,21 @@
     <ID>TooGenericExceptionCaught:BitmapMemoryUtils.kt$BitmapMemoryUtils$e: Exception</ID>
     <ID>TooGenericExceptionCaught:FirstFragment.kt$FirstFragment$e: Exception</ID>
     <ID>TooGenericExceptionCaught:FirstFragment.kt$FirstFragment$ex: Exception</ID>
+    <ID>TooGenericExceptionCaught:ImageExportManager.kt$ImageExportManager$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ImageProcessor.kt$ImageProcessor$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:MainViewModel.kt$MainViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:MiGanInference.kt$MiGanInference$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ServerSdxlApi.kt$ServerSdxlApi$e: Exception</ID>
     <ID>TooGenericExceptionCaught:StaticImagePipeline.kt$StaticImagePipeline$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:UriLoader.kt$UriLoader$e: Exception</ID>
     <ID>TooGenericExceptionCaught:YoloServiceImpl.kt$YoloServiceImpl$e: Exception</ID>
     <ID>TooGenericExceptionCaught:YoloTFLiteEngine.kt$YoloTFLiteEngine$e: Exception</ID>
-    <ID>TooGenericExceptionThrown:FirstFragment.kt$FirstFragment$throw Exception("Failed to initialize ML models: ${e.message}", e)</ID>
-    <ID>TooGenericExceptionThrown:FirstFragment.kt$FirstFragment$throw Exception(pipelineResult.errorMessage)</ID>
-    <ID>TooGenericExceptionThrown:ServerSdxlApi.kt$ServerSdxlApi$throw Exception("Empty response from server")</ID>
-    <ID>TooGenericExceptionThrown:ServerSdxlApi.kt$ServerSdxlApi$throw Exception("Failed to decode image from server")</ID>
-    <ID>TooGenericExceptionThrown:ServerSdxlApi.kt$ServerSdxlApi$throw Exception("Server inpainting failed: ${response.code}")</ID>
     <ID>TooManyFunctions:AppLogger.kt$AppLogger</ID>
+    <ID>TooManyFunctions:BeforeAfterSliderView.kt$BeforeAfterSliderView : View</ID>
     <ID>TooManyFunctions:FirstFragment.kt$FirstFragment : Fragment</ID>
-    <ID>TooManyFunctions:MiGanInference.kt$MiGanInference</ID>
-    <ID>UnusedPrivateMember:FirstFragment.kt$FirstFragment$private fun createMaskOverlay(originalUri: Uri, maskMatrix: Mat)</ID>
-    <ID>UnusedPrivateMember:MiGanInference.kt$MiGanInference$private fun createFloatTensor( data: FloatArray, batchSize: Long, channels: Long, height: Long, width: Long ): OnnxTensor</ID>
-    <ID>UnusedPrivateProperty:FirstFragment.kt$FirstFragment$// Permission request launcher for storage private val storagePermissionLauncher = registerForActivityResult( ActivityResultContracts.RequestPermission() ) { isGranted -&gt; if (isGranted) { launchGallery() } else { AppLogger.warn("Storage permission denied by user") Snackbar.make( binding.root, "Storage permission is required to select photos", Snackbar.LENGTH_LONG ).show() } }</ID>
+    <ID>TooManyFunctions:MiGanInference.kt$MiGanInference : InpaintingEngine</ID>
+    <ID>UnusedPrivateProperty:FirstFragment.kt$FirstFragment$val remaining = quotaManager.getRemainingDailyQuota()</ID>
+    <ID>UseCheckOrError:MiGanInference.kt$MiGanInference$throw IllegalStateException("Failed to initialize Mi-GAN session")</ID>
     <ID>UseCheckOrError:YoloMaskAssembler.kt$YoloMaskAssembler$throw IllegalStateException("Prototype masks buffer too small: ${buffer.capacity()} bytes, expected at least $expectedBufferSize bytes. Model output shape mismatch for prototypes?")</ID>
   </CurrentIssues>
 </SmellBaseline>

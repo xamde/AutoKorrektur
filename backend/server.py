@@ -6,7 +6,7 @@ from datetime import date
 from typing import Any
 
 import icontract
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Request
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -58,7 +58,7 @@ try:
     device = "cuda" if torch.cuda.is_available() else "cpu"
     logger.info(f"PyTorch detected with device: {device}")
     if settings.enable_sdxl_load:
-        sdxl_pipeline = AutoPipelineForInpainting.from_pretrained(
+        sdxl_pipeline = AutoPipelineForInpainting.from_pretrained(  # type: ignore[no-untyped-call]
             settings.sdxl_model_id,
             torch_dtype=torch.float16 if device == "cuda" else torch.float32,
         ).to(device)
@@ -124,7 +124,7 @@ def verify_token(device_uuid: str, play_integrity_token: str) -> bool:
         except Exception as e:
             logger.error(f"Error during Play Integrity verification: {e}")
             if settings.strict_integrity_check:
-                raise HTTPException(status_code=403, detail=f"Play Integrity verification error: {str(e)}")
+                raise HTTPException(status_code=403, detail=f"Play Integrity verification error: {str(e)}") from e
 
     logger.warning(
         f"Invalid Play Integrity token rejected for device {device_uuid}: {play_integrity_token[:10]}..."
@@ -163,8 +163,9 @@ def process_inpainting_payload(
                 raise HTTPException(status_code=400, detail=f"{name} dimensions exceed 2048x2048 limit")
             return img
         except Exception as e:
-            if isinstance(e, HTTPException): raise
-            raise HTTPException(status_code=400, detail=f"Failed to process {name}: {str(e)}")
+            if isinstance(e, HTTPException):
+                raise
+            raise HTTPException(status_code=400, detail=f"Failed to process {name}: {str(e)}") from e
 
     init_img = validate_and_open(image_bytes, "image").convert("RGB")
     mask_img = validate_and_open(mask_bytes, "mask").convert("L")
@@ -338,7 +339,7 @@ async def inpaint_image(
     await check_rate_limit(device_uuid, client_ip)
 
     # A7: Upload size limit check
-    total_size = (image.size or 0) + (mask.size or 0) + (preview.size if preview else 0)
+    total_size = (image.size or 0) + (mask.size or 0) + ((preview.size or 0) if preview else 0)
     if total_size > settings.max_upload_bytes:
          raise HTTPException(status_code=413, detail=f"Total upload size exceeds {settings.max_upload_bytes} bytes")
 

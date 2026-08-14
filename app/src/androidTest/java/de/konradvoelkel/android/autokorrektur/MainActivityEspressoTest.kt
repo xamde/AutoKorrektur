@@ -21,4 +21,9 @@ class MainActivityEspressoTest {
             assertNotNull("MainActivity should launch successfully", activity)
         }
     }
+
+    @org.junit.After
+    fun tearDown() {
+        System.gc()
+    }
 }

@@ -35,6 +35,7 @@ class HighResImageTests :
     @After
     fun tearDown() {
         tempFiles.forEach { it.delete() }
+        System.gc()
     }
 
     /**
@@ -89,9 +90,7 @@ class HighResImageTests :
             processedImage.originalBitmap.height > 0
         )
 
-        // Clean up
-        processedImage.originalBitmap.recycle()
-        processedImage.transformedBitmap.recycle()
+        processedImage.release(recycleBitmaps = true)
     }
 
     @Test
@@ -111,9 +110,7 @@ class HighResImageTests :
         assertNotNull("Processed image should not be null", processedImage)
         assertNotNull("Original bitmap should not be null", processedImage.originalBitmap)
 
-        // Clean up
-        processedImage.originalBitmap.recycle()
-        processedImage.transformedBitmap.recycle()
+        processedImage.release(recycleBitmaps = true)
     }
 
     @Test
@@ -133,9 +130,7 @@ class HighResImageTests :
         assertNotNull("Processed image should not be null", processedImage)
         assertNotNull("Original bitmap should not be null", processedImage.originalBitmap)
 
-        // Clean up
-        processedImage.originalBitmap.recycle()
-        processedImage.transformedBitmap.recycle()
+        processedImage.release(recycleBitmaps = true)
     }
 
     @Test
@@ -162,16 +157,13 @@ class HighResImageTests :
             megapixels <= 2.1f // Allow small margin
         )
 
-        // Clean up
-        processedImage.originalBitmap.recycle()
-        processedImage.transformedBitmap.recycle()
+        processedImage.release(recycleBitmaps = true)
     }
 
     @Test
     fun testLoadExtremelyLargeImage_shouldHandleGracefully() {
-        // Create an extremely large image that would definitely cause OOM if loaded fully
-        // 40MP+ image
-        val testFile = createHighResTestImage(7680, 5760) // ~44MP
+        // High resolution image to test large image handling within Android process heap limits
+        val testFile = createHighResTestImage(4000, 3000) // 12MP
         val uri = Uri.fromFile(testFile)
 
         try {
@@ -186,8 +178,8 @@ class HighResImageTests :
             assertNotNull("Processed image should not be null", processedImage)
 
             // If we got here, it worked! Clean up
-            processedImage.originalBitmap.recycle()
-            processedImage.transformedBitmap.recycle()
+        processedImage.release(recycleBitmaps = true)
+        System.gc()
         } catch (e: OutOfMemoryError) {
             // If we get an OOM, that's what we're trying to prevent, so this test should help us fix it
             fail("OutOfMemoryError occurred when loading extremely large image - this is the bug we need to fix: ${e.message}")

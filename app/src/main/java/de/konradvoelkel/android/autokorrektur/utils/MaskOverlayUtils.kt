@@ -30,9 +30,15 @@ object MaskOverlayUtils {
         threshold: Int = 128,
         alpha: Int = 128
     ): Bitmap {
-        // Scale mask to target size first
+        // Scale mask to target size first using Canvas to avoid null colorSpace issues on Android 14+
         val scaledMask = if (maskBitmap.width != outWidth || maskBitmap.height != outHeight) {
-            maskBitmap.scale(outWidth, outHeight)
+            val scaled = Bitmap.createBitmap(outWidth, outHeight, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(scaled)
+            val paint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
+            val srcRect = android.graphics.Rect(0, 0, maskBitmap.width, maskBitmap.height)
+            val dstRect = android.graphics.Rect(0, 0, outWidth, outHeight)
+            canvas.drawBitmap(maskBitmap, srcRect, dstRect, paint)
+            scaled
         } else maskBitmap
 
         // Prepare output ARGB bitmap

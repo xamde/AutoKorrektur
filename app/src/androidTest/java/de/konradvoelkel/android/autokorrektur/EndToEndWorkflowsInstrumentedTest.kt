@@ -33,6 +33,11 @@ class EndToEndWorkflowsInstrumentedTest : AndroidInstrumentedBaseTest() {
         prefs.edit().clear().commit()
     }
 
+    @org.junit.After
+    fun tearDown() {
+        System.gc()
+    }
+
     /**
      * Workflow 1: On-Device Single Image Vehicle Removal Flow
      * Verifies main buttons, options expansion, and initial on-device pipeline setup.
@@ -64,10 +69,10 @@ class EndToEndWorkflowsInstrumentedTest : AndroidInstrumentedBaseTest() {
         onView(withId(R.id.useSdxl)).perform(scrollTo(), click())
 
         // Verify GDPR Consent dialog is displayed with title Premium Edit (Server SDXL)
-        onView(withText("Premium Edit (Server SDXL)")).check(matches(isDisplayed()))
+        onView(withText(R.string.premium_edit_title)).check(matches(isDisplayed()))
 
         // Click "Accept" in dialog
-        onView(withText("Accept")).perform(click())
+        onView(withText(R.string.btn_accept)).perform(click())
 
         // Guard: Assert no error Snackbars displayed post-consent
         onView(withId(com.google.android.material.R.id.snackbar_text)).check(doesNotExist())

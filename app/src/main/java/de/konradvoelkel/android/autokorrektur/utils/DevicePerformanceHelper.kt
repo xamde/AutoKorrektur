@@ -23,8 +23,9 @@ object DevicePerformanceHelper {
 
     /**
      * Checks if Android Neural Networks API (NNAPI) is supported on this device.
+     * NNAPI was deprecated in Android 12 (API 31) and causes driver crashes on modern Android versions.
      */
     fun isNnapiSupported(): Boolean {
-        return true
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.S
     }
 }

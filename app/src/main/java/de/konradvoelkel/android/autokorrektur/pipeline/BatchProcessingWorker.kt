@@ -29,7 +29,7 @@ class BatchProcessingWorker(
         }
 
         val useServerSdxl = inputData.getBoolean(KEY_USE_SERVER_SDXL, false)
-        val scoreThreshold = inputData.getFloat(KEY_SCORE_THRESHOLD, 0.6f)
+        val scoreThreshold = inputData.getFloat(KEY_SCORE_THRESHOLD, 0.25f)
         val maskUpscale = inputData.getFloat(KEY_MASK_UPSCALE, 1.0f)
         val downscaleMp = if (inputData.keyValueMap.containsKey(KEY_DOWNSCALE_MP)) {
             inputData.getFloat(KEY_DOWNSCALE_MP, 2.0f)

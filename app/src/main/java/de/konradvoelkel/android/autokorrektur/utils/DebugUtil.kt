@@ -19,7 +19,7 @@ fun matToBitmapForDebug(mat: Mat): Bitmap {
 
     // Now convert the normalized float matrix to an 8-bit unsigned integer matrix.
     val displayMat = Mat()
-    normalizedMat.convertTo(displayMat, CvType.CV_8UC1)
+    normalizedMat.convertTo(displayMat, CvType.CV_8U)
 
     // Create a Bitmap with the same dimensions as the Mat.
     val bitmap = createBitmap(displayMat.cols(), displayMat.rows())

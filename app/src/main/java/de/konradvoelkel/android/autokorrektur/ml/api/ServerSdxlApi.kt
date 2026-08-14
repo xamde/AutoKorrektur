@@ -3,6 +3,9 @@ package de.konradvoelkel.android.autokorrektur.ml.api
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import de.konradvoelkel.android.autokorrektur.manager.QuotaManager
+import de.konradvoelkel.android.autokorrektur.ml.errors.CloudInferenceException
+import de.konradvoelkel.android.autokorrektur.ml.errors.QuotaExceededException
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -20,7 +23,8 @@ class ServerSdxlApi(
         .connectTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
-        .build()
+        .build(),
+    private val quotaManager: QuotaManager = QuotaManager(context)
 ) : ServerInpainter {
 
     private var serverUrl = de.konradvoelkel.android.autokorrektur.BuildConfig.BACKEND_URL
@@ -30,18 +34,17 @@ class ServerSdxlApi(
         maskBitmap: Bitmap, 
         previewBitmap: Bitmap
     ): Bitmap = withContext(Dispatchers.IO) {
-        AppLogger.info("ServerSdxlApi: Sending images to server for SDXL inpainting...")
+        if (!quotaManager.hasAvailableQuota()) {
+            throw QuotaExceededException("Daily free SDXL limit reached (${QuotaManager.DEFAULT_DAILY_LIMIT} edits/day). Please try again tomorrow.")
+        }
+
+        AppLogger.info("ServerSdxlApi: Sending images to server for SDXL inpainting (Remaining: ${quotaManager.getRemainingDailyQuota()})...")
         
         val origBytes = bitmapToByteArray(originalBitmap)
         val maskBytes = bitmapToByteArray(maskBitmap)
         val previewBytes = bitmapToByteArray(previewBitmap)
         
-        val sharedPrefs = context.getSharedPreferences("autokorrektur_prefs", Context.MODE_PRIVATE)
-        var deviceUuid = sharedPrefs.getString("device_uuid", null)
-        if (deviceUuid == null) {
-            deviceUuid = java.util.UUID.randomUUID().toString()
-            sharedPrefs.edit().putString("device_uuid", deviceUuid).apply()
-        }
+        val deviceUuid = quotaManager.getDeviceUuid()
         
         val playIntegrityToken = "mock-valid-token" // Placeholder for actual API integration
         
@@ -62,21 +65,22 @@ class ServerSdxlApi(
         try {
             val response = client.newCall(request).execute()
             if (!response.isSuccessful) {
-                val errorBody = response.body?.string() ?: "Unknown error"
+                val errorBody = response.body.string()
                 AppLogger.error("Server returned ${response.code}: $errorBody")
-                throw Exception("Server inpainting failed: ${response.code}")
+                throw CloudInferenceException("Server inpainting failed (${response.code}): $errorBody")
             }
             
-            val responseBytes = response.body?.bytes() ?: throw Exception("Empty response from server")
+            val responseBytes = response.body.bytes()
             val resultBitmap = BitmapFactory.decodeByteArray(responseBytes, 0, responseBytes.size) 
-                ?: throw Exception("Failed to decode image from server")
-                
-            AppLogger.info("ServerSdxlApi: Successfully received inpainted image")
+                ?: throw CloudInferenceException("Failed to decode image from server")
+            quotaManager.consumeQuota()
+            AppLogger.info("ServerSdxlApi: Successfully received inpainted image (Remaining today: ${quotaManager.getRemainingDailyQuota()})")
             return@withContext resultBitmap
             
         } catch (e: Exception) {
             AppLogger.error("ServerSdxlApi Error", e)
-            throw e
+            if (e is CloudInferenceException || e is QuotaExceededException) throw e
+            throw CloudInferenceException("Cloud communication error: ${e.message}", e)
         }
     }
     
