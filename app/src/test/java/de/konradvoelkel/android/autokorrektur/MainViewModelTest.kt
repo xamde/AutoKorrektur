@@ -148,7 +148,9 @@ class MainViewModelTest {
                 maskUpscale = 1.0f,
                 scoreThreshold = 0.25f,
                 useServerSdxl = false,
-                onProgressUpdate = any()
+                qualityMode = any(),
+                onProgressUpdate = any(),
+                onIntermediateInpaintUpdate = any()
             )
         } returns expectedResult
 
@@ -180,7 +182,9 @@ class MainViewModelTest {
                 maskUpscale = 1.0f,
                 scoreThreshold = 0.25f,
                 useServerSdxl = false,
-                onProgressUpdate = any()
+                qualityMode = any(),
+                onProgressUpdate = any(),
+                onIntermediateInpaintUpdate = any()
             )
         } returns PipelineResult(
             originalBitmap = mockk(relaxed = true),

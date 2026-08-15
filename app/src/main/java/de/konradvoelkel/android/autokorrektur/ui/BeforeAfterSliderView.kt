@@ -94,6 +94,14 @@ class BeforeAfterSliderView @JvmOverloads constructor(
     }
 
     /**
+     * Dynamically updates the After bitmap during progressive inpainting without re-triggering animation.
+     */
+    fun updateAfterBitmap(after: Bitmap) {
+        this.afterBitmap = after
+        invalidate()
+    }
+
+    /**
      * Sweeps the slider to visually showcase the inpainting transition.
      */
     fun animateReveal() {

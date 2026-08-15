@@ -41,6 +41,7 @@ import de.konradvoelkel.android.autokorrektur.ui.model.MainUiProperties
 import de.konradvoelkel.android.autokorrektur.ui.model.MainUiState
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import de.konradvoelkel.android.autokorrektur.utils.BitmapMemoryUtils
+import de.konradvoelkel.android.autokorrektur.model.InpaintingQualityMode
 import de.konradvoelkel.android.autokorrektur.utils.ImageExportManager
 import de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils
 import de.konradvoelkel.android.autokorrektur.utils.MaskOverlayUtils
@@ -189,6 +190,15 @@ class FirstFragment : Fragment() {
                     getString(R.string.loading_status, state.stage, state.percent)
                 binding.fileSelect.isEnabled = false
                 binding.batchMode.isEnabled = false
+
+                if (state.intermediateInpaintedBitmap != null && !viewModel.properties.value.isBatchMode) {
+                    val displayAfter = BitmapMemoryUtils.createScaledBitmapForDisplay(
+                        state.intermediateInpaintedBitmap, maxDimension = 1440
+                    )
+                    binding.beforeAfterSliderView.updateAfterBitmap(displayAfter)
+                    binding.beforeAfterSliderView.visibility = View.VISIBLE
+                    binding.imagesContainer.visibility = View.GONE
+                }
             }
 
             is MainUiState.Success -> {
@@ -263,6 +273,24 @@ class FirstFragment : Fragment() {
         }
         updateInferenceButtonState(props)
         binding.beforeAfterSliderView.setSliderPosition(props.sliderPosition)
+
+        when (props.qualityMode) {
+            InpaintingQualityMode.CLOUD_SDXL -> {
+                binding.chipCloudSdxl.isChecked = true
+                binding.tvPrivacyBadge.visibility = View.VISIBLE
+                binding.tvQuotaBadge.visibility = View.VISIBLE
+            }
+            InpaintingQualityMode.HIGH_RES_PROGRESSIVE -> {
+                binding.chipHighResProgressive.isChecked = true
+                binding.tvPrivacyBadge.visibility = View.GONE
+                binding.tvQuotaBadge.visibility = View.GONE
+            }
+            InpaintingQualityMode.FAST_PREVIEW -> {
+                binding.chipFastPreview.isChecked = true
+                binding.tvPrivacyBadge.visibility = View.GONE
+                binding.tvQuotaBadge.visibility = View.GONE
+            }
+        }
     }
 
     private fun updateInferenceButtonState(props: MainUiProperties) {
@@ -280,6 +308,29 @@ class FirstFragment : Fragment() {
     }
 
     private fun setupUI() {
+        binding.chipGroupQuality.setOnCheckedStateChangeListener { _, checkedIds ->
+            when {
+                checkedIds.contains(R.id.chipCloudSdxl) -> {
+                    viewModel.setQualityMode(InpaintingQualityMode.CLOUD_SDXL)
+                    binding.useSdxl.isChecked = true
+                    binding.tvPrivacyBadge.visibility = View.VISIBLE
+                    binding.tvQuotaBadge.visibility = View.VISIBLE
+                }
+                checkedIds.contains(R.id.chipHighResProgressive) -> {
+                    viewModel.setQualityMode(InpaintingQualityMode.HIGH_RES_PROGRESSIVE)
+                    binding.useSdxl.isChecked = false
+                    binding.tvPrivacyBadge.visibility = View.GONE
+                    binding.tvQuotaBadge.visibility = View.GONE
+                }
+                else -> {
+                    viewModel.setQualityMode(InpaintingQualityMode.FAST_PREVIEW)
+                    binding.useSdxl.isChecked = false
+                    binding.tvPrivacyBadge.visibility = View.GONE
+                    binding.tvQuotaBadge.visibility = View.GONE
+                }
+            }
+        }
+
         binding.fileSelect.setOnClickListener {
             if (binding.batchMode.isChecked) {
                 multipleImagePickerLauncher.launch("image/*")

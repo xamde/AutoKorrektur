@@ -1,7 +1,9 @@
 package de.konradvoelkel.android.autokorrektur.ui.model
 
+import android.graphics.Bitmap
 import android.net.Uri
 import de.konradvoelkel.android.autokorrektur.model.BatchProcessingResult
+import de.konradvoelkel.android.autokorrektur.model.InpaintingQualityMode
 import de.konradvoelkel.android.autokorrektur.pipeline.PipelineResult
 
 /**
@@ -12,7 +14,8 @@ sealed class MainUiState {
 
     data class Loading(
         val stage: String,
-        val percent: Int
+        val percent: Int,
+        val intermediateInpaintedBitmap: Bitmap? = null
     ) : MainUiState()
 
     data class Success(
@@ -32,5 +35,6 @@ data class MainUiProperties(
     val selectedImageUris: List<Uri> = emptyList(),
     val sliderPosition: Float = 0.5f,
     val isBatchMode: Boolean = false,
+    val qualityMode: InpaintingQualityMode = InpaintingQualityMode.FAST_PREVIEW,
     val batchProcessingResults: List<BatchProcessingResult> = emptyList()
 )

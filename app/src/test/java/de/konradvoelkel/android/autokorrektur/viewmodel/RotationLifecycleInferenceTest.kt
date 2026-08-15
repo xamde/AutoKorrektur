@@ -73,8 +73,10 @@ class RotationLifecycleInferenceTest {
                 maskUpscale = any(),
                 scoreThreshold = any(),
                 useServerSdxl = any(),
-                onMaskGenerated = any(),
-                onProgressUpdate = any()
+                qualityMode = any(),
+                onMaskGenerated = null,
+                onProgressUpdate = any(),
+                onIntermediateInpaintUpdate = any()
             )
         } returns dummyResult
 
@@ -111,7 +113,17 @@ class RotationLifecycleInferenceTest {
 
         // 6. Ensure pipeline was executed exactly once (no duplicate re-runs on rotation)
         coVerify(exactly = 1) {
-            mockPipeline.processImage(any(), any(), any(), any(), any(), any(), any())
+            mockPipeline.processImage(
+                uri = any(),
+                downscaleMp = any(),
+                maskUpscale = any(),
+                scoreThreshold = any(),
+                useServerSdxl = any(),
+                qualityMode = any(),
+                onMaskGenerated = any(),
+                onProgressUpdate = any(),
+                onIntermediateInpaintUpdate = any()
+            )
         }
     }
 

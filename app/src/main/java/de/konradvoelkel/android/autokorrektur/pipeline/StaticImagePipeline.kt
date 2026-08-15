@@ -10,7 +10,10 @@ import de.konradvoelkel.android.autokorrektur.ml.MiGanInference
 import de.konradvoelkel.android.autokorrektur.ml.api.ServerInpainter
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloService
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
+import de.konradvoelkel.android.autokorrektur.ml.engine.YoloTFLiteEngine
 import de.konradvoelkel.android.autokorrektur.ml.config.YoloConfig
+import de.konradvoelkel.android.autokorrektur.ml.progressive.ProgressiveTileInpainter
+import de.konradvoelkel.android.autokorrektur.model.InpaintingQualityMode
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import de.konradvoelkel.android.autokorrektur.utils.DevicePerformanceHelper
 import kotlinx.coroutines.Dispatchers
@@ -44,7 +47,7 @@ data class PipelineResult(
  * Orchestrates the full image processing workflow:
  * 1. Image loading and preprocessing (via [ImageProcessor])
  * 2. Object detection and mask generation (via [YoloService])
- * 3. Neural inpainting (via [InpaintingEngine] or [ServerSdxlApi])
+ * 3. Neural inpainting (via [InpaintingEngine], [ProgressiveTileInpainter], or [ServerSdxlApi])
  */
 class StaticImagePipeline(
     private val imageProcessor: ImagePreprocessingService,
@@ -78,17 +81,21 @@ class StaticImagePipeline(
      * @param maskUpscale Scale factor for mask boundary dilation
      * @param scoreThreshold Confidence threshold for vehicle detection
      * @param useServerSdxl True to use remote SDXL, false for on-device MI-GAN
+     * @param qualityMode Inpainting computation and resolution mode
      * @param onMaskGenerated Optional callback receiving the intermediate mask Bitmap
      * @param onProgressUpdate Optional progress reporter callback
+     * @param onIntermediateInpaintUpdate Optional callback for progressive inpainting preview updates
      */
     suspend fun processImage(
         uri: Uri,
         downscaleMp: Float?,
         maskUpscale: Float,
         scoreThreshold: Float,
-        useServerSdxl: Boolean,
+        useServerSdxl: Boolean = false,
+        qualityMode: InpaintingQualityMode = if (useServerSdxl) InpaintingQualityMode.CLOUD_SDXL else InpaintingQualityMode.FAST_PREVIEW,
         onMaskGenerated: ((Bitmap) -> Unit)? = null,
-        onProgressUpdate: ((stage: String, percent: Int) -> Unit)? = null
+        onProgressUpdate: ((stage: String, percent: Int) -> Unit)? = null,
+        onIntermediateInpaintUpdate: ((Bitmap) -> Unit)? = null
     ): PipelineResult = withContext(Dispatchers.Default) {
         if (!isInitialized) {
             AppLogger.info("StaticImagePipeline processImage called on uninitialized pipeline; auto-initializing now...")
@@ -103,11 +110,12 @@ class StaticImagePipeline(
 
             // 1. Process Input
             onProgressUpdate?.invoke("Loading & Preprocessing Image", 25)
+            val effectiveDownscaleMp = if (qualityMode == InpaintingQualityMode.HIGH_RES_PROGRESSIVE) null else downscaleMp
             processedImage = imageProcessor.processInputImage(
                 imageUri = uri,
                 modelWidth = 640,
                 modelHeight = 640,
-                downscaleMp = downscaleMp
+                downscaleMp = effectiveDownscaleMp
             )
             
             currentCoroutineContext().ensureActive()
@@ -137,22 +145,44 @@ class StaticImagePipeline(
 
             currentCoroutineContext().ensureActive()
 
-            // 3. Neural Inpainting
-            onProgressUpdate?.invoke(if (useServerSdxl) "Running Cloud SDXL Inpainting" else "Running On-Device Inpainting", 75)
-            val inpaintedBitmap = if (useServerSdxl) {
-                serverSdxlApi.processWithSdxl(
-                    originalBitmap = processedImage.originalBitmap,
-                    maskBitmap = maskBitmap,
-                    previewBitmap = processedImage.transformedBitmap
-                )
-            } else {
-                val inpaintMat = miGanInference.inpaint(
-                    imageMat = processedImage.originalMat,
-                    maskMat = maskMat
-                )
-                val outBmp = MatScaler.createDisplayBitmap(inpaintMat)
-                inpaintMat.release()
-                outBmp
+            // 3. Neural Inpainting based on Quality Mode
+            val isServer = (qualityMode == InpaintingQualityMode.CLOUD_SDXL) || useServerSdxl
+            val inpaintedBitmap = when {
+                isServer -> {
+                    onProgressUpdate?.invoke("Running Cloud SDXL Inpainting", 75)
+                    serverSdxlApi.processWithSdxl(
+                        originalBitmap = processedImage.originalBitmap,
+                        maskBitmap = maskBitmap,
+                        previewBitmap = processedImage.transformedBitmap
+                    )
+                }
+                qualityMode == InpaintingQualityMode.HIGH_RES_PROGRESSIVE -> {
+                    onProgressUpdate?.invoke("Running High-Res Progressive Inpainting", 60)
+                    val progressiveInpainter = ProgressiveTileInpainter(miGanInference)
+                    val inpaintMat = progressiveInpainter.inpaintProgressive(
+                        fullImageMat = processedImage.originalMat,
+                        subtractiveMaskMat = maskMat,
+                        onProgress = { stage, percent, previewBmp ->
+                            onProgressUpdate?.invoke(stage, percent)
+                            if (previewBmp != null) {
+                                onIntermediateInpaintUpdate?.invoke(previewBmp)
+                            }
+                        }
+                    )
+                    val outBmp = MatScaler.createDisplayBitmap(inpaintMat)
+                    inpaintMat.release()
+                    outBmp
+                }
+                else -> {
+                    onProgressUpdate?.invoke("Running On-Device Inpainting", 75)
+                    val inpaintMat = miGanInference.inpaint(
+                        imageMat = processedImage.originalMat,
+                        maskMat = maskMat
+                    )
+                    val outBmp = MatScaler.createDisplayBitmap(inpaintMat)
+                    inpaintMat.release()
+                    outBmp
+                }
             }
             
             currentCoroutineContext().ensureActive()
@@ -162,7 +192,7 @@ class StaticImagePipeline(
                 originalBitmap = processedImage.originalBitmap,
                 maskBitmap = maskBitmap,
                 inpaintedBitmap = inpaintedBitmap,
-                isServerProcessed = useServerSdxl
+                isServerProcessed = isServer
             )
             
         } catch (e: Exception) {
@@ -179,12 +209,27 @@ class StaticImagePipeline(
             maskMat?.release()
         }
     }
-    
-    /**
-     * Releases model sessions and closes open resources.
-     */
+
     fun close() {
         yoloService.close()
         miGanInference.close()
+    }
+
+    companion object {
+        /**
+         * Factory function to create a fully wired [StaticImagePipeline] with production dependencies.
+         */
+        fun create(context: Context): StaticImagePipeline {
+            val imageProcessor = ImageProcessor(context)
+            val yoloService = YoloServiceImpl(YoloTFLiteEngine(context))
+            val inpaintingEngine = MiGanInference(context)
+            val serverSdxlApi = ServerSdxlApi(context)
+            return StaticImagePipeline(
+                imageProcessor = imageProcessor,
+                yoloService = yoloService,
+                miGanInference = inpaintingEngine,
+                serverSdxlApi = serverSdxlApi
+            )
+        }
     }
 }
