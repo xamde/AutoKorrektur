@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0A0A0E">
+
+    <!-- Video Player View -->
+    <VideoView
+        android:id="@+id/videoView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Top Bar with Back Button & Title -->
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="48dp"
+        android:paddingBottom="16dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:background="@drawable/shape_gradient_scrim_top"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageButton
+            android:id="@+id/btnBack"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Zurück"
+            android:src="@drawable/ic_arrow_back"
+            app:tint="#FFFFFF" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:text="Autofreies Video (HQ)"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <!-- Toggle Mode Button (Original vs Autofrei) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnToggleSource"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="AUTOFREI"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            app:cornerRadius="18dp" />
+    </LinearLayout>
+
+    <!-- Processing Progress Container (shown while inpainting) -->
+    <LinearLayout
+        android:id="@+id/processingContainer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="32dp"
+        android:background="@drawable/shape_bottom_dock"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="8dp"
+            android:max="100"
+            android:progress="0"
+            android:progressTint="#38BDF8" />
+
+        <TextView
+            android:id="@+id/tvProgressStage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="HQ On-Device Inpainting..."
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvProgressPercent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="0%"
+            android:textColor="#94A3B8"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- Bottom Actions Dock -->
+    <LinearLayout
+        android:id="@+id/bottomDock"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="40dp"
+        android:background="@drawable/shape_gradient_scrim_bottom"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <!-- Instagram Reels & Save Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSaveGallery"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:text="Speichern"
+                android:textStyle="bold"
+                app:cornerRadius="26dp"
+                app:icon="@drawable/ic_download" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnShareReels"
+                style="@style/Widget.Material3.Button"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:backgroundTint="#E1306C"
+                android:text="Instagram Reels"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                app:cornerRadius="26dp"
+                app:icon="@drawable/ic_instagram"
+                app:iconTint="#FFFFFF" />
+        </LinearLayout>
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

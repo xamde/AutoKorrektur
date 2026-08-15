@@ -10,18 +10,21 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.net.Uri
 import androidx.core.content.FileProvider
+import androidx.core.graphics.withClip
+import de.konradvoelkel.android.autokorrektur.video.VideoEncoder
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import kotlin.math.sin
 
 /**
- * Utility for rendering Instagram-ready (1:1, 4:5, 9:16) comparison graphics
- * combining "BEFORE" and "AFTER" photo bitmaps.
+ * Utility for rendering Instagram-ready (1:1, 4:5, 9:16) comparison graphics and animated sweep videos
+ * combining "VORHER" and "NACHHER" photo bitmaps.
  */
 object InstagramExportUtils {
 
     /**
-     * Common aspect ratios supported by Instagram posts and stories.
+     * Common aspect ratios supported by Instagram posts, carousels, and stories.
      */
     enum class AspectRatio(val width: Int, val height: Int) {
         /** 1:1 square format (1080x1080). */
@@ -43,7 +46,7 @@ object InstagramExportUtils {
     }
 
     /**
-     * Composes a Before/After comparison graphic matching the specified Instagram aspect ratio and layout.
+     * Composes a Before/After side-by-side or stacked split comparison graphic matching the specified aspect ratio.
      */
     fun createComparisonBitmap(
         beforeBitmap: Bitmap,
@@ -65,11 +68,10 @@ object InstagramExportUtils {
         canvas.drawRect(0f, 0f, targetWidth.toFloat(), targetHeight.toFloat(), bgPaint)
 
         // 2. Draw Before & After regions based on layout
-        val dividerPaint = Paint().apply {
-            color = Color.argb(180, 255, 255, 255)
+        val dividerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.argb(220, 255, 255, 255)
             strokeWidth = 4f
             style = Paint.Style.STROKE
-            isAntiAlias = true
         }
 
         when (layout) {
@@ -81,12 +83,10 @@ object InstagramExportUtils {
                 drawScaledCenterCrop(canvas, beforeBitmap, leftRect)
                 drawScaledCenterCrop(canvas, afterBitmap, rightRect)
 
-                // Divider line
                 canvas.drawLine(halfWidth, 0f, halfWidth, targetHeight.toFloat(), dividerPaint)
 
-                // Badges
-                drawBadge(canvas, "BEFORE", leftRect, isTop = true)
-                drawBadge(canvas, "AFTER", rightRect, isTop = true)
+                drawBadge(canvas, "VORHER", leftRect, isTop = true)
+                drawBadge(canvas, "AUTOFREI", rightRect, isTop = true)
             }
             LayoutStyle.STACKED -> {
                 val halfHeight = targetHeight / 2f
@@ -96,16 +96,109 @@ object InstagramExportUtils {
                 drawScaledCenterCrop(canvas, beforeBitmap, topRect)
                 drawScaledCenterCrop(canvas, afterBitmap, bottomRect)
 
-                // Divider line
                 canvas.drawLine(0f, halfHeight, targetWidth.toFloat(), halfHeight, dividerPaint)
 
-                // Badges
-                drawBadge(canvas, "BEFORE", topRect, isTop = true)
-                drawBadge(canvas, "AFTER", bottomRect, isTop = true)
+                drawBadge(canvas, "VORHER", topRect, isTop = true)
+                drawBadge(canvas, "AUTOFREI", bottomRect, isTop = true)
             }
         }
 
         return resultBitmap
+    }
+
+    /**
+     * Generates a 2-slide carousel image pair (Slide 1: Before, Slide 2: After) styled for Instagram.
+     */
+    fun createCarouselPair(
+        beforeBitmap: Bitmap,
+        afterBitmap: Bitmap,
+        ratio: AspectRatio = AspectRatio.PORTRAIT_4_5
+    ): Pair<Bitmap, Bitmap> {
+        val targetW = ratio.width
+        val targetH = ratio.height
+        val fullRect = RectF(0f, 0f, targetW.toFloat(), targetH.toFloat())
+
+        val slide1 = Bitmap.createBitmap(targetW, targetH, Bitmap.Config.ARGB_8888)
+        val canvas1 = Canvas(slide1)
+        drawScaledCenterCrop(canvas1, beforeBitmap, fullRect)
+        drawBadge(canvas1, "1/2  VORHER", fullRect, isTop = true)
+
+        val slide2 = Bitmap.createBitmap(targetW, targetH, Bitmap.Config.ARGB_8888)
+        val canvas2 = Canvas(slide2)
+        drawScaledCenterCrop(canvas2, afterBitmap, fullRect)
+        drawBadge(canvas2, "2/2  AUTOFREI", fullRect, isTop = true)
+
+        return Pair(slide1, slide2)
+    }
+
+    /**
+     * Generates a 3.5s looping MP4 video where a vertical split slider sweeps across the screen.
+     */
+    fun createAnimatedSweepVideo(
+        beforeBitmap: Bitmap,
+        afterBitmap: Bitmap,
+        outputFile: File,
+        ratio: AspectRatio = AspectRatio.STORY_9_16,
+        fps: Int = 30,
+        durationSeconds: Float = 3.5f
+    ): File {
+        val targetW = (ratio.width / 2) * 2
+        val targetH = (ratio.height / 2) * 2
+        val totalFrames = (durationSeconds * fps).toInt().coerceAtLeast(30)
+
+        val encoder = VideoEncoder(
+            width = targetW,
+            height = targetH,
+            frameRate = fps,
+            bitRate = 8_000_000
+        )
+        encoder.start(outputFile)
+
+        val frameBitmap = Bitmap.createBitmap(targetW, targetH, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(frameBitmap)
+        val fullRect = RectF(0f, 0f, targetW.toFloat(), targetH.toFloat())
+
+        val dividerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            strokeWidth = 6f
+            style = Paint.Style.STROKE
+        }
+
+        try {
+            for (i in 0 until totalFrames) {
+                val t = i.toFloat() / totalFrames.toFloat()
+                // Smooth sine oscillation between 0.1 and 0.9
+                val splitPosition = (0.5f - 0.42f * sin(2.0 * Math.PI * t)).toFloat()
+                val splitX = targetW * splitPosition
+
+                // 1. Draw After Bitmap everywhere
+                drawScaledCenterCrop(canvas, afterBitmap, fullRect)
+
+                // 2. Clip left region and draw Before Bitmap
+                canvas.withClip(0f, 0f, splitX, targetH.toFloat()) {
+                    drawScaledCenterCrop(this, beforeBitmap, fullRect)
+                }
+
+                // 3. Draw divider line
+                canvas.drawLine(splitX, 0f, splitX, targetH.toFloat(), dividerPaint)
+
+                // 4. Draw Badges
+                if (splitX > 200f) {
+                    drawBadge(canvas, "VORHER", RectF(0f, 0f, splitX, targetH.toFloat()), isTop = true)
+                }
+                if (splitX < targetW - 200f) {
+                    drawBadge(canvas, "AUTOFREI", RectF(splitX, 0f, targetW.toFloat(), targetH.toFloat()), isTop = true)
+                }
+
+                encoder.encodeFrame(frameBitmap)
+            }
+            encoder.finish()
+        } finally {
+            encoder.release()
+            frameBitmap.recycle()
+        }
+
+        return outputFile
     }
 
     /**
@@ -119,12 +212,10 @@ object InstagramExportUtils {
         val destAspect = destRect.width() / destRect.height()
 
         val srcCrop: Rect = if (srcAspect > destAspect) {
-            // Source is wider than dest: crop left and right
             val cropWidth = srcHeight * destAspect
             val left = (srcWidth - cropWidth) / 2f
             Rect(left.toInt(), 0, (left + cropWidth).toInt(), srcHeight.toInt())
         } else {
-            // Source is taller than dest: crop top and bottom
             val cropHeight = srcWidth / destAspect
             val top = (srcHeight - cropHeight) / 2f
             Rect(0, top.toInt(), srcWidth.toInt(), (top + cropHeight).toInt())
@@ -135,7 +226,7 @@ object InstagramExportUtils {
     }
 
     /**
-     * Draws a styled "BEFORE" or "AFTER" pill badge inside the destination region.
+     * Draws a styled "VORHER" or "AUTOFREI" pill badge inside the destination region.
      */
     private fun drawBadge(canvas: Canvas, text: String, region: RectF, isTop: Boolean) {
         val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -159,15 +250,15 @@ object InstagramExportUtils {
 
         // Background pill badge
         val badgeBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.argb(190, 0, 0, 0)
+            color = Color.argb(200, 15, 15, 20)
             style = Paint.Style.FILL
         }
-        val cornerRadius = 12f
+        val cornerRadius = 14f
         canvas.drawRoundRect(badgeRect, cornerRadius, cornerRadius, badgeBgPaint)
 
         // Border around badge
         val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.argb(100, 255, 255, 255)
+            color = Color.argb(120, 255, 255, 255)
             style = Paint.Style.STROKE
             strokeWidth = 2f
         }

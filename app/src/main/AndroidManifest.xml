@@ -49,6 +49,12 @@
             android:screenOrientation="portrait"
             android:theme="@style/Theme.AndroidKorrektur" />
 
+        <activity
+            android:name=".video.VideoPreviewActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AndroidKorrektur" />
+
         <!-- FileProvider for camera photos -->
         <provider
             android:name="androidx.core.content.FileProvider"

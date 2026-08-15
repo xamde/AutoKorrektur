@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.net.Uri
 import android.os.Bundle
+import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
@@ -98,11 +99,101 @@ class ArCameraActivity : AppCompatActivity() {
         }
 
         binding.captureArButton.setOnClickListener {
-            captureCurrentFrame()
+            if (activeRecording == null) {
+                captureCurrentFrame()
+            } else {
+                stopVideoRecording()
+            }
+        }
+
+        binding.captureArButton.setOnLongClickListener {
+            if (activeRecording == null) {
+                startVideoRecording()
+                true
+            } else {
+                false
+            }
         }
 
         startCamera()
         refreshRecentThumbnail()
+    }
+
+    private var videoCapture: androidx.camera.video.VideoCapture<androidx.camera.video.Recorder>? = null
+    private var activeRecording: androidx.camera.video.Recording? = null
+    private var recordingAnimator: android.animation.ValueAnimator? = null
+    private var currentRecordingFile: java.io.File? = null
+
+    private fun startVideoRecording() {
+        val vCapture = videoCapture
+        if (vCapture == null) {
+            Snackbar.make(binding.root, "Video recording not initialized", Snackbar.LENGTH_SHORT).show()
+            return
+        }
+
+        val videoDir = java.io.File(cacheDir, "raw_videos").apply { mkdirs() }
+        val videoFile = java.io.File(videoDir, "raw_ar_${System.currentTimeMillis()}.mp4")
+        currentRecordingFile = videoFile
+
+        val outputOptions = androidx.camera.video.FileOutputOptions.Builder(videoFile).build()
+
+        binding.videoRecordingProgress.visibility = View.VISIBLE
+        binding.videoRecordingProgress.progress = 0
+        binding.arFpsBadge.text = "🔴 RECORDING (5s Video Snippet)"
+        binding.captureArButton.setBackgroundColor(android.graphics.Color.parseColor("#EF4444"))
+
+        recordingAnimator?.cancel()
+        recordingAnimator = android.animation.ValueAnimator.ofInt(0, 5000).apply {
+            duration = 5000L
+            addUpdateListener { anim ->
+                val progress = anim.animatedValue as Int
+                binding.videoRecordingProgress.progress = progress
+            }
+            addListener(object : android.animation.AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: android.animation.Animator) {
+                    stopVideoRecording()
+                }
+            })
+            start()
+        }
+
+        activeRecording = vCapture.output
+            .prepareRecording(this, outputOptions)
+            .start(ContextCompat.getMainExecutor(this)) { recordEvent ->
+                when (recordEvent) {
+                    is androidx.camera.video.VideoRecordEvent.Finalize -> {
+                        if (!recordEvent.hasError()) {
+                            val savedPath = currentRecordingFile?.absolutePath
+                            if (savedPath != null) {
+                                val intent = Intent(this, de.konradvoelkel.android.autokorrektur.video.VideoPreviewActivity::class.java).apply {
+                                    putExtra(de.konradvoelkel.android.autokorrektur.video.VideoPreviewActivity.EXTRA_RAW_VIDEO_PATH, savedPath)
+                                }
+                                startActivity(intent)
+                            }
+                        } else {
+                            AppLogger.error("Video recording error: ${recordEvent.error}")
+                        }
+                        resetRecordingUi()
+                    }
+                }
+            }
+    }
+
+    private fun stopVideoRecording() {
+        recordingAnimator?.cancel()
+        recordingAnimator = null
+        try {
+            activeRecording?.stop()
+            activeRecording = null
+        } catch (_: Exception) {}
+        resetRecordingUi()
+    }
+
+    private fun resetRecordingUi() {
+        binding.videoRecordingProgress.visibility = View.GONE
+        binding.videoRecordingProgress.progress = 0
+        binding.captureArButton.setBackgroundResource(R.drawable.shape_shutter_core)
+        binding.arFpsBadge.text = "● 30 FPS Camera • Active AR Layer"
     }
 
     override fun onResume() {
@@ -220,11 +311,17 @@ class ArCameraActivity : AppCompatActivity() {
                         }
                     }
 
+                val recorder = androidx.camera.video.Recorder.Builder()
+                    .setQualitySelector(androidx.camera.video.QualitySelector.from(androidx.camera.video.Quality.HD))
+                    .build()
+                val vCapture = androidx.camera.video.VideoCapture.withOutput(recorder)
+                videoCapture = vCapture
+
                 val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
                 provider.unbindAll()
                 provider.bindToLifecycle(
-                    this, cameraSelector, preview, imageAnalyzer
+                    this, cameraSelector, preview, imageAnalyzer, vCapture
                 )
             } catch (exc: Exception) {
                 AppLogger.error("Use case binding failed", exc)
