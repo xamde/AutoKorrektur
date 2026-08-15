@@ -80,17 +80,14 @@ Take your **Pixel 10 Pro** outside (or point it at a street with parked cars / a
 
 ---
 
-## 📚 2. Academic Attribution: Thesis Review Checklist
+## 📚 2. Academic Attribution: Thesis Review (Completed & Verified ✅)
 
-> [!IMPORTANT]
-> **Action Required**: Before official public announcement / release, please review the bachelor theses of:
-> 1. **Till Schellscheidt**: *"Autokorrektur – Automatisierte Objektersetzung in Fotos"*
-> 2. **Benjamin Beckers**: Web application implementation & foundational ML pipeline
->
-> **Checklist for Attribution**:
-> - [ ] Read through the theses to confirm the exact theoretical citations and algorithms derived from their work.
-> - [ ] Ensure their names, thesis titles, and links are clearly highlighted in [`README.md`](file:///home/konrad/files/work/__drafts/AutoKorrektur/README.md).
-> - [ ] Ensure proper credit is included in the in-app *About / Über diese App* dialog and GitHub release notes.
+The bachelor theses of **Till Schellscheidt** and **Ben Beckers** (Heinrich-Heine-Universität Düsseldorf) have been thoroughly reviewed and integrated into the project's documentation, code attribution, and app metadata:
+
+- [x] **Till Schellscheidt (Feb 2024)**: *"Autokorrektur – Automatisierte Objektersetzung in Fotos"* (Supervisor: Dr. Konrad Völkel). Credited for conceptualizing automated car removal, two-cycle latent diffusion prompting, and foundational evaluation criteria.
+- [x] **Ben Beckers (Mai 2025)**: *"Autokorrektur – Inpainting auf mobilen Endgeräten"* (Supervisors: Dr. Konrad Völkel, Dr. Markus Brenneis; [github.com/BenB2/AutoKorrektur](https://github.com/BenB2/AutoKorrektur)). Credited for shifting to on-device/in-browser inference, YOLOv11-seg evaluation, MI-GAN integration, and 1.2x mask scaling / vertical shadow extension.
+- [x] **README & Metadata**: Full academic lineage and BibTeX citations added to [`README.md`](file:///home/konrad/files/work/__drafts/AutoKorrektur/README.md) and [`docs/PLAY_STORE_LISTING.md`](file:///home/konrad/files/work/__drafts/AutoKorrektur/docs/PLAY_STORE_LISTING.md).
+- [x] **In-App Dialog**: Updated `R.string.about_dialog_content` in German and English with explicit academic credits.
 
 ---
 
