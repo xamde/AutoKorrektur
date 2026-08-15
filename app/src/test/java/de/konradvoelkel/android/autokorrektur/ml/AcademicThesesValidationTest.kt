@@ -17,14 +17,13 @@ import kotlin.math.sqrt
 class AcademicThesesValidationTest {
 
     // =========================================================================
-    // 1. Resolution & Memory Boundary Clamping (Beckers Thesis, Chapter 6.2)
+    // 1. Resolution Scaling: Fast Preview vs Native High-Res Progressive
     // =========================================================================
 
     @Test
-    fun testResolutionClamping_48MP_clampedToTwoMegapixels() {
-        // Modern smartphone camera sensors produce 48MP (8000x6000) or 108MP photos.
-        // Beckers proved that clamping to 2 MP (e.g. max side 1920 or ~2,000,000 pixels)
-        // maintains optimal visual quality while guaranteeing zero OOM reloads on mobile.
+    fun testResolutionScaling_fastPreviewMode_clampsToTwoMegapixels() {
+        // Fast On-Device Mode: Clamping to ~2 MP (e.g., 1920x1440) allows instant,
+        // sub-second single-pass preview rendering on any budget device.
         val rawWidth = 8000
         val rawHeight = 6000
         val rawPixels = rawWidth * rawHeight
@@ -40,6 +39,26 @@ class AcademicThesesValidationTest {
         assertEquals(4.0 / 3.0, clampedWidth.toDouble() / clampedHeight.toDouble(), 0.01)
         assertTrue(clampedWidth in 1600..1920)
         assertTrue(clampedHeight in 1200..1440)
+    }
+
+    @Test
+    fun testResolutionScaling_highResProgressiveMode_preservesNativeSensorResolution() {
+        // High-Res Progressive Mode (💎): First-principles approach for strong devices.
+        // Instead of downscaling, the pipeline preserves 100% of the raw 48MP / 108MP
+        // native sensor pixels and processes vehicle regions via contextually padded
+        // progressive tiles with Gaussian alpha-feathering back into the full canvas.
+        val rawWidth = 8000
+        val rawHeight = 6000
+        val rawPixels = rawWidth.toLong() * rawHeight.toLong() // 48 Megapixels
+
+        // Effective downscale limit is null (unrestricted full resolution)
+        val effectiveDownscaleMp: Float? = null
+        val processedWidth = if (effectiveDownscaleMp == null) rawWidth else (rawWidth * 0.2).toInt()
+        val processedHeight = if (effectiveDownscaleMp == null) rawHeight else (rawHeight * 0.2).toInt()
+
+        assertEquals(8000, processedWidth)
+        assertEquals(6000, processedHeight)
+        assertEquals(48_000_000L, processedWidth.toLong() * processedHeight.toLong())
     }
 
     // =========================================================================

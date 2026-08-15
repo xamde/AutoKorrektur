@@ -153,13 +153,28 @@ AutoKorrektur is the result of continuous academic research conducted at the **H
 
 ---
 
-## 📄 Documentation
+## 📄 Documentation Sitemap & Index
 
-- [TODO-for-human.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/TODO-for-human.md) — Detailed human testing instructions on physical phones, thesis review checklist, and launch steps.
-- [docs/PLAY_STORE_LISTING.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/docs/PLAY_STORE_LISTING.md) — Google Play Store metadata and descriptions in German & English.
-- [PRIVACY_POLICY.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/PRIVACY_POLICY.md) — GDPR/DSGVO privacy policy and zero-storage data terms.
-- [backend/DEPLOY_FRANKFURT.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/backend/DEPLOY_FRANKFURT.md) — Step-by-step Frankfurt cloud server deployment guide.
-- [TESTING.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/TESTING.md) — Testing guidelines and benchmark metrics.
+To navigate the comprehensive project documentation:
+
+| Category | Document | Description |
+|---|---|---|
+| **🧪 Testing & Field Operations** | [TODO-for-human.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/TODO-for-human.md) | Step-by-step physical phone testing guide, camera walkthroughs & checklist. |
+| | [docs/FIELD_TESTING_AND_DATA_COLLECTION.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/docs/FIELD_TESTING_AND_DATA_COLLECTION.md) | Field testing protocol, batch CSV metrics collection, and ADB telemetry. |
+| | [docs/TESTING_INSIGHTS_FROM_THESES.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/docs/TESTING_INSIGHTS_FROM_THESES.md) | 5-criteria evaluation framework, failure mode taxonomy & edge cases. |
+| | [TESTING.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/TESTING.md) | Testing guidelines, hardware matrix, unit & instrumented test suites. |
+| **🏗️ Architecture & Engineering** | [ARCHITECTURE.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/ARCHITECTURE.md) | System architecture, CameraX AR loop, and MediaCodec video pipeline. |
+| | [docs/IMAGE_PIPELINE_SPECIFICATION.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/docs/IMAGE_PIPELINE_SPECIFICATION.md) | ML pipeline specification, coordinate math, and tensor normalization. |
+| | [walkthrough.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/walkthrough.md) | Implementation walkthrough of newly added features and UI components. |
+| **🚀 Release & Play Store** | [docs/PLAY_STORE_LISTING.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/docs/PLAY_STORE_LISTING.md) | Google Play Store copy and metadata in German and English. |
+| | [RELEASE_CHECKLIST.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/RELEASE_CHECKLIST.md) | Play Store release pre-flight checks, signing keys, and AAB bundle steps. |
+| | [PRIVACY_POLICY.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/PRIVACY_POLICY.md) | GDPR/DSGVO privacy policy, on-device guarantees, and zero-storage terms. |
+| | [CHANGELOG.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/CHANGELOG.md) | Version history, release tags, and feature changelog. |
+| **☁️ Backend & Cloud** | [backend/README.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/backend/README.md) | FastAPI SDXL cloud inpainting server documentation. |
+| | [backend/DEPLOY_FRANKFURT.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/backend/DEPLOY_FRANKFURT.md) | Deployment guide for German Frankfurt VPS with Docker & Caddy SSL. |
+| **🧭 Product & Roadmaps** | [TODO.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/TODO.md) | Active milestone roadmap (Field Testing, Play Store, Cloud Backend). |
+| | [docs/ARCHIVE_TODO.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/docs/ARCHIVE_TODO.md) | Historical archive of completed milestones M1–M8 and Phases 1–4. |
+| | [docs/PERSONAS.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/docs/PERSONAS.md) | User personas (Mobility Activists, Lot Managers, Photographers). |
 
 ---
 
