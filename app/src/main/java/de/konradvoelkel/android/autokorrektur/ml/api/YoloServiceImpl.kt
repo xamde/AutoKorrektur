@@ -254,7 +254,40 @@ class YoloServiceImpl(
                 warnings.add(msg)
             }
         }
+
+        // Automatically expand vehicle holes downwards into contact shadows and ground reflections
+        if (kept.isNotEmpty()) {
+            expandShadowsAndGroundReflections(overlay)
+        }
+
         return overlay
+    }
+
+    /**
+     * Intelligently expands vehicle holes downwards onto the ground plane / asphalt
+     * to eliminate contact shadows and puddle reflections automatically.
+     */
+    private fun expandShadowsAndGroundReflections(subtractiveOverlay: Mat) {
+        if (subtractiveOverlay.empty()) return
+        val holes = Mat()
+        Core.bitwise_not(subtractiveOverlay, holes)
+
+        val kHeight = (subtractiveOverlay.rows() * 0.025).toInt().coerceIn(7, 25)
+        val kWidth = (subtractiveOverlay.cols() * 0.01).toInt().coerceIn(3, 11)
+        val kernel = Imgproc.getStructuringElement(
+            Imgproc.MORPH_RECT,
+            Size(kWidth.toDouble(), kHeight.toDouble()),
+            org.opencv.core.Point((kWidth / 2).toDouble(), 1.0)
+        )
+
+        val expandedHoles = Mat()
+        Imgproc.dilate(holes, expandedHoles, kernel)
+
+        Core.bitwise_not(expandedHoles, subtractiveOverlay)
+
+        holes.release()
+        expandedHoles.release()
+        kernel.release()
     }
 
     private fun postProcessResultMask(
