@@ -143,6 +143,17 @@ class FirstFragment : Fragment() {
         batchUiDelegate = de.konradvoelkel.android.autokorrektur.ui.delegate.BatchUiDelegate(requireContext(), exportManager) { showSnackbar(it) }
         setupUI()
         observeViewModel()
+
+        val extraUriString = requireActivity().intent?.getStringExtra("EXTRA_IMAGE_URI")
+        val intentData = requireActivity().intent?.data
+        val targetUri = when {
+            extraUriString != null -> android.net.Uri.parse(extraUriString)
+            intentData != null -> intentData
+            else -> null
+        }
+        targetUri?.let { uri ->
+            viewModel.setSelectedImageUri(uri)
+        }
     }
 
     private fun observeViewModel() {

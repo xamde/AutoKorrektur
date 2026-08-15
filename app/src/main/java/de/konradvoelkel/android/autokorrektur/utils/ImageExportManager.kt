@@ -50,6 +50,46 @@ class ImageExportManager(private val context: Context) {
     }
 
     /**
+     * Queries recent images saved by AutoKorrektur.
+     */
+    fun getRecentAutoKorrekturImages(limit: Int = 50): List<Uri> {
+        val uriList = mutableListOf<Uri>()
+        val projection = arrayOf(
+            MediaStore.Images.Media._ID,
+            MediaStore.Images.Media.DISPLAY_NAME,
+            MediaStore.Images.Media.DATE_ADDED
+        )
+        val selection = "${MediaStore.Images.Media.DISPLAY_NAME} LIKE ?"
+        val selectionArgs = arrayOf("AutoKorrektur_%")
+        val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
+
+        try {
+            context.contentResolver.query(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                projection,
+                selection,
+                selectionArgs,
+                sortOrder
+            )?.use { cursor ->
+                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+                var count = 0
+                while (cursor.moveToNext() && count < limit) {
+                    val id = cursor.getLong(idColumn)
+                    val contentUri = android.content.ContentUris.withAppendedId(
+                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                        id
+                    )
+                    uriList.add(contentUri)
+                    count++
+                }
+            }
+        } catch (e: Exception) {
+            AppLogger.error("Failed to query recent AutoKorrektur images", e)
+        }
+        return uriList
+    }
+
+    /**
      * Exports a list of [BatchProcessingResult] to a CSV file in the Documents directory.
      */
     fun exportBatchResultsToCSV(results: List<BatchProcessingResult>): File? {

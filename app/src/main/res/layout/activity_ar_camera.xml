@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:background="#000000">
 
-    <!-- CameraX Preview -->
+    <!-- CameraX Viewfinder -->
     <androidx.camera.view.PreviewView
         android:id="@+id/cameraPreview"
         android:layout_width="match_parent"
@@ -18,82 +18,131 @@
         android:layout_height="match_parent"
         android:scaleType="fitCenter" />
 
-    <!-- Top HUD Bar -->
+    <!-- Top Minimalist HUD Bar -->
     <LinearLayout
         android:id="@+id/topHud"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#A0000000"
+        android:background="#80000000"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:padding="16dp"
+        android:paddingStart="20dp"
+        android:paddingTop="48dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="16dp"
         app:layout_constraintTop_toTopOf="parent">
 
-        <ImageButton
-            android:id="@+id/backButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Back"
-            android:src="@android:drawable/ic_menu_revert"
-            app:tint="#FFFFFF" />
-
-        <TextView
-            android:id="@+id/arStatusTitle"
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/arStatusTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="CAR-FREE VISION"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08"
+                android:fontFamily="sans-serif-medium" />
+
+            <TextView
+                android:id="@+id/arFpsBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="● 30 FPS • Real-time on-device"
+                android:textColor="#34D399"
+                android:textSize="11sp"
+                android:fontFamily="sans-serif" />
+        </LinearLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/resetArButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
             android:paddingStart="12dp"
             android:paddingEnd="12dp"
-            android:text="LIVE AR CAR REMOVAL"
-            android:textColor="#34D399"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/arFpsBadge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="12dp"
-            android:background="#3034D399"
-            android:paddingStart="8dp"
-            android:paddingTop="4dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="4dp"
-            android:text="30 FPS"
-            android:textColor="#34D399"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-
-        <Button
-            android:id="@+id/resetArButton"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Reset AR"
+            android:text="RESET"
             android:textColor="#FFFFFF"
-            app:strokeColor="#34D399" />
+            android:textSize="12sp"
+            app:strokeColor="#50FFFFFF"
+            app:cornerRadius="8dp" />
     </LinearLayout>
 
-    <!-- Bottom Controls HUD -->
-    <LinearLayout
+    <!-- Bottom Minimalist Control Dock -->
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/bottomHud"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#A0000000"
-        android:gravity="center"
-        android:orientation="horizontal"
-        android:padding="24dp"
+        android:background="#80000000"
+        android:paddingStart="32dp"
+        android:paddingTop="20dp"
+        android:paddingEnd="32dp"
+        android:paddingBottom="36dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
+        <!-- Bottom Left: Vision Gallery Thumbnail -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardRecentThumbnail"
+            android:layout_width="54dp"
+            android:layout_height="54dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
+            app:strokeColor="#80FFFFFF"
+            app:strokeWidth="1.5dp"
+            app:cardBackgroundColor="#20FFFFFF"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/ivRecentThumbnail"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:src="@android:drawable/ic_menu_gallery"
+                app:tint="#A0FFFFFF" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Bottom Center: Large Tactile Shutter Button -->
+        <FrameLayout
+            android:id="@+id/shutterContainer"
+            android:layout_width="76dp"
+            android:layout_height="76dp"
+            android:background="@drawable/shape_shutter_ring"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <View
+                android:id="@+id/captureArButton"
+                android:layout_width="62dp"
+                android:layout_height="62dp"
+                android:layout_gravity="center"
+                android:background="@drawable/shape_shutter_core" />
+        </FrameLayout>
+
+        <!-- Bottom Right: Studio / Post Prep Picker Button -->
         <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/captureArButton"
+            android:id="@+id/btnOpenStudio"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:contentDescription="Capture AR Photo"
-            android:src="@android:drawable/ic_menu_camera"
-            app:backgroundTint="#10B981"
-            app:tint="#FFFFFF" />
-    </LinearLayout>
+            android:contentDescription="Studio &amp; Post Prep"
+            android:src="@android:drawable/ic_menu_edit"
+            app:backgroundTint="#30FFFFFF"
+            app:elevation="2dp"
+            app:fabCustomSize="54dp"
+            app:maxImageSize="24dp"
+            app:tint="#FFFFFF"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

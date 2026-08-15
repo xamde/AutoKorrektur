@@ -1,7 +1,10 @@
 package de.konradvoelkel.android.autokorrektur.ar
 
+import android.content.Intent
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -10,15 +13,16 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.snackbar.Snackbar
+import de.konradvoelkel.android.autokorrektur.MainActivity
 import de.konradvoelkel.android.autokorrektur.R
 import de.konradvoelkel.android.autokorrektur.databinding.ActivityArCameraBinding
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloService
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
 import de.konradvoelkel.android.autokorrektur.ml.engine.YoloTFLiteEngine
+import de.konradvoelkel.android.autokorrektur.ui.gallery.VisionGalleryBottomSheet
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import de.konradvoelkel.android.autokorrektur.utils.ImageExportManager
 import kotlinx.coroutines.launch
-import org.opencv.core.Mat
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -37,9 +41,12 @@ class ArCameraActivity : AppCompatActivity() {
 
     private var latestRenderedBitmap: Bitmap? = null
 
-    /**
-     * Sets up CameraX view binding, buttons, and launches asynchronous YOLO engine initialization.
-     */
+    private val photoPickerLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { openInStudio(it) }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityArCameraBinding.inflate(layoutInflater)
@@ -56,7 +63,7 @@ class ArCameraActivity : AppCompatActivity() {
                     val prev = latestRenderedBitmap
                     latestRenderedBitmap = bitmap
                     binding.arOverlayView.setImageBitmap(bitmap)
-                    binding.arFpsBadge.text = "${fps.toInt().coerceAtLeast(1)} FPS"
+                    binding.arFpsBadge.text = "● ${fps.toInt().coerceAtLeast(1)} FPS • Real-time on-device"
                     prev?.recycle()
                 } else {
                     bitmap.recycle()
@@ -72,27 +79,78 @@ class ArCameraActivity : AppCompatActivity() {
             }
         }
 
-        binding.backButton.setOnClickListener {
-            finish()
-        }
-
         binding.resetArButton.setOnClickListener {
             arPipeline.reset()
             Snackbar.make(binding.root, R.string.msg_ar_reset, Snackbar.LENGTH_SHORT).show()
         }
 
+        binding.cardRecentThumbnail.setOnClickListener {
+            openVisionGallery()
+        }
+
+        binding.btnOpenStudio.setOnClickListener {
+            val intent = Intent(this, MainActivity::class.java)
+            startActivity(intent)
+        }
+
         binding.captureArButton.setOnClickListener {
-            val currentBmp = latestRenderedBitmap
-            if (currentBmp != null) {
-                val copyBmp = currentBmp.copy(currentBmp.config ?: Bitmap.Config.ARGB_8888, true)
-                exportManager.saveImageToGallery(copyBmp)
-                Snackbar.make(binding.root, R.string.msg_ar_captured, Snackbar.LENGTH_SHORT).show()
-            } else {
-                Snackbar.make(binding.root, "No AR frame ready to capture", Snackbar.LENGTH_SHORT).show()
-            }
+            captureCurrentFrame()
         }
 
         startCamera()
+        refreshRecentThumbnail()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        refreshRecentThumbnail()
+    }
+
+    private fun refreshRecentThumbnail() {
+        lifecycleScope.launch {
+            val recent = exportManager.getRecentAutoKorrekturImages(limit = 1)
+            if (recent.isNotEmpty()) {
+                try {
+                    binding.ivRecentThumbnail.setImageURI(recent.first())
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
+    private fun captureCurrentFrame() {
+        val currentBmp = latestRenderedBitmap
+        if (currentBmp != null) {
+            val copyBmp = currentBmp.copy(currentBmp.config ?: Bitmap.Config.ARGB_8888, true)
+            val savedUri = exportManager.saveImageToGallery(copyBmp)
+            if (savedUri != null) {
+                try {
+                    binding.ivRecentThumbnail.setImageURI(savedUri)
+                } catch (_: Exception) {}
+
+                Snackbar.make(binding.root, "Car-free vision captured", Snackbar.LENGTH_LONG)
+                    .setAction("OPEN IN STUDIO") {
+                        openInStudio(savedUri)
+                    }
+                    .show()
+            }
+        } else {
+            Snackbar.make(binding.root, "No AR frame ready to capture", Snackbar.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun openVisionGallery() {
+        val gallerySheet = VisionGalleryBottomSheet()
+        gallerySheet.onImageSelected = { selectedUri ->
+            openInStudio(selectedUri)
+        }
+        gallerySheet.show(supportFragmentManager, "VisionGalleryBottomSheet")
+    }
+
+    private fun openInStudio(imageUri: Uri) {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            putExtra("EXTRA_IMAGE_URI", imageUri.toString())
+        }
+        startActivity(intent)
     }
 
     private var cameraProvider: ProcessCameraProvider? = null
