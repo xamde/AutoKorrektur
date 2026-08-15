@@ -2,8 +2,8 @@
     <string name="app_name">AutoKorrektur</string>
     <string name="action_settings">Settings</string>
     <string name="action_about">About &amp; Licenses</string>
-    <string name="about_dialog_title">About AutoKorrektur</string>
-    <string name="about_dialog_content">AutoKorrektur\n\nVersion: 1.0.0\nLicense: GNU AGPLv3\n\nOpen Source Components:\n• YOLOv11-seg: GNU AGPLv3 (Ultralytics)\n• MI-GAN: Apache 2.0\n• OpenCV Android SDK: Apache 2.0\n• ONNX Runtime: MIT License\n\nAll on-device image processing operates 100% offline and respects user privacy.</string>
+    <string name="about_dialog_title">Über AutoKorrektur</string>
+    <string name="about_dialog_content">AutoKorrektur – Autofreie Visionen &amp; AR\n\nVersion: 1.0.0\nLizenz: GNU AGPLv3\n\nWissenschaftliche Grundlagen:\n• Till Schellscheidt: Bachelorarbeit \"Autokorrektur – Automatisierte Objektersetzung in Fotos\" (HHU Düsseldorf, 2024)\n• Ben Beckers: Bachelorarbeit \"Autokorrektur – Inpainting auf mobilen Endgeräten\" (HHU Düsseldorf, 2025)\n• Dr. Konrad Völkel: Betreuung, native Android-Architektur &amp; AR-Pipeline\n\nOpen-Source-Komponenten:\n• YOLOv11-seg: GNU AGPLv3 (Ultralytics)\n• MI-GAN: MIT License (Picsart AI Research)\n• OpenCV Android SDK 5: Apache 2.0\n• ONNX Runtime / TFLite: MIT / Apache 2.0\n• CameraX &amp; Jetpack: Apache 2.0\n\n100% On-Device KI-Verarbeitung ohne Datensammlung.</string>
     <!-- Strings used for fragments for navigation -->
     <string name="first_fragment_label">AutoKorrektur</string>
     <string name="next">Next</string>

@@ -100,11 +100,56 @@ uv run --directory backend pytest --cov=.
 
 ---
 
-## 📚 Academic Attribution & Credits
+## 📚 Academic Attribution & Scientific Lineage
 
-- **Till Schellscheidt**: Bachelor Thesis *"Autokorrektur – Automatisierte Objektersetzung in Fotos"*, providing the core research foundation for automated vehicle removal.
-- **Benjamin Beckers**: Creator of the original web implementation ([BenB2/AutoKorrektur](https://github.com/BenB2/AutoKorrektur)).
-- **Konrad Völkel**: Android architecture, AR video pipeline, progressive tile inpainting, and agentic engineering.
+AutoKorrektur is the result of continuous academic research conducted at the **Heinrich-Heine-Universität Düsseldorf (HHU)** under the supervision of **Dr. Konrad Völkel**:
+
+### 1. Foundational Research & Concept
+- **Author**: **Till Schellscheidt**
+- **Thesis**: *"Autokorrektur – Automatisierte Objektersetzung in Fotos"* (Bachelorarbeit, Lehrstuhl für Dialog Systems and Machine Learning, HHU Düsseldorf, Februar 2024).
+- **Core Contributions**:
+  - Conceptualized automated vehicle removal for mobility activism and urban space reclamation.
+  - Developed the two-cycle latent diffusion inpainting workflow with contextual negative/positive environmental conditioning.
+  - Established the foundational vehicle bounding-box padding and initial 25 px mask shadow expansion rules.
+  - Defined the qualitative 4-criteria evaluation framework (*Instanzsegmentierung*, *Realismus*, *Konsistenz*, *Natürlichkeit*).
+
+### 2. On-Device Mobile Inpainting & Open-Source Web Version
+- **Author**: **Ben Beckers** (Benjamin Beckers)
+- **Thesis**: *"Autokorrektur – Inpainting auf mobilen Endgeräten"* (Bachelorarbeit, Institut für Informatik, HHU Düsseldorf, Mai 2025).
+- **Repository**: [github.com/BenB2/AutoKorrektur](https://github.com/BenB2/AutoKorrektur)
+- **Core Contributions**:
+  - Shifted the paradigm from expensive cloud GPUs to 100% on-device inference using **ONNX-Runtime-Web (WASM)** and **OpenCV.js**.
+  - Integrated and evaluated **YOLOv11-seg** model size tradeoffs (Nano/Small/Medium) on the Mapillary Vistas dataset.
+  - Integrated **MI-GAN 512×512** (Picsart AI Research) for sub-5-second neural on-device inpainting.
+  - Formulated the 1.2x mask scaling and 0.07/0.02 directional vertical shadow downshift transformations.
+
+### 3. Native Android AR & Agentic Real-Time Pipeline
+- **Architect & Supervisor**: **Dr. Konrad Völkel**
+- **Core Contributions**:
+  - Supervision and first examination of both bachelor theses at HHU Düsseldorf.
+  - Native Android implementation with real-time **30–60 FPS CameraX AR passthrough**, hardware **MediaCodec H.264** video pipeline, **Progressive Tile Inpainting** with Gaussian alpha feathering, and **Temporal Background Plate Accumulation**.
+  - Production engineering and autonomous multi-agent orchestration.
+
+```bibtex
+@bachelorthesis{schellscheidt2024autokorrektur,
+  author       = {Till Schellscheidt},
+  title        = {Autokorrektur -- Automatisierte Objektersetzung in Fotos},
+  school       = {Heinrich-Heine-Universit{\"a}t D{\"u}sseldorf},
+  year         = {2024},
+  month        = {February},
+  type         = {Bachelor's Thesis}
+}
+
+@bachelorthesis{beckers2025autokorrektur,
+  author       = {Ben Beckers},
+  title        = {Autokorrektur -- Inpainting auf mobilen Endger{\"a}ten},
+  school       = {Heinrich-Heine-Universit{\"a}t D{\"u}sseldorf},
+  year         = {2025},
+  month        = {May},
+  type         = {Bachelor's Thesis},
+  url          = {https://github.com/BenB2/AutoKorrektur}
+}
+```
 
 ---
 

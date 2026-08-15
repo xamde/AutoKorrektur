@@ -48,10 +48,10 @@ Pinsel über asymmetrische Schatten, Spiegelungen oder Anhänger – oder nutze 
 - **🔄 2-Slide Swipe-Karussell**: Perfekt formatiert für 4:5 Portrait-Feeds.
 - **🎬 Animierter Video-Slider**: 3,5-Sekunden Swipe-Video mit animierter Vorher/Nachher-Trennlinie für Stories & Reels.
 
-🔒 **Privatsphäre & Open-Source First**
+🔒 **Privatsphäre & Wissenschaft**
 - 100% On-Device KI-Verarbeitung ohne Account und ohne Tracking.
 - Optionale Cloud-Verarbeitung ausschließlich auf ISO-zertifizierten deutschen Servern in Frankfurt am Main mit Zero-Storage (Bilder werden im flüchtigen RAM verarbeitet und niemals gespeichert).
-- Entwickelt im Geiste der Verkehrswende und Open-Source-Forschung.
+- Basierend auf universitärer Spitzenforschung der Heinrich-Heine-Universität Düsseldorf (Till Schellscheidt 2024, Ben Beckers 2025, Dr. Konrad Völkel).
 ```
 
 ---
@@ -87,4 +87,5 @@ Manually brush over deep asphalt shadows and tinted reflections, or use the eras
 🔒 **Privacy & Open Science**
 - 100% On-Device AI processing by default. Zero telemetry, no account required.
 - Optional Frankfurt, Germany cloud processing with zero-storage ephemeral memory.
+- Based on academic research at Heinrich Heine University Düsseldorf (Till Schellscheidt 2024, Ben Beckers 2025, Dr. Konrad Völkel).
 ```

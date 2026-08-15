@@ -1,4 +1,6 @@
 <resources>
+    <string name="about_dialog_title">About AutoKorrektur</string>
+    <string name="about_dialog_content">AutoKorrektur – Car-Free AR &amp; Inpainting\n\nVersion: 1.0.0\nLicense: GNU AGPLv3\n\nAcademic Research Foundation:\n• Till Schellscheidt: Bachelor Thesis \"Autokorrektur – Automatisierte Objektersetzung in Fotos\" (HHU Düsseldorf, 2024)\n• Ben Beckers: Bachelor Thesis \"Autokorrektur – Inpainting auf mobilen Endgeräten\" (HHU Düsseldorf, 2025)\n• Dr. Konrad Völkel: Supervision, Native Android Architecture &amp; AR Pipeline\n\nOpen Source Components:\n• YOLOv11-seg: GNU AGPLv3 (Ultralytics)\n• MI-GAN: MIT License (Picsart AI Research)\n• OpenCV Android SDK 5: Apache 2.0\n• ONNX Runtime / TFLite: MIT / Apache 2.0\n• CameraX &amp; Jetpack: Apache 2.0\n\n100% On-Device AI processing without data collection.</string>
     <string name="ar_camera_title">CAR-FREE VISION</string>
     <string name="ar_camera_subtitle">● 30 FPS • Real-time on-device</string>
     <string name="btn_reset">RESET</string>
