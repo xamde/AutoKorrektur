@@ -44,7 +44,7 @@ class ArCameraActivity : AppCompatActivity() {
     private lateinit var exportManager: ImageExportManager
 
     private var latestOverlayBitmap: Bitmap? = null
-    private var latestCameraFrameBitmap: Bitmap? = null
+    private val latestCameraFrameBitmap = java.util.concurrent.atomic.AtomicReference<Bitmap?>()
 
     private val photoPickerLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent()
@@ -68,10 +68,11 @@ class ArCameraActivity : AppCompatActivity() {
                     val prev = latestOverlayBitmap
                     latestOverlayBitmap = overlayPatchBitmap
                     binding.arOverlayView.setImageBitmap(overlayPatchBitmap)
+                    binding.arOverlayView.invalidate()
                     binding.arFpsBadge.text = "● 30 FPS Camera • Active AR Layer"
-                    prev?.recycle()
-                } else {
-                    overlayPatchBitmap.recycle()
+                    if (prev != overlayPatchBitmap) {
+                        prev?.recycle()
+                    }
                 }
             }
         }
@@ -213,7 +214,7 @@ class ArCameraActivity : AppCompatActivity() {
     }
 
     private fun captureCurrentFrame() {
-        val baseBmp = latestCameraFrameBitmap
+        val baseBmp = latestCameraFrameBitmap.get()
         val overlayBmp = latestOverlayBitmap
         if (baseBmp != null) {
             val compositeBmp = Bitmap.createBitmap(baseBmp.width, baseBmp.height, Bitmap.Config.ARGB_8888)
@@ -286,20 +287,26 @@ class ArCameraActivity : AppCompatActivity() {
                                     val rot = ArFrameConverter.rotateMat(rgbaMat, rotation)
                                     rgbaMat.release()
                                     rot
-                                } else {
+} else {
                                     rgbaMat
                                 }
 
-                                // Update raw camera frame bitmap for shutter snapshot
-                                val currentFrameBmp = Bitmap.createBitmap(
-                                    rotatedMat.cols(),
-                                    rotatedMat.rows(),
-                                    Bitmap.Config.ARGB_8888
-                                )
-                                Utils.matToBitmap(rotatedMat, currentFrameBmp)
-                                val prevFrame = latestCameraFrameBitmap
-                                latestCameraFrameBitmap = currentFrameBmp
-                                prevFrame?.recycle()
+                                // Update raw camera frame bitmap for shutter snapshot (thread-safe + reusable)
+                                val currentFrameBmp = latestCameraFrameBitmap.get()
+                                if (currentFrameBmp != null && currentFrameBmp.width == rotatedMat.cols() && currentFrameBmp.height == rotatedMat.rows()) {
+                                    // Reuse existing bitmap — no allocation
+                                    Utils.matToBitmap(rotatedMat, currentFrameBmp)
+                                } else {
+                                    // Dimensions changed or first frame — allocate once
+                                    val newBmp = Bitmap.createBitmap(
+                                        rotatedMat.cols(),
+                                        rotatedMat.rows(),
+                                        Bitmap.Config.ARGB_8888
+                                    )
+                                    Utils.matToBitmap(rotatedMat, newBmp)
+                                    val oldBmp = latestCameraFrameBitmap.getAndSet(newBmp)
+                                    oldBmp?.recycle()
+                                }
 
                                 arPipeline.processFrame(rotatedMat)
                                 rotatedMat.release()
@@ -336,8 +343,7 @@ class ArCameraActivity : AppCompatActivity() {
         arPipeline.close()
         latestOverlayBitmap?.recycle()
         latestOverlayBitmap = null
-        latestCameraFrameBitmap?.recycle()
-        latestCameraFrameBitmap = null
+        latestCameraFrameBitmap.getAndSet(null)?.recycle()
         super.onDestroy()
     }
 }

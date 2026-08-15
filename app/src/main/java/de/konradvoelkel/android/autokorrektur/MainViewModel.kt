@@ -255,7 +255,6 @@ class MainViewModel(
         val queueId = UUID.randomUUID()
         val queueFile = File(getApplication<Application>().cacheDir, "batch_queue_$queueId.json")
         val jsonArray = JSONArray(uris.map { it.toString() })
-        queueFile.writeText(jsonArray.toString())
 
         val dataBuilder = Data.Builder()
             .putString(BatchProcessingWorker.KEY_IMAGE_URIS_FILE, queueFile.absolutePath)
@@ -268,7 +267,11 @@ class MainViewModel(
         val request = OneTimeWorkRequestBuilder<BatchProcessingWorker>()
             .setInputData(dataBuilder.build())
             .build()
-        WorkManager.getInstance(getApplication()).enqueue(request)
+
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            queueFile.writeText(jsonArray.toString())
+            WorkManager.getInstance(getApplication()).enqueue(request)
+        }
         return request.id
     }
 

@@ -257,43 +257,52 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
     private fun preprocessImage(imageMat: Mat): Mat {
         val converted = Mat()
         var current = imageMat
-        if (current.depth() != CvType.CV_8U) {
-            val scale = if (current.depth() == CvType.CV_32F || current.depth() == CvType.CV_64F) 255.0 else 1.0
-            current.convertTo(converted, CvType.CV_8U, scale)
-            current = converted
-        }
-        val rgb = Mat()
-        when (current.channels()) {
-            3 -> {
-                if (current !== imageMat) {
-                    current.copyTo(rgb)
-                    converted.release()
-                } else {
-                    return imageMat.clone()
+        var rgb: Mat? = null
+        try {
+            if (current.depth() != CvType.CV_8U) {
+                val scale = if (current.depth() == CvType.CV_32F || current.depth() == CvType.CV_64F) 255.0 else 1.0
+                current.convertTo(converted, CvType.CV_8U, scale)
+                current = converted
+            }
+            rgb = Mat()
+            when (current.channels()) {
+                3 -> {
+                    if (current !== imageMat) {
+                        current.copyTo(rgb)
+                    } else {
+                        return imageMat.clone()
+                    }
+                }
+                4 -> {
+                    Imgproc.cvtColor(current, rgb, Imgproc.COLOR_RGBA2RGB)
+                }
+                1 -> {
+                    Imgproc.cvtColor(current, rgb, Imgproc.COLOR_GRAY2RGB)
+                }
+                else -> {
+                    val channels = mutableListOf<Mat>()
+                    try {
+                        Core.split(current, channels)
+                        if (channels.size >= 3) {
+                            val rgb3 = listOf(channels[0], channels[1], channels[2])
+                            Core.merge(rgb3, rgb)
+                        } else if (channels.isNotEmpty()) {
+                            Imgproc.cvtColor(channels[0], rgb, Imgproc.COLOR_GRAY2RGB)
+                        }
+                    } finally {
+                        channels.forEach { it.release() }
+                    }
                 }
             }
-            4 -> {
-                Imgproc.cvtColor(current, rgb, Imgproc.COLOR_RGBA2RGB)
-                if (converted !== imageMat) converted.release()
-            }
-            1 -> {
-                Imgproc.cvtColor(current, rgb, Imgproc.COLOR_GRAY2RGB)
-                if (converted !== imageMat) converted.release()
-            }
-            else -> {
-                val channels = mutableListOf<Mat>()
-                Core.split(current, channels)
-                if (channels.size >= 3) {
-                    val rgb3 = listOf(channels[0], channels[1], channels[2])
-                    Core.merge(rgb3, rgb)
-                } else if (channels.isNotEmpty()) {
-                    Imgproc.cvtColor(channels[0], rgb, Imgproc.COLOR_GRAY2RGB)
-                }
-                channels.forEach { it.release() }
-                if (converted !== imageMat) converted.release()
+            val result = rgb
+            rgb = null
+            return result
+        } finally {
+            rgb?.release()
+            if (converted !== imageMat) {
+                converted.release()
             }
         }
-        return rgb
     }
 
     /**

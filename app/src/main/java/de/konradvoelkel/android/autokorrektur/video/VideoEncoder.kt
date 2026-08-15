@@ -1,12 +1,10 @@
 package de.konradvoelkel.android.autokorrektur.video
 
 import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import android.media.MediaMuxer
-import android.view.Surface
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import java.io.File
 
@@ -23,7 +21,6 @@ class VideoEncoder(
 ) {
     private var mediaCodec: MediaCodec? = null
     private var mediaMuxer: MediaMuxer? = null
-    private var inputSurface: Surface? = null
     private var trackIndex = -1
     private var isMuxerStarted = false
     private val bufferInfo = MediaCodec.BufferInfo()
@@ -34,17 +31,21 @@ class VideoEncoder(
      */
     fun start(outputFile: File) {
         val format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height).apply {
-            setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
+            setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible)
             setInteger(MediaFormat.KEY_BIT_RATE, bitRate)
             setInteger(MediaFormat.KEY_FRAME_RATE, frameRate)
             setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, iFrameInterval)
         }
 
         val codec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
-        codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
-        inputSurface = codec.createInputSurface()
-        codec.start()
-        mediaCodec = codec
+        try {
+            codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+            codec.start()
+            mediaCodec = codec
+        } catch (e: Exception) {
+            codec.release()
+            throw e
+        }
 
         mediaMuxer = MediaMuxer(outputFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
         isMuxerStarted = false
@@ -53,16 +54,25 @@ class VideoEncoder(
     }
 
     /**
-     * Draws a [Bitmap] frame onto the encoder input surface and drains available encoded buffers.
+     * Encodes a [Bitmap] frame by converting it to YUV and queueing it to the codec input buffer.
      */
     fun encodeFrame(bitmap: Bitmap) {
-        val surface = inputSurface ?: return
-        val canvas: Canvas = surface.lockHardwareCanvas()
-        try {
-            canvas.drawBitmap(bitmap, 0f, 0f, null)
-        } finally {
-            surface.unlockCanvasAndPost(canvas)
+        val codec = mediaCodec ?: return
+        
+        var inputBufferIndex = -1
+        while (inputBufferIndex < 0) {
+            inputBufferIndex = codec.dequeueInputBuffer(10_000L)
         }
+        
+        val inputBuffer = codec.getInputBuffer(inputBufferIndex) ?: return
+        inputBuffer.clear()
+        
+        val yuvData = getNV12(width, height, bitmap)
+        inputBuffer.put(yuvData)
+        
+        val ptsUs = frameIndex * (1_000_000L / frameRate)
+        codec.queueInputBuffer(inputBufferIndex, 0, yuvData.size, ptsUs, 0)
+        
         drainEncoder(endOfStream = false)
         frameIndex++
     }
@@ -72,13 +82,49 @@ class VideoEncoder(
      */
     fun finish() {
         try {
-            mediaCodec?.signalEndOfInputStream()
+            val codec = mediaCodec
+            if (codec != null) {
+                var inputBufferIndex = -1
+                while (inputBufferIndex < 0) {
+                    inputBufferIndex = codec.dequeueInputBuffer(10_000L)
+                }
+                codec.queueInputBuffer(inputBufferIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+            }
             drainEncoder(endOfStream = true)
         } catch (e: Exception) {
             AppLogger.error("Error signaling EOS to VideoEncoder", e)
         } finally {
             release()
         }
+    }
+
+    private fun getNV12(inputWidth: Int, inputHeight: Int, bitmap: Bitmap): ByteArray {
+        val argb = IntArray(inputWidth * inputHeight)
+        bitmap.getPixels(argb, 0, inputWidth, 0, 0, inputWidth, inputHeight)
+        val yuv = ByteArray(inputWidth * inputHeight * 3 / 2)
+        var yIndex = 0
+        var uvIndex = inputWidth * inputHeight
+        var index = 0
+        for (y in 0 until inputHeight) {
+            for (x in 0 until inputWidth) {
+                val color = argb[index]
+                val R = (color and 0xff0000) shr 16
+                val G = (color and 0xff00) shr 8
+                val B = (color and 0xff)
+                
+                val Y = ((66 * R + 129 * G + 25 * B + 128) shr 8) + 16
+                val U = ((-38 * R - 74 * G + 112 * B + 128) shr 8) + 128
+                val V = ((112 * R - 94 * G - 18 * B + 128) shr 8) + 128
+                
+                yuv[yIndex++] = Y.coerceIn(0, 255).toByte()
+                if (y % 2 == 0 && x % 2 == 0) {
+                    yuv[uvIndex++] = U.coerceIn(0, 255).toByte()
+                    yuv[uvIndex++] = V.coerceIn(0, 255).toByte()
+                }
+                index++
+            }
+        }
+        return yuv
     }
 
     private fun drainEncoder(endOfStream: Boolean) {
@@ -135,11 +181,6 @@ class VideoEncoder(
             }
             mediaMuxer?.release()
             mediaMuxer = null
-        } catch (_: Exception) {}
-
-        try {
-            inputSurface?.release()
-            inputSurface = null
         } catch (_: Exception) {}
     }
 }

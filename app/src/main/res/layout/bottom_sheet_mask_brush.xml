@@ -27,7 +27,7 @@
             android:id="@+id/btnClearMask"
             style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
-            android:layout_height="38dp"
+            android:layout_height="48dp"
             android:text="Löschen"
             android:textColor="#EF4444"
             android:textSize="12sp" />
@@ -36,7 +36,7 @@
             android:id="@+id/btnApplyMask"
             style="@style/Widget.Material3.Button"
             android:layout_width="wrap_content"
-            android:layout_height="38dp"
+            android:layout_height="48dp"
             android:layout_marginStart="8dp"
             android:text="Fertig"
             android:textSize="12sp"
@@ -79,7 +79,7 @@
                 android:id="@+id/btnToolBrush"
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="0dp"
-                android:layout_height="44dp"
+                android:layout_height="48dp"
                 android:layout_weight="1"
                 android:text="🖌️ Pinsel (Auto/Schatten)"
                 android:textSize="12sp" />
@@ -88,7 +88,7 @@
                 android:id="@+id/btnToolEraser"
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="0dp"
-                android:layout_height="44dp"
+                android:layout_height="48dp"
                 android:layout_weight="1"
                 android:text="🧹 Radierer (Fahrrad/Person)"
                 android:textSize="12sp" />

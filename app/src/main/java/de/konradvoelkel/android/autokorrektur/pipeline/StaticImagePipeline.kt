@@ -205,6 +205,7 @@ class StaticImagePipeline(
                 errorMessage = e.message
             )
         } finally {
+            processedImage?.transformedBitmap?.recycle()
             processedImage?.release()
             maskMat?.release()
         }
