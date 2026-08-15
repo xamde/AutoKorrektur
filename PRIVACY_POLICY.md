@@ -1,52 +1,56 @@
-# Privacy Policy for AutoKorrektur
+# Datenschutzerklärung (Privacy Policy) – AutoKorrektur
 
-**Effective Date:** July 30, 2026
+**Stand:** August 2026
 
-AutoKorrektur ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how our mobile application handles your data.
-
----
-
-## 1. Hybrid ML Architecture: On-Device & Server SDXL
-
-AutoKorrektur uses a hybrid machine learning architecture to offer both maximum privacy and premium editing quality.
-
-### 1.1 Local On-Device Processing (Default)
-By default, AutoKorrektur performs all image processing, vehicle detection (YOLO), and image inpainting (MI-GAN) **entirely on your device**. 
-- **No Data Uploads:** Your photos, edited images, and personal data are **never uploaded** to external servers when using this default mode.
-- **Offline Capable:** The application functions fully offline without an internet connection.
-
-### 1.2 Premium Edit via Server SDXL (Opt-In)
-We offer a "Premium Edit" feature that utilizes a high-resolution SDXL model hosted on our secure servers. **This feature is strictly opt-in.**
-- If you choose to enable this feature, the app will securely upload your original photo and a locally computed vehicle mask to our backend server (`api.autokorrektur.konradvoelkel.de`).
-- **Strict GDPR Compliance & Minimal Data Footprint:** Images are processed with minimal
-  persistence. While a temporary copy may reside on the server's disk during the brief processing
-  window, it is deleted immediately after the request completes.
-- We do not store your photos, nor do we use them for training AI models.
+Die Entwickler von **AutoKorrektur** nehmen den Schutz deiner persönlichen Daten und deiner Privatsphäre sehr ernst. Diese Datenschutzerklärung informiert dich über die Art, den Umfang und den Zweck der Verarbeitung personenbezogener Daten innerhalb unserer Android-Anwendung.
 
 ---
 
-## 2. Information We Collect
+## 1. Grundprinzip: On-Device & Datensparsamkeit
 
-**We do not collect, store, transmit, or share any personal information or usage data.**
-
-- **No Account Needed:** AutoKorrektur does not require user registration or accounts.
-- **Anonymous Rate Limiting:** When using the Premium Edit feature, a randomly generated, anonymous device UUID is used solely to enforce daily usage limits to prevent abuse of our servers. This UUID cannot be linked to your identity.
-- **No Analytics / Telemetry:** We do not track user behavior, analytics, or app diagnostics.
-- **No Advertising Trackers:** The app contains zero third-party advertising SDKs or tracking code.
+AutoKorrektur folgt dem Grundsatz der **Privacy by Design & Default**:
+- Die Nutzung der App erfordert **keine Registrierung**, **kein Benutzerkonto** und **keine Eingabe persönlicher Identitätsdaten**.
+- Wir setzen **keine Werbe-SDKs**, **keine Tracking-Tools** und **keine Verhaltensanalyse-Dienste** ein.
 
 ---
 
-## 3. Device Access & Permissions
+## 2. Erforderliche App-Berechtigungen
 
-AutoKorrektur only accesses device capabilities necessary for user-initiated features:
+Damit AutoKorrektur seine Kernfunktionen ausführen kann, benötigt die App folgende Geräteberechtigungen:
 
-- **Photos & Media Access:** Used solely to let you select photos for editing and to save processed images to your device gallery. We use the Android System Photo Picker (`PickVisualMedia`), which allows photo selection **without granting broad storage read permissions**.
-- **Internet Access:** Required **only** if you explicitly opt-in to use the Premium Edit (Server SDXL) feature.
+1. **Kamera (`android.permission.CAMERA`)**:
+   - **Zweck**: Ausschließlich zur Erzeugung des Live-AR-Kamerabildes und zur Aufnahme von Fotos und 5-Sekunden-Videosequenzen.
+   - **Verarbeitung**: Die Kamerabilder werden live im flüchtigen Speicher deines Endgeräts verarbeitet. Es findet keine unbemerkte Übertragung im Hintergrund statt.
+
+2. **Speicher / Mediathek (`READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`)**:
+   - **Zweck**: Ermöglicht dir das Auswählen vorhandener Fotos aus deiner Galerie für das Studio-Inpainting sowie das Speichern der fertigen Vorher/Nachher-Ergebnisse in deinen Medienordner.
 
 ---
 
-## 4. Contact Us
+## 3. Datenverarbeitung bei lokaler KI-Nutzung (On-Device)
 
-If you have any questions or feedback regarding this Privacy Policy, please contact us at:
-- **Email:** support@autokorrektur-app.de
-- **Website:** https://autokorrektur-app.de
+Wenn du den **AR-Modus**, den **Schnell-Modus** oder den **Progressiven High-Res Modus** nutzt:
+- Die Objekterkennung (YOLO) und das KI-Inpainting (MI-GAN / Progressive Tile Engine) laufen **vollständig lokal auf dem Prozessor / NPU deines Geräts**.
+- Zu keinem Zeitpunkt verlassen deine Bild- oder Videodaten dein Endgerät.
+
+---
+
+## 4. Optionale Cloud-Verarbeitung (Cloud SDXL – Frankfurt, Deutschland)
+
+AutoKorrektur bietet die optionale Funktion, Bilder über einen spezialisierten Server in photorealistischer SDXL-Qualität zu veredeln.
+
+- **Ausdrückliche Einwilligung (Opt-In)**: Diese Funktion ist standardmäßig deaktiviert und erfordert vor der ersten Nutzung deine ausdrückliche Zustimmung via DSGVO-Einwilligungsdialog.
+- **Standort der Server**: Die Verarbeitung erfolgt ausschließlich auf Servern in **Frankfurt am Main, Deutschland** unter strikter Einhaltung der Datenschutz-Grundverordnung (DSGVO / GDPR).
+- **Flüchtige Verarbeitung (Zero-Storage Policy)**: Das hochgeladene Bild wird ausschließlich im Arbeitsspeicher (RAM) der Inpainting-Engine verarbeitet. Nach Abschluss der Inferenz und Übertragung des Ergebnisses an dein Smartphone wird das Bild **unverzüglich und unwiederbringlich aus dem Speicher gelöscht**. Es findet keine Protokollierung oder Speicherung deiner Bilder auf Festplatten statt.
+
+---
+
+## 5. Weitergabe von Daten an Dritte
+
+Deine Daten werden weder verkauft, noch an Werbenetzwerke oder unbefugte Dritte weitergegeben. Wenn du fertige Bilder oder Videos über Instagram oder andere Apps teilst, erfolgt dies ausschließlich über das standardmäßige Android-Freigabesystem (`Intent.ACTION_SEND`), über das du jederzeit die volle Kontrolle behältst.
+
+---
+
+## 6. Kontakt & Open-Source
+
+AutoKorrektur ist ein Open-Source-Projekt im Dienste der Mobilitätswende und lebenswerter Städte. Bei Fragen zum Datenschutz erreichst du uns über das GitHub-Repository des Projekts.
