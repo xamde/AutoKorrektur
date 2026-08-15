@@ -40,6 +40,8 @@ class RealtimeArPipeline(
     private var lastFrameTimeNs = 0L
     private var smoothedFps = 30f
 
+    private var reusableOutputBitmap: Bitmap? = null
+
     /**
      * Initializes the underlying YOLO engine.
      */
@@ -104,7 +106,12 @@ class RealtimeArPipeline(
                 carMaskMat.release()
 
                 // 6. Convert blended Mat to Bitmap
-                val outputBitmap = Bitmap.createBitmap(origW, origH, Bitmap.Config.ARGB_8888)
+                var outputBitmap = reusableOutputBitmap
+                if (outputBitmap == null || outputBitmap.width != origW || outputBitmap.height != origH) {
+                    outputBitmap?.recycle()
+                    outputBitmap = Bitmap.createBitmap(origW, origH, Bitmap.Config.ARGB_8888)
+                    reusableOutputBitmap = outputBitmap
+                }
                 Utils.matToBitmap(blendedMat, outputBitmap)
                 blendedMat.release()
 

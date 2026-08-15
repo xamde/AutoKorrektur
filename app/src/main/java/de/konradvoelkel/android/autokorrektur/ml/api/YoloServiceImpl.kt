@@ -269,24 +269,18 @@ class YoloServiceImpl(
      */
     private fun expandShadowsAndGroundReflections(subtractiveOverlay: Mat) {
         if (subtractiveOverlay.empty()) return
-        val holes = Mat()
-        Core.bitwise_not(subtractiveOverlay, holes)
 
+        // Use a purely vertical kernel to expand holes downward without lateral spread.
+        // Eroding the subtractive mask (where car=0, background=255) directly expands
+        // the hole region downward, eliminating the need for two bitwise_not operations.
         val kHeight = (subtractiveOverlay.rows() * 0.025).toInt().coerceIn(7, 25)
-        val kWidth = (subtractiveOverlay.cols() * 0.01).toInt().coerceIn(3, 11)
         val kernel = Imgproc.getStructuringElement(
             Imgproc.MORPH_RECT,
-            Size(kWidth.toDouble(), kHeight.toDouble()),
-            org.opencv.core.Point((kWidth / 2).toDouble(), 1.0)
+            Size(1.0, kHeight.toDouble()),
+            org.opencv.core.Point(0.0, 1.0) // anchor near top → expansion projects downward
         )
 
-        val expandedHoles = Mat()
-        Imgproc.dilate(holes, expandedHoles, kernel)
-
-        Core.bitwise_not(expandedHoles, subtractiveOverlay)
-
-        holes.release()
-        expandedHoles.release()
+        Imgproc.erode(subtractiveOverlay, subtractiveOverlay, kernel)
         kernel.release()
     }
 

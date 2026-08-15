@@ -85,6 +85,11 @@ class FirstFragment : Fragment() {
 
     private var pendingCameraUri: Uri? = null
 
+    private var displayBeforeBmp: Bitmap? = null
+    private var displayAfterBmp: Bitmap? = null
+    private var combinedMaskBmp: Bitmap? = null
+    private var decodedBrushBmp: Bitmap? = null
+
     // Activity result launcher for camera
     private val takePictureLauncher = registerForActivityResult(
         ActivityResultContracts.TakePicture()
@@ -195,6 +200,8 @@ class FirstFragment : Fragment() {
                     val displayAfter = BitmapMemoryUtils.createScaledBitmapForDisplay(
                         state.intermediateInpaintedBitmap, maxDimension = 1440
                     )
+                    displayAfterBmp?.recycle()
+                    displayAfterBmp = displayAfter
                     binding.beforeAfterSliderView.updateAfterBitmap(displayAfter)
                     binding.beforeAfterSliderView.visibility = View.VISIBLE
                     binding.imagesContainer.visibility = View.GONE
@@ -211,6 +218,10 @@ class FirstFragment : Fragment() {
                             finalizeBatchProcessing()
                         }
                     } else {
+                        displayBeforeBmp?.recycle()
+                        displayAfterBmp?.recycle()
+                        combinedMaskBmp?.recycle()
+
                         val displayBefore =
                             BitmapMemoryUtils.createScaledBitmapForDisplay(
                                 result.originalBitmap, maxDimension = 1440
@@ -220,6 +231,9 @@ class FirstFragment : Fragment() {
                                 inpainted, maxDimension = 1440
                             )
                         
+                        displayBeforeBmp = displayBefore
+                        displayAfterBmp = displayAfter
+
                         binding.beforeAfterSliderView.setBitmaps(displayBefore, displayAfter)
                         binding.beforeAfterSliderView.visibility = View.VISIBLE
 
@@ -234,6 +248,8 @@ class FirstFragment : Fragment() {
                         canvas.drawBitmap(displayBefore, 0f, 0f, null)
                         canvas.drawBitmap(overlay, 0f, 0f, null)
                         overlay.recycle()
+
+                        combinedMaskBmp = combinedMask
 
                         binding.imagesContainer.removeAllViews()
                         addImageToContainer(combinedMask, getString(R.string.label_mask))
@@ -349,10 +365,18 @@ class FirstFragment : Fragment() {
                         @Suppress("DEPRECATION")
                         MediaStore.Images.Media.getBitmap(requireContext().contentResolver, uri)
                     }
+                    
+                    val mutableBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+                    if (bitmap != mutableBitmap) {
+                        bitmap.recycle()
+                    }
+                    decodedBrushBmp?.recycle()
+                    decodedBrushBmp = mutableBitmap
+
                     val currentSuccess = viewModel.uiState.value as? MainUiState.Success
                     val initialMask = currentSuccess?.result?.maskBitmap
                     val sheet = de.konradvoelkel.android.autokorrektur.ui.brush.MaskBrushBottomSheet.newInstance(
-                        sourceBitmap = bitmap,
+                        sourceBitmap = mutableBitmap,
                         initialMaskBitmap = initialMask
                     )
                     sheet.onMaskApplied = { _ ->
@@ -684,5 +708,13 @@ class FirstFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+        displayBeforeBmp?.recycle()
+        displayBeforeBmp = null
+        displayAfterBmp?.recycle()
+        displayAfterBmp = null
+        combinedMaskBmp?.recycle()
+        combinedMaskBmp = null
+        decodedBrushBmp?.recycle()
+        decodedBrushBmp = null
     }
 }

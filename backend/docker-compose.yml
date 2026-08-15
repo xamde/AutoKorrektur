@@ -8,7 +8,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - AUTOKORREKTUR_REDIS_URL=redis://redis:6379/0
+      - AUTOKORREKTUR_REDIS_URL=redis://:${REDIS_PASSWORD:-autokorrektur_secret}@redis:6379/0
       - AUTOKORREKTUR_ENABLE_SDXL_LOAD=false
       - AUTOKORREKTUR_STRICT_INTEGRITY_CHECK=false
     depends_on:

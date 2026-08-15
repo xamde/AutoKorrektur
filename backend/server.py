@@ -8,6 +8,9 @@ from typing import Any
 import icontract
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, StreamingResponse
+from starlette.datastructures import UploadFile as StarletteUploadFile
+
+StarletteUploadFile.spool_max_size = 15 * 1024 * 1024
 from pydantic import BaseModel, Field
 
 from backend.config import settings
@@ -358,7 +361,13 @@ async def inpaint_image(
         # B11: Use the semaphore to limit concurrent SDXL inferences
         async with get_sdxl_semaphore():
             # Offload CPU-bound image manipulation to threadpool
-            output_data = await asyncio.to_thread(process_inpainting_payload, image_data, mask_data, preview_data)
+            try:
+                output_data = await asyncio.wait_for(
+                    asyncio.to_thread(process_inpainting_payload, image_data, mask_data, preview_data),
+                    timeout=120.0
+                )
+            except asyncio.TimeoutError as e:
+                raise HTTPException(status_code=504, detail="Inpainting inference timed out") from e
 
         logger.info("Returning processed image from memory")
         return StreamingResponse(io.BytesIO(output_data), media_type="image/jpeg")
