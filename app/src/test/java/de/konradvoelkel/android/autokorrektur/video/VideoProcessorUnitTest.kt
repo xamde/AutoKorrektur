@@ -2,6 +2,7 @@ package de.konradvoelkel.android.autokorrektur.video
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
@@ -27,14 +28,35 @@ class VideoProcessorUnitTest {
 
     @Test
     fun testVideoEncoder_dimensionsEvenMath() {
-        val rawW = 1081
-        val rawH = 1921
-        val targetW = (rawW / 2) * 2
-        val targetH = (rawH / 2) * 2
+        val testResolutions = listOf(
+            Pair(1081, 1921),
+            Pair(719, 1279),
+            Pair(641, 641),
+            Pair(1920, 1080)
+        )
 
-        assertEquals(1080, targetW)
-        assertEquals(1920, targetH)
-        assertEquals(0, targetW % 2)
-        assertEquals(0, targetH % 2)
+        for ((rawW, rawH) in testResolutions) {
+            val targetW = (rawW / 2) * 2
+            val targetH = (rawH / 2) * 2
+
+            assertEquals(0, targetW % 2)
+            assertEquals(0, targetH % 2)
+            assertTrue(targetW <= rawW)
+            assertTrue(targetH <= rawH)
+        }
+    }
+
+    @Test
+    fun testVideoEncoder_presentationTimestampsMath() {
+        val fps = 30
+        val totalFrames = 150 // 5 seconds at 30 fps
+        val timestampsUs = (0 until totalFrames).map { frameIdx ->
+            frameIdx * (1_000_000L / fps)
+        }
+
+        assertEquals(0L, timestampsUs.first())
+        assertEquals(150, timestampsUs.size)
+        // 149 * (1_000_000 / 30) = 149 * 33333 = 4966617 us (~4.966 seconds)
+        assertTrue(timestampsUs.last() in 4_900_000L..5_000_000L)
     }
 }

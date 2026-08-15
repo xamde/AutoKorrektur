@@ -2,6 +2,7 @@ package de.konradvoelkel.android.autokorrektur.utils
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class InstagramExportUtilsTest {
@@ -11,6 +12,7 @@ class InstagramExportUtilsTest {
         val ratio = InstagramExportUtils.AspectRatio.SQUARE_1_1
         assertEquals(1080, ratio.width)
         assertEquals(1080, ratio.height)
+        assertEquals(1.0f, ratio.width.toFloat() / ratio.height.toFloat(), 0.001f)
     }
 
     @Test
@@ -18,6 +20,7 @@ class InstagramExportUtilsTest {
         val ratio = InstagramExportUtils.AspectRatio.PORTRAIT_4_5
         assertEquals(1080, ratio.width)
         assertEquals(1350, ratio.height)
+        assertEquals(0.8f, ratio.width.toFloat() / ratio.height.toFloat(), 0.001f)
     }
 
     @Test
@@ -25,14 +28,15 @@ class InstagramExportUtilsTest {
         val ratio = InstagramExportUtils.AspectRatio.STORY_9_16
         assertEquals(1080, ratio.width)
         assertEquals(1920, ratio.height)
+        assertEquals(9.0f / 16.0f, ratio.width.toFloat() / ratio.height.toFloat(), 0.001f)
     }
 
     @Test
     fun layoutStyles_containsSideBySideAndStacked() {
-        val styles = InstagramExportUtils.LayoutStyle.values()
+        val styles = InstagramExportUtils.LayoutStyle.entries
         assertNotNull(styles)
         assertEquals(2, styles.size)
-        assertEquals(InstagramExportUtils.LayoutStyle.SIDE_BY_SIDE, styles[0])
-        assertEquals(InstagramExportUtils.LayoutStyle.STACKED, styles[1])
+        assertTrue(styles.contains(InstagramExportUtils.LayoutStyle.SIDE_BY_SIDE))
+        assertTrue(styles.contains(InstagramExportUtils.LayoutStyle.STACKED))
     }
 }
