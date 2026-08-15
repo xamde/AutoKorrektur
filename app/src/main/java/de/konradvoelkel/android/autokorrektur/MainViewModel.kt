@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import de.konradvoelkel.android.autokorrektur.model.BatchProcessingResult
+import de.konradvoelkel.android.autokorrektur.model.InpaintingQualityMode
 import de.konradvoelkel.android.autokorrektur.ml.ImageProcessor
 import de.konradvoelkel.android.autokorrektur.ml.MiGanInference
 import de.konradvoelkel.android.autokorrektur.ml.api.ServerSdxlApi
@@ -81,6 +82,13 @@ class MainViewModel(
     }
 
     /**
+     * Sets the inpainting quality computation mode (Fast On-Device vs High-Res Progressive vs Cloud SDXL).
+     */
+    fun setQualityMode(mode: InpaintingQualityMode) {
+        _properties.update { it.copy(qualityMode = mode) }
+    }
+
+    /**
      * Enables or disables multi-image batch processing mode.
      */
     fun setBatchMode(enabled: Boolean) {
@@ -138,14 +146,26 @@ class MainViewModel(
         if (uri == null) return
         _uiState.value = MainUiState.Loading("Initializing", 0)
 
+        val currentQuality = properties.value.qualityMode
+        val effectiveQuality = if (useServerSdxl) InpaintingQualityMode.CLOUD_SDXL else currentQuality
+
         val result = pipeline.processImage(
             uri = uri,
             downscaleMp = downscaleMp,
             maskUpscale = maskUpscale,
             scoreThreshold = scoreThreshold,
             useServerSdxl = useServerSdxl,
+            qualityMode = effectiveQuality,
             onProgressUpdate = { stage, percent ->
-                _uiState.value = MainUiState.Loading(stage, percent)
+                val prev = _uiState.value
+                val prevBmp = (prev as? MainUiState.Loading)?.intermediateInpaintedBitmap
+                _uiState.value = MainUiState.Loading(stage, percent, prevBmp)
+            },
+            onIntermediateInpaintUpdate = { intermediateBmp ->
+                val prev = _uiState.value
+                val stage = (prev as? MainUiState.Loading)?.stage ?: "Inpainting"
+                val percent = (prev as? MainUiState.Loading)?.percent ?: 60
+                _uiState.value = MainUiState.Loading(stage, percent, intermediateBmp)
             }
         )
 

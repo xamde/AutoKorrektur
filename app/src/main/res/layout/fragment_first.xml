@@ -48,7 +48,7 @@
             app:layout_constraintTop_toBottomOf="@id/beforeAfterSliderView"
             app:layout_constraintWidth_percent="0.7" />
 
-        <!-- Premium Edit Switch & Privacy / Quota Container -->
+        <!-- Inpainting Quality & Mode Card -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/premiumEditCard"
             android:layout_width="0dp"
@@ -70,31 +70,58 @@
                 android:orientation="vertical"
                 android:padding="16dp">
 
-                <LinearLayout
+                <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    android:text="INPAINTING ENGINE"
+                    android:letterSpacing="0.08"
+                    android:textStyle="bold"
+                    android:textSize="12sp"
+                    android:textColor="?android:attr/textColorSecondary" />
 
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/premium_edit_title"
-                        android:textStyle="bold"
-                        android:textSize="15sp" />
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/chipGroupQuality"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    app:singleSelection="true"
+                    app:selectionRequired="true">
 
-                    <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/useSdxl"
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipFastPreview"
+                        style="@style/Widget.Material3.Chip.Filter"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
-                </LinearLayout>
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:text="⚡ Fast On-Device" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipHighResProgressive"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="💎 High-Res Progressive" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipCloudSdxl"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="☁️ Cloud SDXL" />
+                </com.google.android.material.chip.ChipGroup>
+
+                <!-- Hidden switch kept for backwards compatibility -->
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/useSdxl"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone" />
 
                 <TextView
                     android:id="@+id/tvPrivacyBadge"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
+                    android:layout_marginTop="8dp"
                     android:text="🔒 In-memory processing in Frankfurt, Germany. Zero persistent storage."
                     android:textSize="12sp"
                     android:textColor="?android:attr/textColorSecondary" />
