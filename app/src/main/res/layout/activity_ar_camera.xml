@@ -109,16 +109,34 @@
                 app:tint="#A0FFFFFF" />
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Bottom Center: Large Tactile Shutter Button -->
+        <!-- Bottom Center: Large Tactile Shutter Button & Video Progress Ring -->
         <FrameLayout
             android:id="@+id/shutterContainer"
-            android:layout_width="76dp"
-            android:layout_height="76dp"
-            android:background="@drawable/shape_shutter_ring"
+            android:layout_width="84dp"
+            android:layout_height="84dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
+
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/videoRecordingProgress"
+                android:layout_width="84dp"
+                android:layout_height="84dp"
+                android:layout_gravity="center"
+                android:max="5000"
+                android:progress="0"
+                android:visibility="gone"
+                app:indicatorColor="#EF4444"
+                app:indicatorSize="84dp"
+                app:trackColor="#40FFFFFF"
+                app:trackThickness="4dp" />
+
+            <View
+                android:layout_width="76dp"
+                android:layout_height="76dp"
+                android:layout_gravity="center"
+                android:background="@drawable/shape_shutter_ring" />
 
             <View
                 android:id="@+id/captureArButton"

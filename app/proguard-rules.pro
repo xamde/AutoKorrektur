@@ -36,6 +36,11 @@
 -dontwarn okhttp3.**
 -dontwarn okio.**
 
+# Preserve CameraX Video & MediaCodec Classes
+-keep class androidx.camera.video.** { *; }
+-dontwarn androidx.camera.video.**
+-keep class de.konradvoelkel.android.autokorrektur.video.** { *; }
+
 # Preserve Line Numbers and Source Attributes for Crash Reporting
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile

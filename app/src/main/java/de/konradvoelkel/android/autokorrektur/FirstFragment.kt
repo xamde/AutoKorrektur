@@ -339,6 +339,42 @@ class FirstFragment : Fragment() {
             }
         }
 
+        binding.btnMaskBrush.setOnClickListener {
+            val uri = viewModel.properties.value.selectedImageUri
+            if (uri != null) {
+                try {
+                    val bitmap = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                        ImageDecoder.decodeBitmap(ImageDecoder.createSource(requireContext().contentResolver, uri))
+                    } else {
+                        @Suppress("DEPRECATION")
+                        MediaStore.Images.Media.getBitmap(requireContext().contentResolver, uri)
+                    }
+                    val currentSuccess = viewModel.uiState.value as? MainUiState.Success
+                    val initialMask = currentSuccess?.result?.maskBitmap
+                    val sheet = de.konradvoelkel.android.autokorrektur.ui.brush.MaskBrushBottomSheet.newInstance(
+                        sourceBitmap = bitmap,
+                        initialMaskBitmap = initialMask
+                    )
+                    sheet.onMaskApplied = { _ ->
+                        showSnackbar("Maske angepasst 🖌️ Inpainting wird gestartet...")
+                        viewModel.startInference(
+                            downscaleMp = getDownscaleMpFromSpinner(),
+                            maskUpscale = getMaskUpscaleFromSlider(),
+                            scoreThreshold = getScoreThresholdFromSlider(),
+                            useServerSdxl = binding.useSdxl.isChecked,
+                            downshift = getDownshiftFromSlider(),
+                            segModel = binding.segModel.selectedItem.toString()
+                        )
+                    }
+                    sheet.show(childFragmentManager, "MaskBrushBottomSheet")
+                } catch (e: Exception) {
+                    showSnackbar("Fehler beim Laden des Bildes: ${e.message}")
+                }
+            } else {
+                showSnackbar("Bitte zuerst ein Bild auswählen")
+            }
+        }
+
         binding.startInference.setOnClickListener {
             viewModel.startInference(
                 downscaleMp = getDownscaleMpFromSpinner(),
@@ -625,10 +661,11 @@ class FirstFragment : Fragment() {
         val inpainted = state.result.inpaintedBitmap ?: return
         val currentOriginalBitmap = state.result.originalBitmap
 
-        instagramDelegate.showExportDialog(
-            originalBitmap = currentOriginalBitmap,
-            inpaintedBitmap = inpainted
+        val sheet = de.konradvoelkel.android.autokorrektur.ui.export.InstagramExportBottomSheet.newInstance(
+            before = currentOriginalBitmap,
+            after = inpainted
         )
+        sheet.show(childFragmentManager, "InstagramExportBottomSheet")
     }
 
     private fun getDownscaleMpFromSpinner(): Float? {

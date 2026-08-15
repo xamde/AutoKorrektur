@@ -34,19 +34,34 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/imagesContainer" />
 
-        <!-- Select Image Button -->
+        <!-- File Select & Custom Mask Brush Row -->
         <Button
             android:id="@+id/fileSelect"
+            style="@style/Widget.Material3.Button.TonalButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
+            android:layout_marginEnd="6dp"
             android:text="@string/select_image"
             app:icon="@android:drawable/ic_menu_gallery"
             app:iconGravity="textStart"
-            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/btnMaskBrush"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/beforeAfterSliderView"
-            app:layout_constraintWidth_percent="0.7" />
+            app:layout_constraintWidth_percent="0.52" />
+
+        <Button
+            android:id="@+id/btnMaskBrush"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:layout_marginStart="6dp"
+            android:text="🖌️ Pinsel"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/fileSelect"
+            app:layout_constraintTop_toBottomOf="@id/beforeAfterSliderView"
+            app:layout_constraintWidth_percent="0.32" />
 
         <!-- Inpainting Quality & Mode Card -->
         <com.google.android.material.card.MaterialCardView
