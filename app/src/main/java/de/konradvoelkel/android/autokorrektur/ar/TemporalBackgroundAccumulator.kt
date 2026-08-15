@@ -12,8 +12,8 @@ import org.opencv.photo.Photo
 
 /**
  * OpenCV Temporal Background Accumulator & Real-Time Inpainter for AR Car Removal.
- * Replaces detected vehicle pixels with instant on-device texture inpainting and
- * blends accumulated clean background textures in real-time.
+ * Generates transparent overlay patches (alpha=0 for background, alpha=255 for inpainted car region)
+ * to allow the native CameraX preview to run at buttery-smooth 30-60 FPS passthrough.
  */
 class TemporalBackgroundAccumulator : AutoCloseable {
 
@@ -26,16 +26,16 @@ class TemporalBackgroundAccumulator : AutoCloseable {
         get() = backgroundMat != null
 
     /**
-     * Accumulates clean background pixels from [frameMat] and replaces vehicle regions
-     * with real-time inpainting and accumulated background.
+     * Replaces detected vehicle pixels with instant on-device texture inpainting,
+     * returning a transparent RGBA Mat (alpha=255 over car, alpha=0 elsewhere).
      *
      * @param frameMat Current camera frame RGBA matrix.
      * @param maskMat Binary mask matrix (255 for vehicle pixels, 0 for background).
-     * @return Blended RGBA matrix with vehicles erased (caller must release).
+     * @return Transparent RGBA matrix containing ONLY the inpainted vehicle patch (caller must release).
      */
     @Synchronized
     fun accumulateAndBlend(frameMat: Mat, maskMat: Mat): Mat {
-        if (frameMat.empty()) return frameMat.clone()
+        if (frameMat.empty()) return Mat.zeros(frameMat.rows(), frameMat.cols(), CvType.CV_8UC4)
 
         val width = frameMat.cols()
         val height = frameMat.rows()
@@ -55,66 +55,55 @@ class TemporalBackgroundAccumulator : AutoCloseable {
 
             val carPixelCount = Core.countNonZero(carMask8U)
 
-            // 2. Initialize or maintain background accumulator
-            var bg = backgroundMat
-            if (bg == null || bg.cols() != width || bg.rows() != height || bg.type() != frameMat.type()) {
-                bg?.release()
-                bg = Mat.zeros(height, width, frameMat.type())
-                backgroundMat = bg
+            // Transparent overlay: initialize with all zeros (alpha=0 everywhere)
+            val transparentOverlay = Mat.zeros(height, width, CvType.CV_8UC4)
+
+            // If no car is detected, return completely transparent overlay immediately
+            if (carPixelCount == 0) {
+                return transparentOverlay
             }
 
-            // Update background buffer with unmasked clean pixels
-            frameMat.copyTo(bg, cleanMask)
-
-            val outputMat = frameMat.clone()
-
-            // 3. If car pixels are detected, inpaint the car region instantly
-            if (carPixelCount > 0) {
-                val bgrFrame = Mat()
-                val inpaintedBgr = Mat()
-                try {
-                    if (frameMat.channels() == 4) {
-                        Imgproc.cvtColor(frameMat, bgrFrame, Imgproc.COLOR_RGBA2BGR)
-                    } else {
-                        frameMat.copyTo(bgrFrame)
-                    }
-
-                    // Fast downscaled inpainting for 30 FPS responsiveness
-                    val scale = 0.5
-                    val smallW = (width * scale).toInt().coerceAtLeast(1)
-                    val smallH = (height * scale).toInt().coerceAtLeast(1)
-                    val smallBgr = Mat()
-                    val smallMask = Mat()
-                    val smallInpainted = Mat()
-
-                    Imgproc.resize(bgrFrame, smallBgr, Size(smallW.toDouble(), smallH.toDouble()), 0.0, 0.0, Imgproc.INTER_LINEAR)
-                    Imgproc.resize(carMask8U, smallMask, Size(smallW.toDouble(), smallH.toDouble()), 0.0, 0.0, Imgproc.INTER_NEAREST)
-
-                    Photo.inpaint(smallBgr, smallMask, smallInpainted, 3.0, Photo.INPAINT_TELEA)
-
-                    Imgproc.resize(smallInpainted, inpaintedBgr, Size(width.toDouble(), height.toDouble()), 0.0, 0.0, Imgproc.INTER_LINEAR)
-
-                    smallBgr.release()
-                    smallMask.release()
-                    smallInpainted.release()
-
-                    val inpaintedRgba = Mat()
-                    if (frameMat.channels() == 4) {
-                        Imgproc.cvtColor(inpaintedBgr, inpaintedRgba, Imgproc.COLOR_BGR2RGBA)
-                    } else {
-                        inpaintedBgr.copyTo(inpaintedRgba)
-                    }
-
-                    // Apply inpainting directly onto the vehicle region in outputMat
-                    inpaintedRgba.copyTo(outputMat, carMask8U)
-                    inpaintedRgba.release()
-                } finally {
-                    bgrFrame.release()
-                    inpaintedBgr.release()
+            // 2. Perform fast downscaled inpainting for the car region
+            val bgrFrame = Mat()
+            val inpaintedBgr = Mat()
+            try {
+                if (frameMat.channels() == 4) {
+                    Imgproc.cvtColor(frameMat, bgrFrame, Imgproc.COLOR_RGBA2BGR)
+                } else {
+                    frameMat.copyTo(bgrFrame)
                 }
+
+                // Fast downscaled inpainting for minimal latency
+                val scale = 0.5
+                val smallW = (width * scale).toInt().coerceAtLeast(1)
+                val smallH = (height * scale).toInt().coerceAtLeast(1)
+                val smallBgr = Mat()
+                val smallMask = Mat()
+                val smallInpainted = Mat()
+
+                Imgproc.resize(bgrFrame, smallBgr, Size(smallW.toDouble(), smallH.toDouble()), 0.0, 0.0, Imgproc.INTER_LINEAR)
+                Imgproc.resize(carMask8U, smallMask, Size(smallW.toDouble(), smallH.toDouble()), 0.0, 0.0, Imgproc.INTER_NEAREST)
+
+                Photo.inpaint(smallBgr, smallMask, smallInpainted, 3.0, Photo.INPAINT_TELEA)
+
+                Imgproc.resize(smallInpainted, inpaintedBgr, Size(width.toDouble(), height.toDouble()), 0.0, 0.0, Imgproc.INTER_LINEAR)
+
+                smallBgr.release()
+                smallMask.release()
+                smallInpainted.release()
+
+                val inpaintedRgba = Mat()
+                Imgproc.cvtColor(inpaintedBgr, inpaintedRgba, Imgproc.COLOR_BGR2RGBA)
+
+                // Copy inpainted pixels ONLY where carMask8U is non-zero into transparentOverlay
+                inpaintedRgba.copyTo(transparentOverlay, carMask8U)
+                inpaintedRgba.release()
+            } finally {
+                bgrFrame.release()
+                inpaintedBgr.release()
             }
 
-            outputMat
+            transparentOverlay
         } finally {
             cleanMask.release()
             carMask8U.release()
