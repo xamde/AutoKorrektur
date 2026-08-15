@@ -11,12 +11,27 @@ android {
     namespace = "de.konradvoelkel.android.autokorrektur"
     compileSdk = 37
 
+    val gitCommitCountProvider = providers.exec {
+        commandLine("git", "rev-list", "--count", "HEAD")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.map { text ->
+        text.trim().toIntOrNull() ?: 170
+    }
+
+    val gitVersionNameProvider = providers.exec {
+        commandLine("git", "describe", "--tags", "--always")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.map { text ->
+        val trimmed = text.trim()
+        if (trimmed.isNotEmpty()) trimmed else "1.0.0"
+    }
+
     defaultConfig {
         applicationId = "de.konradvoelkel.android.autokorrektur"
         minSdk = 29
         targetSdk = 36
-        versionCode = 169 // git rev-list --count HEAD
-        versionName = "working_app" // git describe --tags --abbrev=0
+        versionCode = gitCommitCountProvider.getOrElse(170)
+        versionName = gitVersionNameProvider.getOrElse("1.0.0")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

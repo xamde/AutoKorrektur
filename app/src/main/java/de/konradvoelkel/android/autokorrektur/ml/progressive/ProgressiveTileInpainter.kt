@@ -225,23 +225,19 @@ class ProgressiveTileInpainter(
          * Creates a 1-channel CV_8UC1 feathered blend mask with soft edges to eliminate seam artifacts.
          */
         fun createFeatheredMask(width: Int, height: Int, featherPx: Int = 16): Mat {
-            val mask = Mat.ones(height, width, CvType.CV_8UC1)
-            mask.setTo(Scalar(255.0))
-
             val feather = featherPx.coerceAtMost(min(width, height) / 4).coerceAtLeast(1)
 
-            // Draw border inset rectangle with feathering
+            // Draw border inset rectangle with Gaussian feathering
             val insetRect = Rect(feather, feather, width - 2 * feather, height - 2 * feather)
-            val blackMat = Mat.zeros(height, width, CvType.CV_8UC1)
-            val whiteRoi = blackMat.submat(insetRect)
+            val baseMat = Mat.zeros(height, width, CvType.CV_8UC1)
+            val whiteRoi = baseMat.submat(insetRect)
             whiteRoi.setTo(Scalar(255.0))
             whiteRoi.release()
 
             val blurred = Mat()
             val kSize = (feather * 2 + 1)
-            Imgproc.GaussianBlur(blackMat, blurred, Size(kSize.toDouble(), kSize.toDouble()), 0.0)
-            blackMat.release()
-            mask.release()
+            Imgproc.GaussianBlur(baseMat, blurred, Size(kSize.toDouble(), kSize.toDouble()), 0.0)
+            baseMat.release()
             return blurred
         }
 
