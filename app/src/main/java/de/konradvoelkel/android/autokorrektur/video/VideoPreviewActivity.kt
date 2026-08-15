@@ -68,7 +68,7 @@ class VideoPreviewActivity : AppCompatActivity() {
             if (rawFile.exists()) {
                 startVideoProcessing(rawFile)
             } else {
-                Snackbar.make(binding.root, "Video file not found", Snackbar.LENGTH_LONG).show()
+                Snackbar.make(binding.root, getString(R.string.video_error_not_found), Snackbar.LENGTH_LONG).show()
             }
         }
     }
@@ -109,13 +109,13 @@ class VideoPreviewActivity : AppCompatActivity() {
 
                 binding.processingContainer.visibility = View.GONE
                 binding.bottomDock.visibility = View.VISIBLE
-                binding.btnToggleSource.text = "AUTOFREI"
+                binding.btnToggleSource.text = getString(R.string.video_btn_car_free)
 
                 // Switch player to processed car-free video
                 binding.videoView.setVideoPath(result.outputFile.absolutePath)
                 binding.videoView.start()
 
-                Snackbar.make(binding.root, "HQ Car-Free Video Ready!", Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, getString(R.string.video_msg_ready), Snackbar.LENGTH_SHORT).show()
 
                 yoloService.close()
                 inpaintingEngine.close()
@@ -123,7 +123,7 @@ class VideoPreviewActivity : AppCompatActivity() {
                 AppLogger.error("Video inpainting failed", e)
                 binding.processingContainer.visibility = View.GONE
                 binding.bottomDock.visibility = View.VISIBLE
-                Snackbar.make(binding.root, "Inpainting failed: ${e.message}", Snackbar.LENGTH_LONG).show()
+                Snackbar.make(binding.root, getString(R.string.video_error_inpainting, e.message), Snackbar.LENGTH_LONG).show()
             }
         }
     }
@@ -135,14 +135,14 @@ class VideoPreviewActivity : AppCompatActivity() {
             binding.videoView.setVideoPath(rawPath)
             binding.videoView.seekTo(currentPosition)
             binding.videoView.start()
-            binding.btnToggleSource.text = "VORHER (RAW)"
+            binding.btnToggleSource.text = getString(R.string.video_btn_before)
             isShowingProcessed = false
         } else {
             val proc = processedVideoFile ?: return
             binding.videoView.setVideoPath(proc.absolutePath)
             binding.videoView.seekTo(currentPosition)
             binding.videoView.start()
-            binding.btnToggleSource.text = "AUTOFREI"
+            binding.btnToggleSource.text = getString(R.string.video_btn_car_free)
             isShowingProcessed = true
         }
     }
@@ -150,7 +150,7 @@ class VideoPreviewActivity : AppCompatActivity() {
     private fun saveVideoToGallery() {
         val targetFile = if (isShowingProcessed) processedVideoFile else rawVideoPath?.let { File(it) }
         if (targetFile == null || !targetFile.exists()) {
-            Snackbar.make(binding.root, "Kein Video zum Speichern vorhanden", Snackbar.LENGTH_SHORT).show()
+            Snackbar.make(binding.root, getString(R.string.video_error_none_to_save), Snackbar.LENGTH_SHORT).show()
             return
         }
 
@@ -181,13 +181,13 @@ class VideoPreviewActivity : AppCompatActivity() {
                     }
 
                     withContext(Dispatchers.Main) {
-                        Snackbar.make(binding.root, "Video in Galerie gespeichert 🎬", Snackbar.LENGTH_LONG).show()
+                        Snackbar.make(binding.root, getString(R.string.video_msg_saved), Snackbar.LENGTH_LONG).show()
                     }
                 }
             } catch (e: Exception) {
                 AppLogger.error("Failed to save video to gallery", e)
                 withContext(Dispatchers.Main) {
-                    Snackbar.make(binding.root, "Fehler beim Speichern des Videos", Snackbar.LENGTH_SHORT).show()
+                    Snackbar.make(binding.root, getString(R.string.video_error_save), Snackbar.LENGTH_SHORT).show()
                 }
             }
         }
@@ -224,7 +224,7 @@ class VideoPreviewActivity : AppCompatActivity() {
             }
         } catch (e: Exception) {
             AppLogger.error("Failed to share video", e)
-            Snackbar.make(binding.root, "Teilen fehlgeschlagen: ${e.message}", Snackbar.LENGTH_SHORT).show()
+            Snackbar.make(binding.root, getString(R.string.video_error_share, e.message), Snackbar.LENGTH_SHORT).show()
         }
     }
 

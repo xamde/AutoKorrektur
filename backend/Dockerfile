@@ -19,4 +19,4 @@ USER appuser
 
 # Run Uvicorn server via uv run
 # Use the backend package structure for imports to work
-CMD ["uv", "run", "--project", "./backend", "uvicorn", "backend.server:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "--project", "./backend", "uvicorn", "backend.server:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]

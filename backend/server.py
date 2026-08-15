@@ -7,7 +7,8 @@ from typing import Any
 
 import icontract
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
+import secrets
 from starlette.datastructures import UploadFile as StarletteUploadFile
 
 StarletteUploadFile.spool_max_size = 15 * 1024 * 1024
@@ -125,6 +126,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+@app.middleware("http")
+async def limit_request_size(request: Request, call_next):
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > settings.max_upload_bytes:
+        return JSONResponse(
+            status_code=413,
+            content={"detail": f"Payload size exceeds maximum allowed limit of {settings.max_upload_bytes} bytes"}
+        )
+    return await call_next(request)
+
+nonce_store = {}
 
 # --- Pydantic Data Models (EiPy Data-Handling Standards) ---
 
@@ -145,7 +157,7 @@ class HealthCheckResponse(BaseModel):
     lambda play_integrity_token: len(play_integrity_token.strip()) > 0,
     "play_integrity_token must be non-empty",
 )
-def verify_token(device_uuid: str, play_integrity_token: str) -> bool:
+def verify_token(device_uuid: str, play_integrity_token: str) -> str | bool:
     """Verifies Play Integrity token to prevent third-party API abuse."""
     # 1. Allow bypass for development/testing
     if play_integrity_token in settings.allowed_integrity_tokens:
@@ -179,7 +191,7 @@ def verify_token(device_uuid: str, play_integrity_token: str) -> bool:
                     raise IntegrityVerificationError("Device integrity check failed")
 
             logger.info(f"Play Integrity token verified for device {device_uuid}")
-            return True
+            return token_payload.request_details.nonce
         except InpaintingDomainError:
             raise
         except Exception as e:
@@ -246,11 +258,18 @@ def process_inpainting_payload(
     return buf.getvalue()
 
 
+def get_client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
 async def check_rate_limit(device_uuid: str, client_ip: str) -> None:
     """Enforce max daily requests limit per device/IP per day."""
     today_str = date.today().isoformat()
-    # B12: Key rate limits on both device UUID and IP to prevent spoofing/bypass
-    key = f"rate:{device_uuid}:{client_ip}:{today_str}"
+    # B12: Key rate limits on IP to prevent spoofing/bypass
+    key = f"rate:{client_ip}:{today_str}"
 
     if redis_client:
         try:
@@ -274,14 +293,14 @@ async def check_rate_limit(device_uuid: str, client_ip: str) -> None:
 
     # B12: In-memory fallback (only useful for single-worker dev setups)
     today = date.today()
-    mem_key = f"{device_uuid}:{client_ip}"
+    mem_key = f"{client_ip}"
     # Prune expired dates to prevent unbounded dictionary growth
     expired_days = [d for d in rate_limits[mem_key] if d < today]
     for d in expired_days:
         del rate_limits[mem_key][d]
 
     if rate_limits[mem_key][today] >= settings.max_daily_requests:
-        logger.warning(f"In-memory rate limit exceeded for {mem_key}")
+        logger.warning(f"In-memory rate limit exceeded for {mem_key} (device {device_uuid})")
         raise HTTPException(
             status_code=429,
             detail="Daily request limit exceeded. Please try again tomorrow.",
@@ -301,6 +320,14 @@ def get_web_workbench() -> str:
     return "<h1>AutoKorrektur Inpainting Workbench</h1>"
 
 
+@app.get("/v1/nonce")
+async def generate_nonce():
+    """Generates a cryptographically random nonce for Play Integrity verification."""
+    nonce = secrets.token_urlsafe(32)
+    nonce_store[nonce] = True
+    return {"nonce": nonce}
+
+
 @app.post("/v1/inpaint", response_class=StreamingResponse)
 async def inpaint_image(
     request: Request,
@@ -315,11 +342,14 @@ async def inpaint_image(
     To ensure GDPR compliance, all image data is processed in memory and never written to disk.
     Uses asyncio.to_thread to execute CPU-bound PIL/PyTorch code without blocking the event loop.
     """
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = get_client_ip(request)
     logger.info(f"Received request for /v1/inpaint from {device_uuid} at {client_ip}")
 
     try:
-        await asyncio.to_thread(verify_token, device_uuid, play_integrity_token)
+        token_nonce = await asyncio.to_thread(verify_token, device_uuid, play_integrity_token)
+        if isinstance(token_nonce, str):
+            if not nonce_store.pop(token_nonce, None):
+                raise InpaintingDomainError("Invalid or reused Play Integrity nonce", status_code=403)
     except InpaintingDomainError as e:
         raise HTTPException(status_code=e.status_code, detail=e.message) from e
 

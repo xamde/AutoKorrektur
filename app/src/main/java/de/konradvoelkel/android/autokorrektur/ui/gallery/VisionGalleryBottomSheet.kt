@@ -40,11 +40,11 @@ class VisionGalleryBottomSheet : BottomSheetDialogFragment() {
         if (images.isEmpty()) {
             tvEmpty.visibility = View.VISIBLE
             rvGallery.visibility = View.GONE
-            tvCount.text = "0 shots"
+            tvCount.text = getString(R.string.gallery_zero_shots)
         } else {
             tvEmpty.visibility = View.GONE
             rvGallery.visibility = View.VISIBLE
-            tvCount.text = "${images.size} shots"
+            tvCount.text = getString(R.string.gallery_n_shots, images.size)
 
             rvGallery.adapter = VisionGalleryAdapter(images) { selectedUri ->
                 dismiss()

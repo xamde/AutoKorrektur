@@ -95,4 +95,65 @@
         <item>4:5 Feed Portrait (Stacked)</item>
         <item>9:16 Story (Side-by-Side)</item>
     </string-array>
+
+    <string name="ar_camera_title">AUTOFREIE VISION</string>
+    <string name="ar_camera_subtitle">● 30 FPS • Echtzeit auf dem Gerät</string>
+    <string name="btn_reset">ZURÜCKSETZEN</string>
+    <string name="video_title">Autofreies Video (HQ)</string>
+    <string name="video_btn_car_free">AUTOFREI</string>
+    <string name="video_inpainting_progress">HQ On-Device Inpainting...</string>
+    <string name="video_progress_zero">0%</string>
+    <string name="btn_save">Speichern</string>
+    <string name="btn_share_instagram">Instagram Reels</string>
+    <string name="export_title">INSTAGRAM &amp; SOCIAL EXPORT</string>
+    <string name="export_subtitle">Wähle das Format für deinen Beitrag oder deine Story:</string>
+    <string name="export_layout_type">LAYOUT TYP</string>
+    <string name="export_layout_split">📸 Split-Bild (Side-by-Side)</string>
+    <string name="export_layout_carousel">🔄 2-Slide Swipe-Karussell</string>
+    <string name="export_layout_video">🎬 Animierter Video-Slider (Reels/Story)</string>
+    <string name="export_aspect_ratio">SEITENVERHÄLTNIS</string>
+    <string name="export_ratio_square">1:1 Quadrat</string>
+    <string name="export_ratio_portrait">4:5 Portrait Feed</string>
+    <string name="export_ratio_story">9:16 Story / Reel</string>
+    <string name="btn_export_share">Exportieren &amp; Teilen</string>
+    <string name="brush_title">MASKEN-PINSEL</string>
+    <string name="btn_delete">Löschen</string>
+    <string name="btn_done">Fertig</string>
+    <string name="brush_type_brush">🖌️ Pinsel (Auto/Schatten)</string>
+    <string name="brush_type_eraser">🧹 Radierer (Fahrrad/Person)</string>
+    <string name="brush_size">Größe:</string>
+    <string name="gallery_title">Autofreie Vision Galerie</string>
+    <string name="gallery_zero_shots">0 Aufnahmen</string>
+    <string name="gallery_empty_text">Noch keine autofreien Aufnahmen gemacht.\nRichte die AR-Kamera aus und tippe auf den Auslöser!</string>
+    <string name="gdpr_desc1">Um ein hochwertiges Inpainting zu bieten, wird dein Foto zusammen mit einer berechneten Maske und einer Vorschau an unseren sicheren Backend-Server gesendet.</string>
+    <string name="gdpr_desc2">Datenschutzgarantie:\n• Bilder werden streng im Arbeitsspeicher verarbeitet.\n• Bilder werden nach der Verarbeitung sofort gelöscht.\n• Es werden keine Daten gespeichert oder für das Training verwendet.</string>
+    <string name="gdpr_checkbox">Meine Wahl merken und nicht mehr anzeigen</string>
+    <string name="first_frag_brush">🖌️ Pinsel</string>
+    <string name="engine_title">INPAINTING ENGINE</string>
+    <string name="engine_fast">⚡ Fast On-Device</string>
+    <string name="engine_highres">💎 High-Res Progressive</string>
+    <string name="engine_cloud">☁️ Cloud SDXL</string>
+    <string name="engine_privacy">🔒 In-Memory-Verarbeitung in Frankfurt, Deutschland. Keine dauerhafte Speicherung.</string>
+    <string name="engine_quota">⚡ 1/2 kostenlose High-Res-Server-Erweiterungen verbleiben in diesem Monat</string>
+    <string name="cd_recent_gallery">Aktuelle Aufnahmen-Galerie</string>
+    <string name="cd_studio_prep">Studio &amp; Post Prep</string>
+    <string name="cd_back">Zurück</string>
+    <string name="cd_shot_thumbnail">Autofreie Aufnahme Vorschau</string>
+    <string name="ar_fps_active">● 30 FPS Kamera • Aktive AR-Ebene</string>
+    <string name="ar_error_video_init">Videoaufnahme nicht initialisiert</string>
+    <string name="ar_recording">🔴 AUFNAHME (5s Video-Snippet)</string>
+    <string name="ar_msg_captured">Autofreie Vision aufgenommen</string>
+    <string name="ar_error_no_frame">Kein Frame zur Aufnahme bereit</string>
+    <string name="export_error_not_ready">Bilder nicht bereit zum Export</string>
+    <string name="export_btn_exporting">Exportiere...</string>
+    <string name="export_error_failed">Export fehlgeschlagen: %1$s</string>
+    <string name="gallery_n_shots">%1$d Aufnahmen</string>
+    <string name="video_error_not_found">Videodatei nicht gefunden</string>
+    <string name="video_msg_ready">HQ Autofreies Video fertig!</string>
+    <string name="video_error_inpainting">Inpainting fehlgeschlagen: %1$s</string>
+    <string name="video_btn_before">VORHER (RAW)</string>
+    <string name="video_error_none_to_save">Kein Video zum Speichern vorhanden</string>
+    <string name="video_msg_saved">Video in Galerie gespeichert 🎬</string>
+    <string name="video_error_save">Fehler beim Speichern des Videos</string>
+    <string name="video_error_share">Teilen fehlgeschlagen: %1$s</string>
 </resources>

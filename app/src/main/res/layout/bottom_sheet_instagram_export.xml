@@ -18,7 +18,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="INSTAGRAM &amp; SOCIAL EXPORT"
+        android:text="@string/export_title"
         android:textColor="#FFFFFF"
         android:textSize="17sp"
         android:textStyle="bold" />
@@ -27,7 +27,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:text="Wähle das Format für deinen Beitrag oder deine Story:"
+        android:text="@string/export_subtitle"
         android:textColor="#94A3B8"
         android:textSize="13sp" />
 
@@ -36,7 +36,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="LAYOUT TYP"
+        android:text="@string/export_layout_type"
         android:letterSpacing="0.05"
         android:textColor="#94A3B8"
         android:textSize="11sp"
@@ -56,21 +56,21 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:checked="true"
-            android:text="📸 Split-Bild (Side-by-Side)" />
+            android:text="@string/export_layout_split" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipCarouselPair"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🔄 2-Slide Swipe-Karussell" />
+            android:text="@string/export_layout_carousel" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipAnimatedVideo"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🎬 Animierter Video-Slider (Reels/Story)" />
+            android:text="@string/export_layout_video" />
     </com.google.android.material.chip.ChipGroup>
 
     <!-- Aspect Ratio Selection Chips -->
@@ -78,7 +78,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="SEITENVERHÄLTNIS"
+        android:text="@string/export_aspect_ratio"
         android:letterSpacing="0.05"
         android:textColor="#94A3B8"
         android:textSize="11sp"
@@ -98,21 +98,21 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:checked="true"
-            android:text="1:1 Quadrat" />
+            android:text="@string/export_ratio_square" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipRatio45"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="4:5 Portrait Feed" />
+            android:text="@string/export_ratio_portrait" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipRatio916"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="9:16 Story / Reel" />
+            android:text="@string/export_ratio_story" />
     </com.google.android.material.chip.ChipGroup>
 
     <!-- Export Action Button -->
@@ -123,7 +123,7 @@
         android:layout_height="54dp"
         android:layout_marginTop="24dp"
         android:backgroundTint="#E1306C"
-        android:text="Exportieren &amp; Teilen"
+        android:text="@string/btn_export_share"
         android:textColor="#FFFFFF"
         android:textSize="15sp"
         android:textStyle="bold"
