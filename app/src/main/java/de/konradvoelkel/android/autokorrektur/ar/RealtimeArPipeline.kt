@@ -2,6 +2,7 @@ package de.konradvoelkel.android.autokorrektur.ar
 
 import android.graphics.Bitmap
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloService
+import de.konradvoelkel.android.autokorrektur.ml.preprocess.DefaultPreprocessor
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -12,8 +13,6 @@ import org.opencv.android.Utils
 import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
-import org.opencv.core.Scalar
-import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -28,6 +27,7 @@ class RealtimeArPipeline(
 
     private val pipelineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val isProcessingFrame = AtomicBoolean(false)
+    private val preprocessor = DefaultPreprocessor()
 
     private var _isInitialized = false
     val isInitialized: Boolean get() = _isInitialized
@@ -71,40 +71,44 @@ class RealtimeArPipeline(
                 val origW = frameCopy.cols()
                 val origH = frameCopy.rows()
 
-                // 1. Scale and pad to 640x640 for YOLO
-                val yoloRgba = ArFrameConverter.scaleAndPadForYolo(frameCopy, 640)
-                val yoloRgb = Mat()
-                Imgproc.cvtColor(yoloRgba, yoloRgb, Imgproc.COLOR_RGBA2RGB)
-                yoloRgba.release()
+                // 1. Convert RGBA to RGB for neural preprocessor
+                val frameRgb = Mat()
+                Imgproc.cvtColor(frameCopy, frameRgb, Imgproc.COLOR_RGBA2RGB)
 
-                // 2. Run YOLO segmentation
-                val maxDim = kotlin.math.max(origW, origH).toFloat()
-                val xRatio = maxDim / origW.toFloat()
-                val yRatio = maxDim / origH.toFloat()
+                // 2. Preprocess with DefaultPreprocessor (stride=32, letterbox alignment)
+                val prep = preprocessor.prepare(frameRgb, 640, 640)
+                frameRgb.release()
+
+                val transformedFloatMat = Mat()
+                prep.forEngine.convertTo(transformedFloatMat, CvType.CV_32F, 1.0 / 255.0)
+                prep.forEngine.release()
+                prep.forBitmap.release()
+
+                // 3. Run YOLO segmentation with exact geometric ratios
                 val subtractiveMask = yoloService.infer(
-                    transformedMat = yoloRgb,
-                    xRatio = xRatio,
-                    yRatio = yRatio,
+                    transformedMat = transformedFloatMat,
+                    xRatio = prep.xRatio,
+                    yRatio = prep.yRatio,
                     originalWidth = origW,
                     originalHeight = origH
                 )
-                yoloRgb.release()
+                transformedFloatMat.release()
 
-                // 3. Invert subtractive mask (0=car, 255=bg) -> (255=car, 0=bg) for accumulator
+                // 4. Invert subtractive mask (0=car, 255=bg) -> (255=car, 0=bg) for accumulator
                 val carMaskMat = Mat()
                 Core.bitwise_not(subtractiveMask, carMaskMat)
                 subtractiveMask.release()
 
-                // 4. Accumulate clean background and blend
+                // 5. Accumulate clean background and blend
                 val blendedMat = accumulator.accumulateAndBlend(frameCopy, carMaskMat)
                 carMaskMat.release()
 
-                // 5. Convert blended Mat to Bitmap
+                // 6. Convert blended Mat to Bitmap
                 val outputBitmap = Bitmap.createBitmap(origW, origH, Bitmap.Config.ARGB_8888)
                 Utils.matToBitmap(blendedMat, outputBitmap)
                 blendedMat.release()
 
-                // 6. Calculate rolling FPS
+                // 7. Calculate rolling FPS
                 val nowNs = System.nanoTime()
                 if (lastFrameTimeNs > 0L) {
                     val deltaSec = (nowNs - lastFrameTimeNs) / 1_000_000_000.0f
@@ -115,7 +119,7 @@ class RealtimeArPipeline(
                 }
                 lastFrameTimeNs = nowNs
 
-                // 7. Dispatch to listener
+                // 8. Dispatch to listener
                 onFrameRendered?.invoke(outputBitmap, smoothedFps)
             } catch (e: Exception) {
                 AppLogger.error("RealtimeArPipeline: Frame processing failed", e)
