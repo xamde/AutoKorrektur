@@ -42,7 +42,7 @@ class YoloTFLiteEngine(private val context: Context) : YoloEngine {
     private var inputBuffer: ByteBuffer? = null
     private var outputDetections: ByteBuffer? = null
     private var outputPrototypes: ByteBuffer? = null
-    private var pixelBuffer: ByteArray? = null
+    private var floatBuffer: FloatArray? = null
 
     // Synchronization lock for lifecycle and run serialization
     private val lock = Any()
@@ -67,14 +67,10 @@ class YoloTFLiteEngine(private val context: Context) : YoloEngine {
                 "model/${modelName}-seg_saved_model/${modelName}-seg_float32.tflite"
             }
             try {
-                val modelBytes = ModelAssetProvider.openModelAsset(context, modelFile).use { inputStream ->
-                    inputStream.readBytes()
-                }
-
-                val modelBuffer = ByteBuffer.allocateDirect(modelBytes.size)
-                modelBuffer.order(ByteOrder.nativeOrder())
-                modelBuffer.put(modelBytes)
-                modelBuffer.rewind()
+                val assetFd = context.assets.openFd(modelFile)
+                val fileChannel = java.io.FileInputStream(assetFd.fileDescriptor).channel
+                val modelBuffer = fileChannel.map(java.nio.channels.FileChannel.MapMode.READ_ONLY, assetFd.startOffset, assetFd.declaredLength)
+                assetFd.close()
 
                 val threads = if (isDebugBuild) 2 else Runtime.getRuntime().availableProcessors()
 
@@ -130,10 +126,10 @@ class YoloTFLiteEngine(private val context: Context) : YoloEngine {
         if (inBuf == null || inBuf.capacity() < inBytes) {
             inputBuffer = ByteBuffer.allocateDirect(inBytes).order(ByteOrder.nativeOrder())
         }
-        val totalRawBytes = inputH * inputW * inputC
-        val pxBuf = pixelBuffer
-        if (pxBuf == null || pxBuf.size < totalRawBytes) {
-            pixelBuffer = ByteArray(totalRawBytes)
+        val totalRawFloats = inputH * inputW * inputC
+        val fBuf = floatBuffer
+        if (fBuf == null || fBuf.size < totalRawFloats) {
+            floatBuffer = FloatArray(totalRawFloats)
         }
         // Assume float32 outputs
         val detFloats = detShape.fold(1) { acc, v -> acc * v }
@@ -260,7 +256,7 @@ class YoloTFLiteEngine(private val context: Context) : YoloEngine {
                 inputBuffer = null
                 outputDetections = null
                 outputPrototypes = null
-                pixelBuffer = null
+                floatBuffer = null
                 detShape = intArrayOf()
                 protoShape = intArrayOf()
             }
@@ -289,32 +285,19 @@ class YoloTFLiteEngine(private val context: Context) : YoloEngine {
             val channels = input.channels()
             if (channels != 3) throw ShapeMismatchException("Expected 3 channels, got $channels")
 
-            // Copy pixels using pre-allocated buffer
-            val totalBytes = rows * cols * channels
-            val pxBuf = pixelBuffer
-            val pixels = if (pxBuf != null && pxBuf.size >= totalBytes) {
-                pxBuf
-            } else {
-                ByteArray(totalBytes).also { pixelBuffer = it }
+            val totalFloats = rows * cols * channels
+            var fBuf = floatBuffer
+            if (fBuf == null || fBuf.size < totalFloats) {
+                fBuf = FloatArray(totalFloats).also { floatBuffer = it }
             }
-            val reshaped = input.reshape(1, totalBytes)
-            reshaped.get(0, 0, pixels)
-            reshaped.release()
+
+            val floatMat = Mat().also { matsToRelease.add(it) }
+            input.convertTo(floatMat, CvType.CV_32FC3, 1.0 / 255.0)
+            val reshaped = floatMat.reshape(1, totalFloats)
+            reshaped.get(0, 0, fBuf)
+
             buffer.rewind()
-            // Write normalized floats in NHWC order
-            var idx = 0
-            val scale = 1f / 255f
-            repeat(rows) {
-                repeat(cols) {
-                    val r = (pixels[idx].toInt() and 0xFF) * scale
-                    val g = (pixels[idx + 1].toInt() and 0xFF) * scale
-                    val b = (pixels[idx + 2].toInt() and 0xFF) * scale
-                    buffer.putFloat(r)
-                    buffer.putFloat(g)
-                    buffer.putFloat(b)
-                    idx += 3
-                }
-            }
+            buffer.asFloatBuffer().put(fBuf, 0, totalFloats)
             buffer.rewind()
         } finally {
             matsToRelease.forEach { it.release() }

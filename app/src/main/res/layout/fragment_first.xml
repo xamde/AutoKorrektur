@@ -57,7 +57,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:layout_marginStart="6dp"
-            android:text="🖌️ Pinsel"
+            android:text="@string/first_frag_brush"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@id/fileSelect"
             app:layout_constraintTop_toBottomOf="@id/beforeAfterSliderView"
@@ -88,7 +88,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="INPAINTING ENGINE"
+                    android:text="@string/engine_title"
                     android:letterSpacing="0.08"
                     android:textStyle="bold"
                     android:textSize="12sp"
@@ -108,21 +108,21 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:checked="true"
-                        android:text="⚡ Fast On-Device" />
+                        android:text="@string/engine_fast" />
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/chipHighResProgressive"
                         style="@style/Widget.Material3.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="💎 High-Res Progressive" />
+                        android:text="@string/engine_highres" />
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/chipCloudSdxl"
                         style="@style/Widget.Material3.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="☁️ Cloud SDXL" />
+                        android:text="@string/engine_cloud" />
                 </com.google.android.material.chip.ChipGroup>
 
                 <!-- Hidden switch kept for backwards compatibility -->
@@ -137,7 +137,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="🔒 In-memory processing in Frankfurt, Germany. Zero persistent storage."
+                    android:text="@string/engine_privacy"
                     android:textSize="12sp"
                     android:textColor="?android:attr/textColorSecondary" />
 
@@ -146,7 +146,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="⚡ 1/2 Free High-Res Server Enhancements remaining this month"
+                    android:text="@string/engine_quota"
                     android:textSize="11sp"
                     android:textStyle="italic"
                     android:textColor="#34D399" />

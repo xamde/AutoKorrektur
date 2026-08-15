@@ -34,7 +34,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Back"
+            android:contentDescription="@string/cd_back"
             android:src="@drawable/ic_arrow_back"
             app:tint="#FFFFFF" />
 
@@ -43,7 +43,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:layout_weight="1"
-            android:text="Autofreies Video (HQ)"
+            android:text="@string/video_title"
             android:textColor="#FFFFFF"
             android:textSize="18sp"
             android:textStyle="bold" />
@@ -54,7 +54,7 @@
             style="@style/Widget.Material3.Button.TonalButton"
             android:layout_width="wrap_content"
             android:layout_height="48dp"
-            android:text="AUTOFREI"
+            android:text="@string/video_btn_car_free"
             android:textSize="11sp"
             android:textStyle="bold"
             app:cornerRadius="18dp" />
@@ -90,7 +90,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="HQ On-Device Inpainting..."
+            android:text="@string/video_inpainting_progress"
             android:textColor="#FFFFFF"
             android:textSize="14sp"
             android:textStyle="bold" />
@@ -100,7 +100,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="0%"
+            android:text="@string/video_progress_zero"
             android:textColor="#94A3B8"
             android:textSize="12sp" />
     </LinearLayout>
@@ -131,7 +131,7 @@
                 android:layout_height="52dp"
                 android:layout_marginEnd="8dp"
                 android:layout_weight="1"
-                android:text="Speichern"
+                android:text="@string/btn_save"
                 android:textStyle="bold"
                 app:cornerRadius="26dp"
                 app:icon="@drawable/ic_download" />
@@ -144,7 +144,7 @@
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
                 android:backgroundTint="#E1306C"
-                android:text="Instagram Reels"
+                android:text="@string/btn_share_instagram"
                 android:textColor="#FFFFFF"
                 android:textStyle="bold"
                 app:cornerRadius="26dp"

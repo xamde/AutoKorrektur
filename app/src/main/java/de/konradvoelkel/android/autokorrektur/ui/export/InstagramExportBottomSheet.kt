@@ -55,7 +55,7 @@ class InstagramExportBottomSheet : BottomSheetDialogFragment() {
         val before = beforeBitmap
         val after = afterBitmap
         if (before == null || after == null) {
-            Toast.makeText(requireContext(), "Bilder nicht bereit zum Export", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.export_error_not_ready), Toast.LENGTH_SHORT).show()
             dismiss()
             return
         }
@@ -67,7 +67,7 @@ class InstagramExportBottomSheet : BottomSheetDialogFragment() {
         }
 
         binding.btnExportInstagram.isEnabled = false
-        binding.btnExportInstagram.text = "Exportiere..."
+        binding.btnExportInstagram.text = getString(R.string.export_btn_exporting)
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
@@ -121,9 +121,9 @@ class InstagramExportBottomSheet : BottomSheetDialogFragment() {
             } catch (e: Exception) {
                 AppLogger.error("Instagram export failed", e)
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(requireContext(), "Export fehlgeschlagen: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(requireContext(), getString(R.string.export_error_failed, e.message), Toast.LENGTH_LONG).show()
                     binding.btnExportInstagram.isEnabled = true
-                    binding.btnExportInstagram.text = "Exportieren & Teilen"
+                    binding.btnExportInstagram.text = getString(R.string.btn_export_share)
                 }
             }
         }

@@ -18,6 +18,8 @@ import org.opencv.photo.Photo
 class TemporalBackgroundAccumulator : AutoCloseable {
 
     private var backgroundMat: Mat? = null
+    private var backgroundValidityMat: Mat? = null
+    private val alphaMovingAvg = 0.85
 
     /**
      * Whether clean background pixels have been accumulated into the buffer.
@@ -26,7 +28,8 @@ class TemporalBackgroundAccumulator : AutoCloseable {
         get() = backgroundMat != null
 
     /**
-     * Replaces detected vehicle pixels with instant on-device texture inpainting,
+     * Replaces detected vehicle pixels using temporal background accumulation
+     * merged with fast on-device texture inpainting for unobserved regions,
      * returning a transparent RGBA Mat (alpha=255 over car, alpha=0 elsewhere).
      *
      * @param frameMat Current camera frame RGBA matrix.
@@ -53,19 +56,44 @@ class TemporalBackgroundAccumulator : AutoCloseable {
 
             Core.bitwise_not(carMask8U, cleanMask)
 
-            val carPixelCount = Core.countNonZero(carMask8U)
-
             // Transparent overlay: initialize with all zeros (alpha=0 everywhere)
             val transparentOverlay = Mat.zeros(height, width, CvType.CV_8UC4)
 
-            // If no car is detected, return completely transparent overlay immediately
+            val activeBg: Mat
+            val activeBgValid: Mat
+            val currentBg = backgroundMat
+            val currentBgValid = backgroundValidityMat
+            if (currentBg == null || currentBgValid == null || currentBg.cols() != width || currentBg.rows() != height) {
+                currentBg?.release()
+                currentBgValid?.release()
+                activeBg = Mat.zeros(height, width, CvType.CV_8UC4).also { backgroundMat = it }
+                activeBgValid = Mat.zeros(height, width, CvType.CV_8UC1).also { backgroundValidityMat = it }
+            } else {
+                activeBg = currentBg
+                activeBgValid = currentBgValid
+            }
+
+            // 2. Update persistent background plate with clean pixels from current frame
+            val cleanPixelCount = Core.countNonZero(cleanMask)
+            if (cleanPixelCount > 0) {
+                // Copy clean pixels into persistent background plate
+                val currentCleanRgba = Mat()
+                frameMat.copyTo(currentCleanRgba, cleanMask)
+                currentCleanRgba.copyTo(activeBg, cleanMask)
+                activeBgValid.setTo(Scalar(255.0), cleanMask)
+                currentCleanRgba.release()
+            }
+
+            val carPixelCount = Core.countNonZero(carMask8U)
             if (carPixelCount == 0) {
                 return transparentOverlay
             }
 
-            // 2. Perform fast downscaled inpainting for the car region
+            // 3. Synthesize vehicle removal patch
+            val inpaintedPatchRgba = Mat.zeros(height, width, CvType.CV_8UC4)
             val bgrFrame = Mat()
             val inpaintedBgr = Mat()
+
             try {
                 if (frameMat.channels() == 4) {
                     Imgproc.cvtColor(frameMat, bgrFrame, Imgproc.COLOR_RGBA2BGR)
@@ -73,7 +101,7 @@ class TemporalBackgroundAccumulator : AutoCloseable {
                     frameMat.copyTo(bgrFrame)
                 }
 
-                // Fast downscaled inpainting for minimal latency
+                // Fast downscaled inpainting for remaining non-accumulated regions
                 val scale = 0.5
                 val smallW = (width * scale).toInt().coerceAtLeast(1)
                 val smallH = (height * scale).toInt().coerceAtLeast(1)
@@ -92,15 +120,24 @@ class TemporalBackgroundAccumulator : AutoCloseable {
                 smallMask.release()
                 smallInpainted.release()
 
-                val inpaintedRgba = Mat()
-                Imgproc.cvtColor(inpaintedBgr, inpaintedRgba, Imgproc.COLOR_BGR2RGBA)
+                Imgproc.cvtColor(inpaintedBgr, inpaintedPatchRgba, Imgproc.COLOR_BGR2RGBA)
 
-                // Copy inpainted pixels ONLY where carMask8U is non-zero into transparentOverlay
-                inpaintedRgba.copyTo(transparentOverlay, carMask8U)
-                inpaintedRgba.release()
+                // Blend: if we have temporally accumulated background for this region, use it
+                val validCarHoles = Mat()
+                Core.bitwise_and(carMask8U, activeBgValid, validCarHoles)
+                val validCarPixelCount = Core.countNonZero(validCarHoles)
+
+                if (validCarPixelCount > 0) {
+                    activeBg.copyTo(inpaintedPatchRgba, validCarHoles)
+                }
+                validCarHoles.release()
+
+                // Copy synthesized patch ONLY where carMask8U is non-zero into transparentOverlay
+                inpaintedPatchRgba.copyTo(transparentOverlay, carMask8U)
             } finally {
                 bgrFrame.release()
                 inpaintedBgr.release()
+                inpaintedPatchRgba.release()
             }
 
             transparentOverlay
@@ -117,6 +154,8 @@ class TemporalBackgroundAccumulator : AutoCloseable {
     fun reset() {
         backgroundMat?.release()
         backgroundMat = null
+        backgroundValidityMat?.release()
+        backgroundValidityMat = null
     }
 
     override fun close() {

@@ -8,14 +8,14 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="To provide high-quality inpainting, your photo, along with a computed mask and preview, will be sent to our secure backend server."
+        android:text="@string/gdpr_desc1"
         android:textSize="16sp"
         android:layout_marginBottom="12dp"/>
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Privacy Guarantee:\n• Images are processed strictly in memory.\n• Images are immediately deleted after processing.\n• No data is stored or used for training."
+        android:text="@string/gdpr_desc2"
         android:textSize="14sp"
         android:textStyle="bold"
         android:layout_marginBottom="16dp"/>
@@ -24,7 +24,7 @@
         android:id="@+id/rememberChoiceCheckbox"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Remember my choice and don't show this again"
+        android:text="@string/gdpr_checkbox"
         android:textSize="14sp" />
 
 </LinearLayout>

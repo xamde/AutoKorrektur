@@ -52,10 +52,18 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
 
             AppLogger.debug("Initializing MiGanInference...")
 
-            val modelBytes = try {
-                context.assets.open("model/$MODEL_FILE").use { it.readBytes() }
+            val modelPath = try {
+                val cachedModel = java.io.File(context.cacheDir, MODEL_FILE)
+                if (!cachedModel.exists()) {
+                    context.assets.open("model/$MODEL_FILE").use { input ->
+                        java.io.FileOutputStream(cachedModel).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                }
+                cachedModel.absolutePath
             } catch (e: IOException) {
-                AppLogger.debug("Failed to load Mi-GAN model: ${e.message}")
+                AppLogger.debug("Failed to copy Mi-GAN model to cache: ${e.message}")
                 throw IOException(
                     "Failed to load Mi-GAN model 'model/$MODEL_FILE': ${e.message}",
                     e
@@ -67,13 +75,13 @@ class MiGanInference(private val context: Context) : InpaintingEngine {
                     try {
                         val sessionOptions = OrtSession.SessionOptions().apply { addNnapi() }
                         AppLogger.info("MiGanInference: Attempting NNAPI EP...")
-                        ortEnvironment.createSession(modelBytes, sessionOptions)
+                        ortEnvironment.createSession(modelPath, sessionOptions)
                     } catch (e: Exception) {
                         AppLogger.warn("MiGanInference: Failed to initialize NNAPI EP, falling back to CPU: ${e.message}")
-                        ortEnvironment.createSession(modelBytes)
+                        ortEnvironment.createSession(modelPath)
                     }
                 } else {
-                    ortEnvironment.createSession(modelBytes)
+                    ortEnvironment.createSession(modelPath)
                 }
             } catch (e: Exception) {
                 AppLogger.debug("Failed to create Mi-GAN session: ${e.message}")

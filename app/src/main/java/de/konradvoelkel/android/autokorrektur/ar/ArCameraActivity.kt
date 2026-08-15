@@ -69,7 +69,7 @@ class ArCameraActivity : AppCompatActivity() {
                     latestOverlayBitmap = overlayPatchBitmap
                     binding.arOverlayView.setImageBitmap(overlayPatchBitmap)
                     binding.arOverlayView.invalidate()
-                    binding.arFpsBadge.text = "● 30 FPS Camera • Active AR Layer"
+                    binding.arFpsBadge.text = getString(R.string.ar_fps_active)
                     if (prev != overlayPatchBitmap) {
                         prev?.recycle()
                     }
@@ -128,7 +128,7 @@ class ArCameraActivity : AppCompatActivity() {
     private fun startVideoRecording() {
         val vCapture = videoCapture
         if (vCapture == null) {
-            Snackbar.make(binding.root, "Video recording not initialized", Snackbar.LENGTH_SHORT).show()
+            Snackbar.make(binding.root, getString(R.string.ar_error_video_init), Snackbar.LENGTH_SHORT).show()
             return
         }
 
@@ -140,7 +140,7 @@ class ArCameraActivity : AppCompatActivity() {
 
         binding.videoRecordingProgress.visibility = View.VISIBLE
         binding.videoRecordingProgress.progress = 0
-        binding.arFpsBadge.text = "🔴 RECORDING (5s Video Snippet)"
+        binding.arFpsBadge.text = getString(R.string.ar_recording)
         binding.captureArButton.setBackgroundColor(android.graphics.Color.parseColor("#EF4444"))
 
         recordingAnimator?.cancel()
@@ -194,7 +194,7 @@ class ArCameraActivity : AppCompatActivity() {
         binding.videoRecordingProgress.visibility = View.GONE
         binding.videoRecordingProgress.progress = 0
         binding.captureArButton.setBackgroundResource(R.drawable.shape_shutter_core)
-        binding.arFpsBadge.text = "● 30 FPS Camera • Active AR Layer"
+        binding.arFpsBadge.text = getString(R.string.ar_fps_active)
     }
 
     override fun onResume() {
@@ -229,14 +229,14 @@ class ArCameraActivity : AppCompatActivity() {
                     binding.ivRecentThumbnail.setImageURI(savedUri)
                 } catch (_: Exception) {}
 
-                Snackbar.make(binding.root, "Car-free vision captured", Snackbar.LENGTH_LONG)
+                Snackbar.make(binding.root, getString(R.string.ar_msg_captured), Snackbar.LENGTH_LONG)
                     .setAction("OPEN IN STUDIO") {
                         openInStudio(savedUri)
                     }
                     .show()
             }
         } else {
-            Snackbar.make(binding.root, "No frame ready to capture", Snackbar.LENGTH_SHORT).show()
+            Snackbar.make(binding.root, getString(R.string.ar_error_no_frame), Snackbar.LENGTH_SHORT).show()
         }
     }
 

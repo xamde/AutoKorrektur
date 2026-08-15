@@ -22,7 +22,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Car-Free Vision Gallery"
+            android:text="@string/gallery_title"
             android:textSize="18sp"
             android:textStyle="bold"
             android:fontFamily="sans-serif-medium" />
@@ -31,7 +31,7 @@
             android:id="@+id/tvGalleryCount"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="0 shots"
+            android:text="@string/gallery_zero_shots"
             android:textSize="13sp"
             android:textColor="?android:attr/textColorSecondary" />
     </LinearLayout>
@@ -41,7 +41,7 @@
         android:layout_width="match_parent"
         android:layout_height="160dp"
         android:gravity="center"
-        android:text="No car-free shots captured yet.\nPoint the AR camera and tap the shutter!"
+        android:text="@string/gallery_empty_text"
         android:textColor="?android:attr/textColorSecondary"
         android:textSize="14sp"
         android:visibility="gone" />
