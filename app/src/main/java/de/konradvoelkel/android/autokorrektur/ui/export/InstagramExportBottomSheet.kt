@@ -45,9 +45,24 @@ class InstagramExportBottomSheet : BottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        applyFeatureFlags()
 
         binding.btnExportInstagram.setOnClickListener {
             performExport()
+        }
+    }
+
+    /**
+     * MVP tier ships exactly one export shape (the split card, one aspect ratio) — see
+     * docs/MVP_FEATURE_FLAG_PLAN.md §2. Currently a no-op: FEATURE_EXTRA_EXPORT_LAYOUTS is
+     * hardcoded true until migration step 4 introduces product flavors.
+     */
+    private fun applyFeatureFlags() {
+        if (!de.konradvoelkel.android.autokorrektur.BuildConfig.FEATURE_EXTRA_EXPORT_LAYOUTS) {
+            binding.chipCarouselPair.visibility = View.GONE
+            binding.chipAnimatedVideo.visibility = View.GONE
+            binding.tvExportAspectRatioLabel.visibility = View.GONE
+            binding.chipGroupRatio.visibility = View.GONE
         }
     }
 

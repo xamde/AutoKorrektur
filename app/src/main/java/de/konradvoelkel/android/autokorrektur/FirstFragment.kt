@@ -147,6 +147,7 @@ class FirstFragment : Fragment() {
         exportManager = ImageExportManager(requireContext())
         instagramDelegate = de.konradvoelkel.android.autokorrektur.ui.delegate.InstagramExportDelegate(requireContext(), exportManager) { showSnackbar(it) }
         batchUiDelegate = de.konradvoelkel.android.autokorrektur.ui.delegate.BatchUiDelegate(requireContext(), exportManager) { showSnackbar(it) }
+        applyFeatureFlags()
         setupUI()
         observeViewModel()
 
@@ -320,6 +321,33 @@ class FirstFragment : Fragment() {
         } else {
             binding.startInference.isEnabled = props.selectedImageUri != null
             binding.startInference.text = getString(R.string.start)
+        }
+    }
+
+    /**
+     * Hides UI entry points for features not present in this build's tier
+     * (see docs/MVP_FEATURE_FLAG_PLAN.md). All BuildConfig.FEATURE_* flags are currently
+     * hardcoded true (no product flavors yet — that's migration step 4), so this is a no-op
+     * today; it exists so the tier cut in step 4 is a Gradle-only change with no further UI code.
+     */
+    private fun applyFeatureFlags() {
+        if (!BuildConfig.FEATURE_LIVE_AR) {
+            binding.arLiveModeButton.visibility = View.GONE
+        }
+        if (!BuildConfig.FEATURE_CLOUD_SDXL) {
+            binding.chipCloudSdxl.visibility = View.GONE
+        }
+        if (!BuildConfig.FEATURE_HIGH_RES_PROGRESSIVE) {
+            binding.chipHighResProgressive.visibility = View.GONE
+        }
+        if (!BuildConfig.FEATURE_MANUAL_MASK_BRUSH) {
+            binding.btnMaskBrush.visibility = View.GONE
+        }
+        if (!BuildConfig.FEATURE_BATCH_PROCESSING) {
+            binding.multipleImagesRow.visibility = View.GONE
+        }
+        if (!BuildConfig.FEATURE_EVALUATION_MODE) {
+            binding.evaluationModeContainer.visibility = View.GONE
         }
     }
 
