@@ -1,8 +1,8 @@
 # AutoKorrektur — MVP Amputation & Build-Time Feature Flag Plan
 
-**Status:** in progress. Written 2026-09-03 against the actual repo state. Migration steps 1–2
+**Status:** in progress. Written 2026-09-03 against the actual repo state. Migration steps 1–3
 (§6) done 2026-09-03 from a session with full local shell + SDK access to this checkout — steps
-3–6 (UI gating, flavors, CI/docs update) not started yet.
+4–6 (flavors, CI/docs update, cut `core` loose) not started yet.
 **Goal:** ship a radically simple, easy-to-share "campaign tool" app first, while keeping every
 cut feature's code alive and re-enterable behind a build-time flag, so a beta-tester APK with
 more features is one Gradle task away, never a re-implementation.
@@ -56,6 +56,19 @@ Why AR sits alone in `full`: it's explicitly the subsystem you flagged as not ye
 shares no models with the rest of the app (so cutting it saves zero APK bytes — this is a
 complexity/risk cut, not a size cut), and it deserves its own dedicated bug-fixing and
 field-testing round before it's in front of anyone but you again.
+
+> **Correction found during step 3 (2026-09-03), important for step 4:** `ArCameraActivity`, not
+> `MainActivity`/`FirstFragment`, is the app's actual `MAIN`/`LAUNCHER` activity today
+> (`AndroidManifest.xml`) — confirmed on-device, the app opens directly into the AR camera, and
+> `FirstFragment` ("Studio") is reached *from* AR mode via `btnOpenStudio`, not the other way
+> around. `TODO-for-human.md` already documents this correctly ("Test 3: ... From AR mode, tap
+> the Studio floating action button"); this plan's framing of AR as one optional button off a
+> campaign-tool home screen was the piece that didn't account for it. **Consequence for `core`:**
+> hiding `arLiveModeButton` in `FirstFragment` (done in step 3, see §6) is necessary but not
+> sufficient — a `core`/`plus` build must also make `MainActivity` the launcher instead of
+> `ArCameraActivity`, via a flavor-specific `AndroidManifest.xml` (e.g.
+> `app/src/core/AndroidManifest.xml` overriding the `<intent-filter>` on each activity) in step 4.
+> Flagging now so step 4 doesn't get blindsided by it.
 
 ---
 
@@ -212,11 +225,23 @@ verifiable steps rather than one large refactor:
    to `defaultConfig` (all `true`), `FEATURE_EVALUATION_MODE` added per build type (`true` debug /
    `false` release). No call sites reference them yet — that's step 3. `testDebugUnitTest` stayed
    green throughout.
-3. **Next up — gate UI entry points one flag at a time** (menu items, nav graph destinations, the engine
-   switcher, the export-format list) — run the relevant Espresso suite after each single flag to
-   catch a broken navigation path immediately, not after five flags are gated at once.
+3. ~~**Gate UI entry points**~~ **Done 2026-09-03** — `FirstFragment.applyFeatureFlags()` hides
+   `arLiveModeButton` (`FEATURE_LIVE_AR`), the cloud/high-res quality chips (`FEATURE_CLOUD_SDXL`,
+   `FEATURE_HIGH_RES_PROGRESSIVE`), `btnMaskBrush` (`FEATURE_MANUAL_MASK_BRUSH`), the batch-mode
+   options row (`FEATURE_BATCH_PROCESSING`), and the evaluation-mode dev sliders/spinners
+   (`FEATURE_EVALUATION_MODE`); `InstagramExportBottomSheet.applyFeatureFlags()` hides the
+   carousel/video export chips and the whole aspect-ratio picker (`FEATURE_EXTRA_EXPORT_LAYOUTS`).
+   `FEATURE_VIDEO_SNIPPETS` has no separate entry point yet — video snippets are only reachable
+   through AR mode, already gated by `FEATURE_LIVE_AR`; revisit if a tier ever wants AR preview
+   without recording. Verified zero behavior change: `compileDebugKotlin` +
+   `testDebugUnitTest` green, `assembleDebug` installed and screenshotted on a Pixel 9 Pro XL
+   emulator (all flags still hardcoded `true`, so nothing is hidden yet). Full Espresso suite not
+   run per-flag (would need a per-flag emulator boot); deferred to a single pass once step 4's
+   flavors give the gates something to actually verify. See the launcher-activity correction above
+   — required for step 4, not addressed by this step's BuildConfig gating alone.
 4. **Add the `flavorDimensions`/`productFlavors` block** from §4 and flip the real per-tier flag
-   values.
+   values — including a flavor-specific `AndroidManifest.xml` for `core`/`plus` making
+   `MainActivity` the launcher instead of `ArCameraActivity` (see the correction above).
 5. **Update CI and docs for flavor-qualified task names** — once `flavorDimensions` exists, plain
    `./gradlew testDebugUnitTest` stops resolving; it becomes `./gradlew testCoreDebugUnitTest`
    etc. `.github/workflows/ci.yml`, `README.md`, and `TESTING.md` all reference the old bare task

@@ -33,6 +33,7 @@
 
     <!-- Format Mode Selection Chips -->
     <TextView
+        android:id="@+id/tvExportLayoutTypeLabel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
@@ -75,6 +76,7 @@
 
     <!-- Aspect Ratio Selection Chips -->
     <TextView
+        android:id="@+id/tvExportAspectRatioLabel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"

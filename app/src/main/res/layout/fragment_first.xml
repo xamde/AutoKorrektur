@@ -247,6 +247,7 @@
 
                 <!-- Multiple Images Option -->
                 <LinearLayout
+                    android:id="@+id/multipleImagesRow"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
@@ -288,6 +289,15 @@
                 </LinearLayout>
 
 
+
+                <!-- Evaluation-mode dev controls (mask upscale/downshift, score threshold,
+                     downscale/model chooser). Debug-only, never a real end-user feature —
+                     see FEATURE_EVALUATION_MODE in app/build.gradle.kts. -->
+                <LinearLayout
+                    android:id="@+id/evaluationModeContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
 
                 <!-- Mask Upscale Slider -->
                 <TextView
@@ -406,6 +416,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp" />
+                </LinearLayout>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
     </androidx.constraintlayout.widget.ConstraintLayout>
