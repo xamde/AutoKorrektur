@@ -1,6 +1,7 @@
 package de.konradvoelkel.android.autokorrektur.utils
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -12,6 +13,8 @@ import android.net.Uri
 import androidx.core.content.FileProvider
 import androidx.core.graphics.withClip
 import de.konradvoelkel.android.autokorrektur.video.VideoEncoder
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -288,5 +291,51 @@ object InstagramExportUtils {
 
         val authority = "${context.packageName}.fileprovider"
         return FileProvider.getUriForFile(context, authority, imageFile)
+    }
+
+    /**
+     * Composes the split-card comparison graphic and saves it for sharing, in one call. Used by
+     * tiers that offer no layout/ratio choice (see FEATURE_EXTRA_EXPORT_LAYOUTS) to skip the
+     * picker UI and go straight from "Export" tap to a ready-to-share Uri.
+     */
+    suspend fun exportSplitCardForSharing(
+        context: Context,
+        beforeBitmap: Bitmap,
+        afterBitmap: Bitmap,
+        ratio: AspectRatio = AspectRatio.SQUARE_1_1
+    ): Uri = withContext(Dispatchers.IO) {
+        val splitBitmap = createComparisonBitmap(beforeBitmap, afterBitmap, ratio)
+        try {
+            saveBitmapForSharing(context, splitBitmap)
+        } finally {
+            splitBitmap.recycle()
+        }
+    }
+
+    /**
+     * Launches Instagram directly if installed, otherwise a system share chooser, for a single
+     * image Uri produced by [saveBitmapForSharing]/[exportSplitCardForSharing].
+     */
+    fun shareImage(context: Context, uri: Uri, chooserTitle: String) {
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "image/jpeg"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            setPackage("com.instagram.android")
+        }
+
+        if (intent.resolveActivity(context.packageManager) != null) {
+            context.startActivity(intent)
+        } else {
+            val chooser = Intent.createChooser(
+                Intent(Intent.ACTION_SEND).apply {
+                    type = "image/jpeg"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                },
+                chooserTitle
+            )
+            context.startActivity(chooser)
+        }
     }
 }

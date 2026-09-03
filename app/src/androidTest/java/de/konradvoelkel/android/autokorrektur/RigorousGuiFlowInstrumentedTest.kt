@@ -26,8 +26,12 @@ class RigorousGuiFlowInstrumentedTest {
         // Verify start inference button is displayed
         onView(withId(R.id.startInference)).check(matches(isDisplayed()))
 
-        // Verify Premium Edit (Server SDXL) toggle is displayed on main UI
-        onView(withId(R.id.useSdxl)).check(matches(isDisplayed()))
+        // Verify the inpainting engine picker (Fast/High-Res/Cloud SDXL chips) is displayed on
+        // the main UI. Pre-existing test debt fixed here: this used to assert R.id.useSdxl, a
+        // SwitchCompat superseded by the chip picker below and left `visibility="gone"` in the
+        // layout as a backwards-compat stub ever since — that assertion could never have passed
+        // against the current layout, confirmed unrelated to any change in this session.
+        onView(withId(R.id.chipGroupQuality)).check(matches(isDisplayed()))
 
         // Error Snackbar Guard: Assert no startup error Snackbars are displayed on screen
         onView(withId(com.google.android.material.R.id.snackbar_text)).check(androidx.test.espresso.assertion.ViewAssertions.doesNotExist())
