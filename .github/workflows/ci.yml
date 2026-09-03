@@ -30,7 +30,14 @@ jobs:
           cache-dependency-glob: "backend/uv.lock"
 
       - name: Install backend dependencies
-        run: uv sync --project backend
+        # --extra dev pulls in pytest/pytest-cov (backend/pyproject.toml's
+        # [project.optional-dependencies] dev group) — without it `uv sync` only installs the
+        # runtime dependencies and the next step's `pytest` invocation fails with
+        # "Failed to spawn: pytest ... No such file or directory". Restores behavior lost when
+        # this step was reorganized in 96b540a (switched --directory backend --extra dev to
+        # --project backend, silently dropping --extra dev) — pre-existing since before this
+        # session, unrelated to any of today's changes.
+        run: uv sync --project backend --extra dev
 
       - name: Run Backend Pytest Suite with Coverage
         run: |
