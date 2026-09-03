@@ -102,10 +102,13 @@ class UninitializedYoloServiceUsageTest : AndroidInstrumentedBaseTest() {
             viewModel.setSelectedImageUri(android.net.Uri.fromFile(testFile))
         }
 
-        // Use Espresso to click the startInference button
+        // Use Espresso to click the startInference button. scrollTo() first: on smaller-screen
+        // CI emulator profiles the button isn't fully within the initial viewport (unlike on
+        // larger local test devices), and Espresso's click() requires ~90% of the target view
+        // to be visible without it.
         androidx.test.espresso.Espresso.onView(
             androidx.test.espresso.matcher.ViewMatchers.withId(R.id.startInference)
-        ).perform(androidx.test.espresso.action.ViewActions.click())
+        ).perform(androidx.test.espresso.action.ViewActions.scrollTo(), androidx.test.espresso.action.ViewActions.click())
 
         // Verify that the Snackbar "ML components not initialized. Please restart the app." does NOT exist
         // This Snackbar was used in older versions of FirstFragment; we ensure it's not shown anymore.

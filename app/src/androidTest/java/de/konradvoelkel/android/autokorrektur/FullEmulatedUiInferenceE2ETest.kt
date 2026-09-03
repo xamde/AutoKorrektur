@@ -31,6 +31,7 @@ import org.junit.After
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
+import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -62,6 +63,19 @@ class FullEmulatedUiInferenceE2ETest : AndroidInstrumentedBaseTest() {
 
     @Test
     fun testFullUiWorkflow_withVeryHighResCar_showsMaskAndSliderAndRemovesCar() = runBlocking {
+        // This test specifically drives the manual Start-button pipeline (click startInference,
+        // poll the ViewModel for completion). In tiers with no engine choice (core/plus), the
+        // Start button is hidden and inference auto-starts instead — a mechanism that lives in
+        // FirstFragment.onImageSelected(), not the ViewModel, and this test bypasses
+        // FirstFragment entirely by calling viewModel.setSelectedImageUri() directly. That means
+        // auto-start would never fire here even with the button hidden, so this test would hang
+        // until timeout rather than exercise anything meaningful. Skip on those tiers; the real
+        // ML pipeline this test verifies is still covered via CI's full-flavor run.
+        assumeTrue(
+            "Requires the manual Start-button pipeline (FEATURE_HIGH_RES_PROGRESSIVE or FEATURE_CLOUD_SDXL)",
+            BuildConfig.FEATURE_HIGH_RES_PROGRESSIVE || BuildConfig.FEATURE_CLOUD_SDXL
+        )
+
         // 1. Prepare asset
         val imageFile = AndroidTestUtils.copyAssetToCache(appContext, "very_high_res_car.jpg")
         tempFiles.add(imageFile)

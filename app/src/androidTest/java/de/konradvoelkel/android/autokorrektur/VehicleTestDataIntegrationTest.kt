@@ -57,7 +57,10 @@ class VehicleTestDataIntegrationTest : AndroidInstrumentedBaseTest() {
 
     @Test
     fun testContextCanAccessExternalTestData() {
+        // Compare against BuildConfig.APPLICATION_ID rather than a hardcoded literal — product
+        // flavors other than `core` carry an applicationIdSuffix (see
+        // docs/MVP_FEATURE_FLAG_PLAN.md §4), so the actual package name varies per flavor.
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        assertTrue("Context package name must match app", context.packageName == "de.konradvoelkel.android.autokorrektur")
+        assertTrue("Context package name must match app", context.packageName == BuildConfig.APPLICATION_ID)
     }
 }
