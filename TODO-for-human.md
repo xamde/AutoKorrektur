@@ -102,8 +102,8 @@ When you are ready to upload the app to the **Google Play Console**:
 3. **Cloud Backend Deployment (Optional)**:
    - Follow [`backend/DEPLOY_FRANKFURT.md`](file:///home/konrad/files/work/__drafts/AutoKorrektur/backend/DEPLOY_FRANKFURT.md) to launch the SDXL container on a Frankfurt VM if you want live cloud processing for non-local devices.
 4. **App Bundle (`.aab`)**:
-   - Generate the release bundle:
+   - Generate the release bundle (`core` is the Play Store flavor, see `docs/MVP_FEATURE_FLAG_PLAN.md`):
      ```bash
-     ./gradlew bundleRelease
+     ./gradlew bundleCoreRelease
      ```
-   - Located at `app/build/outputs/bundle/release/app-release.aab`.
+   - Located at `app/build/outputs/bundle/coreRelease/app-core-release.aab`.

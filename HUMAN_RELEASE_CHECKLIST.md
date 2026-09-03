@@ -91,12 +91,15 @@ Based on the actual `PRIVACY_POLICY.md` content:
 
 ## 6. Build & upload
 
+`core` is the flavor that goes to the public Play Store listing (see
+`docs/MVP_FEATURE_FLAG_PLAN.md`) — `bundleRelease` alone now aggregates all four flavors, so
+build `core` specifically:
 ```bash
-./gradlew bundleRelease
+./gradlew bundleCoreRelease
 ```
-Output: `app/build/outputs/bundle/release/app-release.aab`. Upload to Play Console → Internal
-Testing track first, review the automated Pre-Launch Report (accessibility/performance/crash
-scan on real device farm hardware), then promote to Production when clean.
+Output: `app/build/outputs/bundle/coreRelease/app-core-release.aab`. Upload to Play Console →
+Internal Testing track first, review the automated Pre-Launch Report (accessibility/performance/
+crash scan on real device farm hardware), then promote to Production when clean.
 
 ## 7. Decide your locale footprint (5-minute decision, not a task)
 

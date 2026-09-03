@@ -1,0 +1,2699 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 9.3.2" type="baseline" client="gradle" dependencies="false" name="AGP (9.3.2)" variant="all" version="9.3.2">
+
+    <issue
+        id="ScopedStorage"
+        message="READ_EXTERNAL_STORAGE is deprecated (and is not granted) when targeting Android 13+. If you need to query or interact with MediaStore or media files on the shared storage, you should instead use one or more new storage permissions: `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO` or `READ_MEDIA_AUDIO`."
+        errorLine1="        android:name=&quot;android.permission.READ_EXTERNAL_STORAGE&quot;"
+        errorLine2="                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="12"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                binding.maskUpscaleVal.text = String.format(&quot;%.2f&quot;, value)"
+        errorLine2="                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/FirstFragment.kt"
+            line="515"
+            column="47"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                binding.maskUpscaleVal.text = String.format(&quot;%.2f&quot;, value)"
+        errorLine2="                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/FirstFragment.kt"
+            line="515"
+            column="47"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                binding.downshiftVal.text = String.format(&quot;%.3f&quot;, value)"
+        errorLine2="                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/FirstFragment.kt"
+            line="524"
+            column="45"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                binding.downshiftVal.text = String.format(&quot;%.3f&quot;, value)"
+        errorLine2="                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/FirstFragment.kt"
+            line="524"
+            column="45"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                binding.scoreThresholdVal.text = String.format(&quot;%.2f&quot;, value)"
+        errorLine2="                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/FirstFragment.kt"
+            line="533"
+            column="50"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                binding.scoreThresholdVal.text = String.format(&quot;%.2f&quot;, value)"
+        errorLine2="                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/FirstFragment.kt"
+            line="533"
+            column="50"/>
+    </issue>
+
+    <issue
+        id="OldTargetApi"
+        message="Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the `android.os.Build.VERSION_CODES` javadoc for details."
+        errorLine1="        targetSdk = 36"
+        errorLine2="        ~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="32"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="FragmentTagUsage"
+        message="Replace the &lt;fragment> tag with FragmentContainerView."
+        errorLine1="    &lt;fragment"
+        errorLine2="     ~~~~~~~~">
+        <location
+            file="src/main/res/layout/content_main.xml"
+            line="8"
+            column="6"/>
+    </issue>
+
+    <issue
+        id="QueryPermissionsNeeded"
+        message="Consider adding a `&lt;queries>` declaration to your manifest when calling this method; see https://g.co/dev/packagevisibility for details"
+        errorLine1="        if (intent.resolveActivity(requireContext().packageManager) != null) {"
+        errorLine2="                   ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/ui/export/InstagramExportBottomSheet.kt"
+            line="155"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="QueryPermissionsNeeded"
+        message="Consider adding a `&lt;queries>` declaration to your manifest when calling this method; see https://g.co/dev/packagevisibility for details"
+        errorLine1="        if (intent.resolveActivity(requireContext().packageManager) != null) {"
+        errorLine2="                   ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/ui/export/InstagramExportBottomSheet.kt"
+            line="178"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="QueryPermissionsNeeded"
+        message="Consider adding a `&lt;queries>` declaration to your manifest when calling this method; see https://g.co/dev/packagevisibility for details"
+        errorLine1="        if (intent.resolveActivity(requireContext().packageManager) != null) {"
+        errorLine2="                   ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/ui/export/InstagramExportBottomSheet.kt"
+            line="201"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="QueryPermissionsNeeded"
+        message="Consider adding a `&lt;queries>` declaration to your manifest when calling this method; see https://g.co/dev/packagevisibility for details"
+        errorLine1="            if (shareIntent.resolveActivity(packageManager) != null) {"
+        errorLine2="                            ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/video/VideoPreviewActivity.kt"
+            line="212"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="SelectedPhotoAccess"
+        message="Your app is currently not handling Selected Photos Access introduced in Android 14+"
+        errorLine1="    &lt;uses-permission android:name=&quot;android.permission.READ_MEDIA_IMAGES&quot; />"
+        errorLine2="                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="19"
+            column="36"/>
+    </issue>
+
+    <issue
+        id="SelectedPhotoAccess"
+        message="Your app is currently not handling Selected Photos Access introduced in Android 14+"
+        errorLine1="    &lt;uses-permission android:name=&quot;android.permission.READ_MEDIA_VIDEO&quot; />"
+        errorLine2="                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="20"
+            column="36"/>
+    </issue>
+
+    <issue
+        id="AndroidGradlePluginVersion"
+        message="A newer version of Gradle than 9.7.0 is available: 9.7.1"
+        errorLine1="distributionUrl=https\://services.gradle.org/distributions/gradle-9.7.0-bin.zip"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="$HOME/files/work/__drafts/AutoKorrektur/gradle/wrapper/gradle-wrapper.properties"
+            line="3"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="AndroidGradlePluginVersion"
+        message="A newer version of com.android.application than 9.3.2 is available: 9.4.0"
+        errorLine1="agp = &quot;9.3.2&quot;"
+        errorLine2="      ~~~~~~~">
+        <location
+            file="$HOME/files/work/__drafts/AutoKorrektur/gradle/libs.versions.toml"
+            line="2"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.appcompat:appcompat than 1.7.1 is available: 1.8.0"
+        errorLine1="appcompat = &quot;1.7.1&quot;"
+        errorLine2="            ~~~~~~~">
+        <location
+            file="$HOME/files/work/__drafts/AutoKorrektur/gradle/libs.versions.toml"
+            line="9"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.navigation:navigation-fragment-ktx than 2.9.8 is available: 2.10.0"
+        errorLine1="navigationFragmentKtx = &quot;2.9.8&quot;"
+        errorLine2="                        ~~~~~~~">
+        <location
+            file="$HOME/files/work/__drafts/AutoKorrektur/gradle/libs.versions.toml"
+            line="12"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.navigation:navigation-ui-ktx than 2.9.8 is available: 2.10.0"
+        errorLine1="navigationUiKtx = &quot;2.9.8&quot;"
+        errorLine2="                  ~~~~~~~">
+        <location
+            file="$HOME/files/work/__drafts/AutoKorrektur/gradle/libs.versions.toml"
+            line="13"
+            column="19"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.exifinterface:exifinterface than 1.3.6 is available: 1.4.2"
+        errorLine1="exifinterface = &quot;1.3.6&quot;"
+        errorLine2="                ~~~~~~~">
+        <location
+            file="$HOME/files/work/__drafts/AutoKorrektur/gradle/libs.versions.toml"
+            line="21"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.camera:camera-camera2 than 1.6.1 is available: 1.6.2"
+        errorLine1="camera = &quot;1.6.1&quot;"
+        errorLine2="         ~~~~~~~">
+        <location
+            file="$HOME/files/work/__drafts/AutoKorrektur/gradle/libs.versions.toml"
+            line="22"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.camera:camera-core than 1.6.1 is available: 1.6.2"
+        errorLine1="camera = &quot;1.6.1&quot;"
+        errorLine2="         ~~~~~~~">
+        <location
+            file="$HOME/files/work/__drafts/AutoKorrektur/gradle/libs.versions.toml"
+            line="22"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.camera:camera-lifecycle than 1.6.1 is available: 1.6.2"
+        errorLine1="camera = &quot;1.6.1&quot;"
+        errorLine2="         ~~~~~~~">
+        <location
+            file="$HOME/files/work/__drafts/AutoKorrektur/gradle/libs.versions.toml"
+            line="22"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.camera:camera-video than 1.6.1 is available: 1.6.2"
+        errorLine1="camera = &quot;1.6.1&quot;"
+        errorLine2="         ~~~~~~~">
+        <location
+            file="$HOME/files/work/__drafts/AutoKorrektur/gradle/libs.versions.toml"
+            line="22"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.camera:camera-view than 1.6.1 is available: 1.6.2"
+        errorLine1="camera = &quot;1.6.1&quot;"
+        errorLine2="         ~~~~~~~">
+        <location
+            file="$HOME/files/work/__drafts/AutoKorrektur/gradle/libs.versions.toml"
+            line="22"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.test:orchestrator than 1.5.0 is available: 1.6.1"
+        errorLine1="testOrchestrator = &quot;1.5.0&quot;"
+        errorLine2="                   ~~~~~~~">
+        <location
+            file="$HOME/files/work/__drafts/AutoKorrektur/gradle/libs.versions.toml"
+            line="23"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="LockedOrientationActivity"
+        message="Expecting `android:screenOrientation=&quot;unspecified&quot;` or `&quot;fullSensor&quot;` for this activity so the user can use the application in any orientation and provide a great experience on Chrome OS devices"
+        errorLine1="            android:screenOrientation=&quot;portrait&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="38"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="LockedOrientationActivity"
+        message="Expecting `android:screenOrientation=&quot;unspecified&quot;` or `&quot;fullSensor&quot;` for this activity so the user can use the application in any orientation and provide a great experience on Chrome OS devices"
+        errorLine1="            android:screenOrientation=&quot;portrait&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="49"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="LockedOrientationActivity"
+        message="Expecting `android:screenOrientation=&quot;unspecified&quot;` or `&quot;fullSensor&quot;` for this activity so the user can use the application in any orientation and provide a great experience on Chrome OS devices"
+        errorLine1="            android:screenOrientation=&quot;portrait&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="55"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.microsoft.onnxruntime:onnxruntime-android than 1.22.0 is available: 1.29.0"
+        errorLine1="onnxruntimeAndroid = &quot;1.22.0&quot;"
+        errorLine2="                     ~~~~~~~~">
+        <location
+            file="$HOME/files/work/__drafts/AutoKorrektur/gradle/libs.versions.toml"
+            line="14"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.squareup.okhttp3:okhttp than 5.4.0 is available: 5.5.0"
+        errorLine1="okhttp = &quot;5.4.0&quot;"
+        errorLine2="         ~~~~~~~">
+        <location
+            file="$HOME/files/work/__drafts/AutoKorrektur/gradle/libs.versions.toml"
+            line="17"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.squareup.okhttp3:mockwebserver than 5.4.0 is available: 5.5.0"
+        errorLine1="mockwebserver = &quot;5.4.0&quot;"
+        errorLine2="                ~~~~~~~">
+        <location
+            file="$HOME/files/work/__drafts/AutoKorrektur/gradle/libs.versions.toml"
+            line="20"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.jetbrains.kotlinx:kotlinx-coroutines-test than 1.8.0 is available: 1.11.0"
+        errorLine1="kotlinx-coroutines-test = { group = &quot;org.jetbrains.kotlinx&quot;, name = &quot;kotlinx-coroutines-test&quot;, version = &quot;1.8.0&quot; }"
+        errorLine2="                                                                                                         ~~~~~~~">
+        <location
+            file="$HOME/files/work/__drafts/AutoKorrektur/gradle/libs.versions.toml"
+            line="46"
+            column="106"/>
+    </issue>
+
+    <issue
+        id="Aligned16KB"
+        message="The native library `x86_64/libtensorflowlite_jni.so` (from `com.google.ai.edge.litert:litert:1.0.1`) is not 16 KB aligned">
+        <location
+            file="$GRADLE_USER_HOME/caches/9.7.0/transforms/fbf0daf26593458b81ae11e56e526ffd/transformed/litert-1.0.1/jni/x86_64/libtensorflowlite_jni.so"/>
+    </issue>
+
+    <issue
+        id="Aligned16KB"
+        message="The native library `x86_64/libtensorflowlite_jni.so` (from `com.google.ai.edge.litert:litert:1.0.1`) is not 16 KB aligned">
+        <location
+            file="$GRADLE_USER_HOME/caches/9.7.0/transforms/fbf0daf26593458b81ae11e56e526ffd/transformed/litert-1.0.1/jni/x86_64/libtensorflowlite_jni.so"/>
+    </issue>
+
+    <issue
+        id="Aligned16KB"
+        message="The native library `x86_64/libtensorflowlite_jni.so` (from `com.google.ai.edge.litert:litert:1.0.1`) is not 16 KB aligned">
+        <location
+            file="$GRADLE_USER_HOME/caches/9.7.0/transforms/fbf0daf26593458b81ae11e56e526ffd/transformed/litert-1.0.1/jni/x86_64/libtensorflowlite_jni.so"/>
+    </issue>
+
+    <issue
+        id="DiscouragedApi"
+        message="Fixed screen orientations will be ignored in most cases, starting from Android 16. Android is moving toward a model where apps are expected to adapt to various orientations, display sizes, and aspect ratios."
+        errorLine1="            android:screenOrientation=&quot;portrait&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="38"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="DiscouragedApi"
+        message="Fixed screen orientations will be ignored in most cases, starting from Android 16. Android is moving toward a model where apps are expected to adapt to various orientations, display sizes, and aspect ratios."
+        errorLine1="            android:screenOrientation=&quot;portrait&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="49"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="DiscouragedApi"
+        message="Fixed screen orientations will be ignored in most cases, starting from Android 16. Android is moving toward a model where apps are expected to adapt to various orientations, display sizes, and aspect ratios."
+        errorLine1="            android:screenOrientation=&quot;portrait&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="55"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;app_name&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;app_name&quot;>AutoKorrektur&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="2"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;action_settings&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;action_settings&quot;>Settings&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="3"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;action_about&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;action_about&quot;>About &amp;amp; Licenses&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="4"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;first_fragment_label&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;first_fragment_label&quot;>AutoKorrektur&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="8"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;next&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;next&quot;>Next&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="9"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;previous&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;previous&quot;>Previous&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="10"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;select_image&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;select_image&quot;>Select Image&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="13"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;start&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;start&quot;>Start&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="14"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;download&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;download&quot;>Download&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="15"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;options&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;options&quot;>Options&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="16"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_ar_car_removal&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;live_ar_car_removal&quot;>Live AR Car Removal (30 FPS)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="17"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;photo_selection_title&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;photo_selection_title&quot;>Select Photo&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="20"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;take_photo&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;take_photo&quot;>Take Photo&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="21"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;choose_from_gallery&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;choose_from_gallery&quot;>Choose from Gallery&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="22"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;cancel&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;cancel&quot;>Cancel&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="23"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;multiple_images&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;multiple_images&quot;>Multiple Images&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="26"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;evaluation_mode&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;evaluation_mode&quot;>Evaluation Mode&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="27"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;continue_with_result&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;continue_with_result&quot;>Continue with Result&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="28"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;mask_upscale&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;mask_upscale&quot;>Mask Upscale&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="29"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;mask_downshift&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;mask_downshift&quot;>Mask Downshift&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="30"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;score_threshold&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;score_threshold&quot;>Score Threshold&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="31"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;downscale&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;downscale&quot;>Downscale to Max Image Size&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="32"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;segmentation_model&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;segmentation_model&quot;>Segmentation Model&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="33"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;start_batch_processing_images&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;start_batch_processing_images&quot;>Start Batch Processing (%1$d images)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="34"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;select_multiple_images&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;select_multiple_images&quot;>Select Multiple Images&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="35"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;start_btn&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;start_btn&quot;>Start&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="36"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;select_image_btn&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;select_image_btn&quot;>Select Image&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="37"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;processing&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;processing&quot;>Processing…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="38"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;export_instagram&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;export_instagram&quot;>Export for Instagram&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="39"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;share_to_instagram&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;share_to_instagram&quot;>Share graphic&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="40"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;save_graphic&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;save_graphic&quot;>Save graphic&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="41"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;error_gallery_failed&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;error_gallery_failed&quot;>Failed to get image from gallery&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="43"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;error_camera_permission_required&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;error_camera_permission_required&quot;>Camera permission is required to take photos&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="44"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;label_result&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;label_result&quot;>Result&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="45"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;label_image_numbered&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;label_image_numbered&quot;>Image %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="46"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;label_original&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;label_original&quot;>Original&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="47"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;label_mask&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;label_mask&quot;>Detected Vehicles (Mask Preview)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="48"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;loading_status&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;loading_status&quot;>%1$s (%2$d%%)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="49"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;btn_start_batch_processing&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;btn_start_batch_processing&quot;>Start Batch Processing&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="50"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;msg_image_saved&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;msg_image_saved&quot;>Image saved to gallery&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="51"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;error_no_processed_image&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;error_no_processed_image&quot;>No processed image to download. Run inference first.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="52"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;premium_edit_title&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;premium_edit_title&quot;>Premium Edit (Server SDXL)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="53"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;btn_accept&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;btn_accept&quot;>Accept&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="54"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;error_no_previous_result&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;error_no_previous_result&quot;>No previous result available. Process an image first.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="55"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;error_create_file_failed&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;error_create_file_failed&quot;>Error creating image file for camera&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="56"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;error_create_file_message&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;error_create_file_message&quot;>Error creating image file: %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="57"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;msg_batch_completed&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;msg_batch_completed&quot;>Batch processing completed!\n%1$d/%2$d images processed successfully&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="58"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;btn_export_csv&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;btn_export_csv&quot;>Export CSV&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="59"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;error_export_instagram_no_image&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;error_export_instagram_no_image&quot;>Process an image first before exporting for Instagram&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="60"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;dialog_instagram_format_title&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;dialog_instagram_format_title&quot;>Select Instagram Format&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="61"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;instagram_format_square&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;instagram_format_square&quot;>1:1 Square (Side-by-Side)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="62"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;instagram_format_portrait&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;instagram_format_portrait&quot;>4:5 Feed Portrait (Stacked)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="63"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;instagram_format_story&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;instagram_format_story&quot;>9:16 Story (Side-by-Side)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="64"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;dialog_instagram_ready_title&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;dialog_instagram_ready_title&quot;>Instagram Graphic Ready&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="65"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;share_chooser_title&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;share_chooser_title&quot;>Share Before/After Graphic&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="66"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;error_export_message&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;error_export_message&quot;>Export error: %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="67"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;msg_instagram_graphic_saved&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;msg_instagram_graphic_saved&quot;>Instagram graphic saved to gallery!&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="68"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;msg_ar_reset&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;msg_ar_reset&quot;>AR Background Memory Reset&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="69"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;msg_ar_captured&quot; is not translated in &quot;en&quot; (English)"
+        errorLine1="    &lt;string name=&quot;msg_ar_captured&quot;>AR Photo Captured!&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="70"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;ar_camera_title&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;ar_camera_title&quot;>AUTOFREIE VISION&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="99"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;ar_camera_subtitle&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;ar_camera_subtitle&quot;>● 30 FPS • Echtzeit auf dem Gerät&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="100"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;btn_reset&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;btn_reset&quot;>ZURÜCKSETZEN&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="101"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;video_title&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;video_title&quot;>Autofreies Video (HQ)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="102"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;video_btn_car_free&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;video_btn_car_free&quot;>AUTOFREI&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="103"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;video_inpainting_progress&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;video_inpainting_progress&quot;>HQ On-Device Inpainting...&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="104"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;video_progress_zero&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;video_progress_zero&quot;>0%&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="105"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;btn_save&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;btn_save&quot;>Speichern&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="106"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;btn_share_instagram&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;btn_share_instagram&quot;>Instagram Reels&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="107"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;export_title&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;export_title&quot;>INSTAGRAM &amp;amp; SOCIAL EXPORT&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="108"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;export_subtitle&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;export_subtitle&quot;>Wähle das Format für deinen Beitrag oder deine Story:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="109"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;export_layout_type&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;export_layout_type&quot;>LAYOUT TYP&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="110"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;export_layout_split&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;export_layout_split&quot;>📸 Split-Bild (Side-by-Side)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="111"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;export_layout_carousel&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;export_layout_carousel&quot;>🔄 2-Slide Swipe-Karussell&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="112"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;export_layout_video&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;export_layout_video&quot;>🎬 Animierter Video-Slider (Reels/Story)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="113"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;export_aspect_ratio&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;export_aspect_ratio&quot;>SEITENVERHÄLTNIS&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="114"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;export_ratio_square&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;export_ratio_square&quot;>1:1 Quadrat&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="115"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;export_ratio_portrait&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;export_ratio_portrait&quot;>4:5 Portrait Feed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="116"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;export_ratio_story&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;export_ratio_story&quot;>9:16 Story / Reel&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="117"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;btn_export_share&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;btn_export_share&quot;>Exportieren &amp;amp; Teilen&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="118"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;brush_title&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;brush_title&quot;>MASKEN-PINSEL&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="119"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;btn_delete&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;btn_delete&quot;>Löschen&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="120"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;btn_done&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;btn_done&quot;>Fertig&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="121"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;brush_type_brush&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;brush_type_brush&quot;>🖌️ Pinsel (Auto/Schatten)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="122"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;brush_type_eraser&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;brush_type_eraser&quot;>🧹 Radierer (Fahrrad/Person)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="123"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;brush_size&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;brush_size&quot;>Größe:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="124"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;gallery_title&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;gallery_title&quot;>Autofreie Vision Galerie&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="125"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;gallery_zero_shots&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;gallery_zero_shots&quot;>0 Aufnahmen&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="126"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;gallery_empty_text&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;gallery_empty_text&quot;>Noch keine autofreien Aufnahmen gemacht.\nRichte die AR-Kamera aus und tippe auf den Auslöser!&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="127"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;gdpr_desc1&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;gdpr_desc1&quot;>Um ein hochwertiges Inpainting zu bieten, wird dein Foto zusammen mit einer berechneten Maske und einer Vorschau an unseren sicheren Backend-Server gesendet.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="128"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;gdpr_desc2&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;gdpr_desc2&quot;>Datenschutzgarantie:\n• Bilder werden streng im Arbeitsspeicher verarbeitet.\n• Bilder werden nach der Verarbeitung sofort gelöscht.\n• Es werden keine Daten gespeichert oder für das Training verwendet.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="129"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;gdpr_checkbox&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;gdpr_checkbox&quot;>Meine Wahl merken und nicht mehr anzeigen&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="130"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;first_frag_brush&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;first_frag_brush&quot;>🖌️ Pinsel&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="131"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;engine_title&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;engine_title&quot;>INPAINTING ENGINE&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="132"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;engine_fast&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;engine_fast&quot;>⚡ Fast On-Device&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="133"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;engine_highres&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;engine_highres&quot;>💎 High-Res Progressive&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="134"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;engine_cloud&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;engine_cloud&quot;>☁️ Cloud SDXL&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="135"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;engine_privacy&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;engine_privacy&quot;>🔒 In-Memory-Verarbeitung in Frankfurt, Deutschland. Keine dauerhafte Speicherung.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="136"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;engine_quota&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;engine_quota&quot;>⚡ 1/2 kostenlose High-Res-Server-Erweiterungen verbleiben in diesem Monat&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="137"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;cd_recent_gallery&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;cd_recent_gallery&quot;>Aktuelle Aufnahmen-Galerie&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="138"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;cd_studio_prep&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;cd_studio_prep&quot;>Studio &amp;amp; Post Prep&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="139"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;cd_back&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;cd_back&quot;>Zurück&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="140"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;cd_shot_thumbnail&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;cd_shot_thumbnail&quot;>Autofreie Aufnahme Vorschau&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="141"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;ar_fps_active&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;ar_fps_active&quot;>● 30 FPS Kamera • Aktive AR-Ebene&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="142"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;ar_error_video_init&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;ar_error_video_init&quot;>Videoaufnahme nicht initialisiert&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="143"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;ar_recording&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;ar_recording&quot;>🔴 AUFNAHME (5s Video-Snippet)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="144"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;ar_msg_captured&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;ar_msg_captured&quot;>Autofreie Vision aufgenommen&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="145"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;ar_error_no_frame&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;ar_error_no_frame&quot;>Kein Frame zur Aufnahme bereit&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="146"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;export_error_not_ready&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;export_error_not_ready&quot;>Bilder nicht bereit zum Export&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="147"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;export_btn_exporting&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;export_btn_exporting&quot;>Exportiere...&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="148"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;export_error_failed&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;export_error_failed&quot;>Export fehlgeschlagen: %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="149"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;gallery_n_shots&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;gallery_n_shots&quot;>%1$d Aufnahmen&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="150"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;video_error_not_found&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;video_error_not_found&quot;>Videodatei nicht gefunden&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="151"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;video_msg_ready&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;video_msg_ready&quot;>HQ Autofreies Video fertig!&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="152"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;video_error_inpainting&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;video_error_inpainting&quot;>Inpainting fehlgeschlagen: %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="153"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;video_btn_before&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;video_btn_before&quot;>VORHER (RAW)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="154"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;video_error_none_to_save&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;video_error_none_to_save&quot;>Kein Video zum Speichern vorhanden&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="155"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;video_msg_saved&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;video_msg_saved&quot;>Video in Galerie gespeichert 🎬&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="156"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;video_error_save&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;video_error_save&quot;>Fehler beim Speichern des Videos&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="157"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;video_error_share&quot; is not translated in &quot;de&quot; (German)"
+        errorLine1="    &lt;string name=&quot;video_error_share&quot;>Teilen fehlgeschlagen: %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="158"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="Typos"
+        message="Did you mean &quot;YOLOv!!&quot; instead of &quot;YOLOv11&quot;?"
+        errorLine1="    &lt;string name=&quot;about_dialog_content&quot;>AutoKorrektur\n\nVersion: 1.0.0\nLizenz: GNU AGPLv3\n\nOpen-Source-Komponenten:\n• YOLOv11-seg: GNU AGPLv3 (Ultralytics)\n• MI-GAN: Apache 2.0\n• OpenCV Android SDK: Apache 2.0\n• ONNX Runtime: MIT-Lizenz\n\nDie lokale Bildverarbeitung arbeitet zu 100% offline und datenschutzkonform.&lt;/string>"
+        errorLine2="                                                                                                                           ~~~~~~~">
+        <location
+            file="src/main/res/values-de/strings.xml"
+            line="6"
+            column="124"/>
+    </issue>
+
+    <issue
+        id="Typos"
+        message="Did you mean &quot;Yolo!!&quot; instead of &quot;Yolo11&quot;?"
+        errorLine1="        &lt;item>Yolo11-Nano&lt;/item>"
+        errorLine2="              ~~~~~~">
+        <location
+            file="src/main/res/values-de/strings.xml"
+            line="84"
+            column="15"/>
+    </issue>
+
+    <issue
+        id="Typos"
+        message="Did you mean &quot;Yolo!!&quot; instead of &quot;Yolo11&quot;?"
+        errorLine1="        &lt;item>Yolo11-Small&lt;/item>"
+        errorLine2="              ~~~~~~">
+        <location
+            file="src/main/res/values-de/strings.xml"
+            line="85"
+            column="15"/>
+    </issue>
+
+    <issue
+        id="Typos"
+        message="Did you mean &quot;Yolo!!&quot; instead of &quot;Yolo11&quot;?"
+        errorLine1="        &lt;item>Yolo11-Medium&lt;/item>"
+        errorLine2="              ~~~~~~">
+        <location
+            file="src/main/res/values-de/strings.xml"
+            line="86"
+            column="15"/>
+    </issue>
+
+    <issue
+        id="Typos"
+        message="Did you mean &quot;Yolo!!&quot; instead of &quot;Yolo11&quot;?"
+        errorLine1="        &lt;item>Yolo11-Nano&lt;/item>"
+        errorLine2="              ~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="88"
+            column="15"/>
+    </issue>
+
+    <issue
+        id="Typos"
+        message="Did you mean &quot;Yolo!!&quot; instead of &quot;Yolo11&quot;?"
+        errorLine1="        &lt;item>Yolo11-Small&lt;/item>"
+        errorLine2="              ~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="89"
+            column="15"/>
+    </issue>
+
+    <issue
+        id="Typos"
+        message="Did you mean &quot;Yolo!!&quot; instead of &quot;Yolo11&quot;?"
+        errorLine1="        &lt;item>Yolo11-Medium&lt;/item>"
+        errorLine2="              ~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="90"
+            column="15"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;images&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;start_batch_processing_images&quot;>Start Batch Processing (%1$d images)&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="34"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;shots&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;gallery_n_shots&quot;>%1$d shots&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-en/strings.xml"
+            line="55"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;images&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;msg_batch_completed&quot;>Batch processing completed!\n%1$d/%2$d images processed successfully&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="58"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;Aufnahmen&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;gallery_n_shots&quot;>%1$d Aufnahmen&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="150"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ChromeOsAbiSupport"
+        message="Missing x86_64 ABI support for ChromeOS"
+        errorLine1="            ndk { abiFilters += &quot;arm64-v8a&quot; }"
+        errorLine2="                                ~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="54"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="ChromeOsAbiSupport"
+        message="Missing x86_64 ABI support for ChromeOS"
+        errorLine1="            ndk { abiFilters += &quot;arm64-v8a&quot; }"
+        errorLine2="                                ~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="67"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="ChromeOsAbiSupport"
+        message="Missing x86_64 ABI support for ChromeOS"
+        errorLine1="            ndk { abiFilters += &quot;arm64-v8a&quot; }"
+        errorLine2="                                ~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="79"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; `SDK_INT` is always >= 29"
+        errorLine1="                    val bitmap = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {"
+        errorLine2="                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/FirstFragment.kt"
+            line="390"
+            column="38"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; `SDK_INT` is always >= 29"
+        errorLine1="                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/video/VideoPreviewActivity.kt"
+            line="163"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; `SDK_INT` is always >= 29"
+        errorLine1="                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/video/VideoPreviewActivity.kt"
+            line="177"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="Overdraw"
+        message="Possible overdraw: Root element paints background `#000000` with a theme that also paints a background (inferred theme is `@style/Theme.AndroidKorrektur`)"
+        errorLine1="    android:background=&quot;#000000&quot;>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/activity_ar_camera.xml"
+            line="6"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="Overdraw"
+        message="Possible overdraw: Root element paints background `#0A0A0E` with a theme that also paints a background (inferred theme is `@style/Theme.AndroidKorrektur`)"
+        errorLine1="    android:background=&quot;#0A0A0E&quot;>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/activity_video_preview.xml"
+            line="7"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="Overdraw"
+        message="Possible overdraw: Root element paints background `#16161E` with a theme that also paints a background (inferred theme is `@style/Theme.AndroidKorrektur`)"
+        errorLine1="    android:background=&quot;#16161E&quot;"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/bottom_sheet_instagram_export.xml"
+            line="6"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="Overdraw"
+        message="Possible overdraw: Root element paints background `#0F0F14` with a theme that also paints a background (inferred theme is `@style/Theme.AndroidKorrektur`)"
+        errorLine1="    android:background=&quot;#0F0F14&quot;"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/bottom_sheet_mask_brush.xml"
+            line="6"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="Overdraw"
+        message="Possible overdraw: Root element paints background `?android:attr/colorBackground` with a theme that also paints a background (inferred theme is `@style/Theme.AndroidKorrektur`)"
+        errorLine1="    android:background=&quot;?android:attr/colorBackground&quot;>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/bottom_sheet_vision_gallery.xml"
+            line="8"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.drawable.app_icon_foreground` appears to be unused">
+        <location
+            file="src/main/res/drawable-nodpi/app_icon_foreground.png"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.black` appears to be unused"
+        errorLine1="    &lt;color name=&quot;black&quot;>#FF000000&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="3"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.white` appears to be unused"
+        errorLine1="    &lt;color name=&quot;white&quot;>#FFFFFFFF&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="4"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.dimen.fab_margin` appears to be unused"
+        errorLine1="    &lt;dimen name=&quot;fab_margin&quot;>16dp&lt;/dimen>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/dimens.xml"
+            line="2"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.next` appears to be unused"
+        errorLine1="    &lt;string name=&quot;next&quot;>Next&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="9"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.previous` appears to be unused"
+        errorLine1="    &lt;string name=&quot;previous&quot;>Previous&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="10"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.evaluation_mode` appears to be unused"
+        errorLine1="    &lt;string name=&quot;evaluation_mode&quot;>Evaluation Mode&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="27"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.start_btn` appears to be unused"
+        errorLine1="    &lt;string name=&quot;start_btn&quot;>Start&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="36"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.select_image_btn` appears to be unused"
+        errorLine1="    &lt;string name=&quot;select_image_btn&quot;>Select Image&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="37"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.processing` appears to be unused"
+        errorLine1="    &lt;string name=&quot;processing&quot;>Processing…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="38"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.instagram_format_square` appears to be unused"
+        errorLine1="    &lt;string name=&quot;instagram_format_square&quot;>1:1 Square (Side-by-Side)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="62"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.instagram_format_portrait` appears to be unused"
+        errorLine1="    &lt;string name=&quot;instagram_format_portrait&quot;>4:5 Feed Portrait (Stacked)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="63"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.instagram_format_story` appears to be unused"
+        errorLine1="    &lt;string name=&quot;instagram_format_story&quot;>9:16 Story (Side-by-Side)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="64"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.msg_ar_captured` appears to be unused"
+        errorLine1="    &lt;string name=&quot;msg_ar_captured&quot;>AR Photo Captured!&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="70"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UselessParent"
+        message="This `LinearLayout` layout or its `LinearLayout` parent is unnecessary; transfer the `background` attribute to the other view"
+        errorLine1="        &lt;LinearLayout"
+        errorLine2="         ~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/activity_video_preview.xml"
+            line="121"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;video_inpainting_progress&quot;>HQ On-Device Inpainting...&lt;/string>"
+        errorLine2="                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-en/strings.xml"
+            line="9"
+            column="46"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;processing&quot;>Verarbeitung...&lt;/string>"
+        errorLine2="                              ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-de/strings.xml"
+            line="34"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;export_btn_exporting&quot;>Exporting...&lt;/string>"
+        errorLine2="                                        ~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-en/strings.xml"
+            line="53"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;video_inpainting_progress&quot;>HQ On-Device Inpainting...&lt;/string>"
+        errorLine2="                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="104"
+            column="46"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;export_btn_exporting&quot;>Exportiere...&lt;/string>"
+        errorLine2="                                        ~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="148"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="TypographyFractions"
+        message="Use fraction character ½ (&amp;#189;) instead of 1/2?"
+        errorLine1="    &lt;string name=&quot;engine_quota&quot;>⚡ 1/2 Free High-Res Server Enhancements remaining this month&lt;/string>"
+        errorLine2="                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-en/strings.xml"
+            line="42"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="TypographyFractions"
+        message="Use fraction character ½ (&amp;#189;) instead of 1/2?"
+        errorLine1="    &lt;string name=&quot;engine_quota&quot;>⚡ 1/2 kostenlose High-Res-Server-Erweiterungen verbleiben in diesem Monat&lt;/string>"
+        errorLine2="                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="137"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="IconXmlAndPng"
+        message="The following images appear both as density independent `.xml` files and as bitmap files: src/main/res/mipmap-anydpi/ic_launcher.xml, src/main/res/mipmap-hdpi/ic_launcher.png">
+        <location
+            file="src/main/res/mipmap-xxxhdpi/ic_launcher.png"/>
+        <location
+            file="src/main/res/mipmap-xxhdpi/ic_launcher.png"/>
+        <location
+            file="src/main/res/mipmap-xhdpi/ic_launcher.png"/>
+        <location
+            file="src/main/res/mipmap-mdpi/ic_launcher.png"/>
+        <location
+            file="src/main/res/mipmap-hdpi/ic_launcher.png"/>
+        <location
+            file="src/main/res/mipmap-anydpi/ic_launcher.xml"/>
+    </issue>
+
+    <issue
+        id="IconXmlAndPng"
+        message="The following images appear both as density independent `.xml` files and as bitmap files: src/main/res/mipmap-anydpi/ic_launcher_round.xml, src/main/res/mipmap-hdpi/ic_launcher_round.png">
+        <location
+            file="src/main/res/mipmap-xxxhdpi/ic_launcher_round.png"/>
+        <location
+            file="src/main/res/mipmap-xxhdpi/ic_launcher_round.png"/>
+        <location
+            file="src/main/res/mipmap-xhdpi/ic_launcher_round.png"/>
+        <location
+            file="src/main/res/mipmap-mdpi/ic_launcher_round.png"/>
+        <location
+            file="src/main/res/mipmap-hdpi/ic_launcher_round.png"/>
+        <location
+            file="src/main/res/mipmap-anydpi/ic_launcher_round.xml"/>
+    </issue>
+
+    <issue
+        id="IconLauncherShape"
+        message="Launcher icon used as round icon did not have a circular shape">
+        <location
+            file="src/main/res/mipmap-hdpi/ic_launcher_round.png"/>
+    </issue>
+
+    <issue
+        id="IconLauncherShape"
+        message="Launcher icon used as round icon did not have a circular shape">
+        <location
+            file="src/main/res/mipmap-mdpi/ic_launcher_round.png"/>
+    </issue>
+
+    <issue
+        id="IconLauncherShape"
+        message="Launcher icon used as round icon did not have a circular shape">
+        <location
+            file="src/main/res/mipmap-xhdpi/ic_launcher_round.png"/>
+    </issue>
+
+    <issue
+        id="IconLauncherShape"
+        message="Launcher icon used as round icon did not have a circular shape">
+        <location
+            file="src/main/res/mipmap-xxhdpi/ic_launcher_round.png"/>
+    </issue>
+
+    <issue
+        id="IconLauncherShape"
+        message="Launcher icon used as round icon did not have a circular shape">
+        <location
+            file="src/main/res/mipmap-xxxhdpi/ic_launcher_round.png"/>
+    </issue>
+
+    <issue
+        id="MonochromeLauncherIcon"
+        message="The application adaptive icon is missing a monochrome tag"
+        errorLine1="&lt;adaptive-icon xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;>"
+        errorLine2="^">
+        <location
+            file="src/main/res/mipmap-anydpi/ic_launcher.xml"
+            line="2"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="MonochromeLauncherIcon"
+        message="The application adaptive roundIcon is missing a monochrome tag"
+        errorLine1="&lt;adaptive-icon xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;>"
+        errorLine2="^">
+        <location
+            file="src/main/res/mipmap-anydpi/ic_launcher_round.xml"
+            line="2"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="IconDipSize"
+        message="The image `ic_launcher.png` varies significantly in its density-independent (dip) size across the various density versions: mipmap-hdpi/ic_launcher.png: 128x128 dp (192x192 px), mipmap-mdpi/ic_launcher.png: 192x192 dp (192x192 px), mipmap-xhdpi/ic_launcher.png: 96x96 dp (192x192 px), mipmap-xxhdpi/ic_launcher.png: 64x64 dp (192x192 px), mipmap-xxxhdpi/ic_launcher.png: 48x48 dp (192x192 px)">
+        <location
+            file="src/main/res/mipmap-xxxhdpi/ic_launcher.png"/>
+        <location
+            file="src/main/res/mipmap-xxhdpi/ic_launcher.png"/>
+        <location
+            file="src/main/res/mipmap-xhdpi/ic_launcher.png"/>
+        <location
+            file="src/main/res/mipmap-hdpi/ic_launcher.png"/>
+        <location
+            file="src/main/res/mipmap-mdpi/ic_launcher.png"/>
+    </issue>
+
+    <issue
+        id="IconDipSize"
+        message="The image `ic_launcher_round.png` varies significantly in its density-independent (dip) size across the various density versions: mipmap-hdpi/ic_launcher_round.png: 128x128 dp (192x192 px), mipmap-mdpi/ic_launcher_round.png: 192x192 dp (192x192 px), mipmap-xhdpi/ic_launcher_round.png: 96x96 dp (192x192 px), mipmap-xxhdpi/ic_launcher_round.png: 64x64 dp (192x192 px), mipmap-xxxhdpi/ic_launcher_round.png: 48x48 dp (192x192 px)">
+        <location
+            file="src/main/res/mipmap-xxxhdpi/ic_launcher_round.png"/>
+        <location
+            file="src/main/res/mipmap-xxhdpi/ic_launcher_round.png"/>
+        <location
+            file="src/main/res/mipmap-xhdpi/ic_launcher_round.png"/>
+        <location
+            file="src/main/res/mipmap-hdpi/ic_launcher_round.png"/>
+        <location
+            file="src/main/res/mipmap-mdpi/ic_launcher_round.png"/>
+    </issue>
+
+    <issue
+        id="IconDuplicates"
+        message="The following unrelated icon files have identical contents: app_icon_foreground.png, ic_launcher.png, ic_launcher_round.png, ic_launcher.png, ic_launcher_round.png, ic_launcher.png, ic_launcher_round.png, ic_launcher.png, ic_launcher_round.png, ic_launcher.png, ic_launcher_round.png">
+        <location
+            file="src/main/res/mipmap-xxxhdpi/ic_launcher_round.png"/>
+        <location
+            file="src/main/res/mipmap-xxxhdpi/ic_launcher.png"/>
+        <location
+            file="src/main/res/mipmap-xxhdpi/ic_launcher_round.png"/>
+        <location
+            file="src/main/res/mipmap-xxhdpi/ic_launcher.png"/>
+        <location
+            file="src/main/res/mipmap-xhdpi/ic_launcher_round.png"/>
+        <location
+            file="src/main/res/mipmap-xhdpi/ic_launcher.png"/>
+        <location
+            file="src/main/res/mipmap-mdpi/ic_launcher_round.png"/>
+        <location
+            file="src/main/res/mipmap-mdpi/ic_launcher.png"/>
+        <location
+            file="src/main/res/mipmap-hdpi/ic_launcher_round.png"/>
+        <location
+            file="src/main/res/mipmap-hdpi/ic_launcher.png"/>
+        <location
+            file="src/main/res/drawable-nodpi/app_icon_foreground.png"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toColorInt` instead?"
+        errorLine1="        binding.captureArButton.setBackgroundColor(android.graphics.Color.parseColor(&quot;#EF4444&quot;))"
+        errorLine2="                                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/ar/ArCameraActivity.kt"
+            line="144"
+            column="52"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX function `createBitmap` instead?"
+        errorLine1="            val compositeBmp = Bitmap.createBitmap(baseBmp.width, baseBmp.height, Bitmap.Config.ARGB_8888)"
+        errorLine2="                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/ar/ArCameraActivity.kt"
+            line="220"
+            column="32"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX function `createBitmap` instead?"
+        errorLine1="                                    val newBmp = Bitmap.createBitmap("
+        errorLine2="                                                 ^">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/ar/ArCameraActivity.kt"
+            line="301"
+            column="50"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="        prefs.edit().putBoolean(PreferencesConstants.KEY_GDPR_CONSENT, granted).apply()"
+        errorLine2="        ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/manager/ConsentManager.kt"
+            line="19"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="            extraUriString != null -> android.net.Uri.parse(extraUriString)"
+        errorLine2="                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/FirstFragment.kt"
+            line="157"
+            column="39"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX function `createBitmap` instead?"
+        errorLine1="                        val combinedMask = Bitmap.createBitmap(displayBefore.width, displayBefore.height, Bitmap.Config.ARGB_8888)"
+        errorLine2="                                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/FirstFragment.kt"
+            line="247"
+            column="44"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX function `createBitmap` instead?"
+        errorLine1="        val resultBitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)"
+        errorLine2="                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/utils/InstagramExportUtils.kt"
+            line="60"
+            column="28"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toColorInt` instead?"
+        errorLine1="            color = Color.parseColor(&quot;#121212&quot;)"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/utils/InstagramExportUtils.kt"
+            line="65"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toColorInt` instead?"
+        errorLine1="            color = Color.parseColor(&quot;#121212&quot;)"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/utils/InstagramExportUtils.kt"
+            line="65"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX function `createBitmap` instead?"
+        errorLine1="        val slide1 = Bitmap.createBitmap(targetW, targetH, Bitmap.Config.ARGB_8888)"
+        errorLine2="                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/utils/InstagramExportUtils.kt"
+            line="121"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX function `createBitmap` instead?"
+        errorLine1="        val slide2 = Bitmap.createBitmap(targetW, targetH, Bitmap.Config.ARGB_8888)"
+        errorLine2="                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/utils/InstagramExportUtils.kt"
+            line="126"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX function `createBitmap` instead?"
+        errorLine1="        val frameBitmap = Bitmap.createBitmap(targetW, targetH, Bitmap.Config.ARGB_8888)"
+        errorLine2="                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/utils/InstagramExportUtils.kt"
+            line="157"
+            column="27"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX function `createBitmap` instead?"
+        errorLine1="        val maskBmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)"
+        errorLine2="                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/ui/brush/MaskBrushView.kt"
+            line="73"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX function `createBitmap` instead?"
+        errorLine1="            val scaled = Bitmap.createBitmap(outWidth, outHeight, Bitmap.Config.ARGB_8888)"
+        errorLine2="                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/utils/MaskOverlayUtils.kt"
+            line="35"
+            column="26"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX function `createBitmap` instead?"
+        errorLine1="            val resultBitmap = Bitmap.createBitmap("
+        errorLine2="                               ^">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/utils/MaskTouchUpUtils.kt"
+            line="38"
+            column="32"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX function `createBitmap` instead?"
+        errorLine1="        val merged = Bitmap.createBitmap(baseMask.width, baseMask.height, Bitmap.Config.ARGB_8888)"
+        errorLine2="                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/utils/MaskTouchUpUtils.kt"
+            line="54"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX function `createBitmap` instead?"
+        errorLine1="                val previewBitmap = Bitmap.createBitmap(origW, origH, Bitmap.Config.ARGB_8888)"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/ml/progressive/ProgressiveTileInpainter.kt"
+            line="129"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="            prefs.edit().putString(PreferencesConstants.KEY_DEVICE_UUID, uuid).apply()"
+        errorLine2="            ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/manager/QuotaManager.kt"
+            line="34"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="            prefs.edit()"
+        errorLine2="            ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/manager/QuotaManager.kt"
+            line="48"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="        prefs.edit().putInt(PreferencesConstants.KEY_USED_COUNT, used + 1).apply()"
+        errorLine2="        ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/manager/QuotaManager.kt"
+            line="76"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX function `createBitmap` instead?"
+        errorLine1="                    outputBitmap = Bitmap.createBitmap(origW, origH, Bitmap.Config.ARGB_8888)"
+        errorLine2="                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/ar/RealtimeArPipeline.kt"
+            line="112"
+            column="36"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX function `createBitmap` instead?"
+        errorLine1="            val maskBitmap = Bitmap.createBitmap("
+        errorLine2="                             ^">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/pipeline/StaticImagePipeline.kt"
+            line="138"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX function `createBitmap` instead?"
+        errorLine1="        val standard = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/utils/UriLoader.kt"
+            line="43"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="ClickableViewAccessibility"
+        message="Custom view `BeforeAfterSliderView` overrides `onTouchEvent` but not `performClick`"
+        errorLine1="    override fun onTouchEvent(event: MotionEvent): Boolean {"
+        errorLine2="                 ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/ui/BeforeAfterSliderView.kt"
+            line="133"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="ClickableViewAccessibility"
+        message="Custom view `MaskBrushView` overrides `onTouchEvent` but not `performClick`"
+        errorLine1="    override fun onTouchEvent(event: MotionEvent): Boolean {"
+        errorLine2="                 ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/ui/brush/MaskBrushView.kt"
+            line="100"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="ContentDescription"
+        message="Missing `contentDescription` attribute on image"
+        errorLine1="    &lt;ImageView"
+        errorLine2="     ~~~~~~~~~">
+        <location
+            file="src/main/res/layout/activity_ar_camera.xml"
+            line="16"
+            column="6"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="                        binding.tvProgressPercent.text = &quot;$percent%&quot;"
+        errorLine2="                                                         ~~~~~~~~~~~">
+        <location
+            file="src/main/java/de/konradvoelkel/android/autokorrektur/video/VideoPreviewActivity.kt"
+            line="103"
+            column="58"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;1.20&quot;, should use `@string` resource"
+        errorLine1="                        android:text=&quot;1.20&quot; />"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/fragment_first.xml"
+            line="329"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;0.020&quot;, should use `@string` resource"
+        errorLine1="                        android:text=&quot;0.020&quot; />"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/fragment_first.xml"
+            line="359"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;0.20&quot;, should use `@string` resource"
+        errorLine1="                        android:text=&quot;0.20&quot; />"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/fragment_first.xml"
+            line="389"
+            column="25"/>
+    </issue>
+
+</issues>

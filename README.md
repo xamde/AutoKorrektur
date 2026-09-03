@@ -81,15 +81,20 @@ This codebase serves as a benchmark for how far modern **Agentic AI** and **Vibe
 
 ## 🧪 Development & Testing
 
+The app ships as four product flavors (`core`/`plus`/`beta`/`full`, see
+[`docs/MVP_FEATURE_FLAG_PLAN.md`](docs/MVP_FEATURE_FLAG_PLAN.md)) — Gradle tasks are
+flavor-qualified accordingly. `full` reproduces the pre-flavor app exactly (every feature on, all
+ABIs) and is the day-to-day dev target; `core` is the Play Store candidate.
+
 ```bash
-# Build Debug APK
-./gradlew assembleDebug
+# Build Debug APK (dev target: full flavor, or drop "Full" to build all 4 flavors at once)
+./gradlew assembleFullDebug
 
 # Run Unit Tests (75+ passing)
-./gradlew testDebugUnitTest
+./gradlew testFullDebugUnitTest
 
-# Build Release APK (with ProGuard/R8 minification)
-./gradlew assembleRelease
+# Build Release APK (with ProGuard/R8 minification) — core is the Play Store flavor
+./gradlew assembleCoreRelease
 
 # Run Static Analysis (Detekt)
 ./gradlew detekt

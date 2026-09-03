@@ -43,9 +43,16 @@ uv run --directory backend python benchmark_ml.py
 
 ### B. Android Client Tests
 
+> As of `docs/MVP_FEATURE_FLAG_PLAN.md`, the app builds as four product flavors
+> (`core`/`plus`/`beta`/`full`), so `test`/`connected`/`lint` Gradle tasks need a flavor prefix —
+> bare `testDebugUnitTest`/`connectedDebugAndroidTest`/`lintDebug` no longer resolve. The
+> commands below target `full` (all features on, all ABIs) since it's the flavor that exercises
+> every code path; swap in `core`/`plus`/`beta` to test a specific tier, or drop the flavor
+> (`./gradlew test`, `./gradlew connectedAndroidTest`) to run all four.
+
 * **Run Fast JVM Unit Tests**:
   ```bash
-  ./gradlew :app:testDebugUnitTest
+  ./gradlew :app:testFullDebugUnitTest
   ```
 * **Run Static Code Analysis (Detekt)**:
   ```bash
@@ -53,11 +60,11 @@ uv run --directory backend python benchmark_ml.py
   ```
 * **Run On-Device Segmentation & Inpainting Benchmark**:
   ```bash
-  ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=de.konradvoelkel.android.autokorrektur.ml.MaskQualityBenchmarkTest,de.konradvoelkel.android.autokorrektur.ml.InpaintingQualityBenchmarkTest
+  ./gradlew :app:connectedFullDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=de.konradvoelkel.android.autokorrektur.ml.MaskQualityBenchmarkTest,de.konradvoelkel.android.autokorrektur.ml.InpaintingQualityBenchmarkTest
   ```
 * **Run Full Connected Test Suite**:
   ```bash
-  ./gradlew :app:connectedDebugAndroidTest
+  ./gradlew :app:connectedFullDebugAndroidTest
   ```
 
 ---
@@ -120,7 +127,7 @@ To eliminate discrepancies between clean lab benchmarks and messy real-world pho
 ### A. String Resource Localization Test (✅ Implemented)
 `app/src/test/java/de/konradvoelkel/android/autokorrektur/StringResourceLocalizationTest.kt`
 
-A pure-JVM test (no emulator, runs in `./gradlew :app:testDebugUnitTest`) that parses
+A pure-JVM test (no emulator, runs in `./gradlew :app:testFullDebugUnitTest`) that parses
 `values/strings.xml`, `values-de/strings.xml`, and `values-en/strings.xml` directly and asserts
 resource-resolution safety. It caught a real, pre-existing bug while being written: **51 of the
 121 keys in the default (locale-neutral) `strings.xml` are German text that disagrees with the

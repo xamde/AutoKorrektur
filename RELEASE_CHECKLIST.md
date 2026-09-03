@@ -28,8 +28,8 @@ This checklist tracks the tasks required to build, sign, and publish **AutoKorre
 - [ ] Short description (max 80 characters) and full store description.
 
 ## 5. Build Artifacts & Internal Testing
-- [ ] Build release Android App Bundle (`./gradlew :app:bundleRelease`).
-- [ ] Test release build locally (`./gradlew :app:installRelease`).
+- [ ] Build release Android App Bundle (`./gradlew :app:bundleCoreRelease` — `core` is the Play Store flavor, see `docs/MVP_FEATURE_FLAG_PLAN.md`).
+- [ ] Test release build locally (`./gradlew :app:installCoreRelease`).
 - [ ] Upload `.aab` to Google Play Console **Internal Testing** track.
 - [ ] Review Google Play Pre-launch Report (Firebase Test Lab compatibility, performance, and accessibility checks).
 - [ ] Promote to **Production** track.

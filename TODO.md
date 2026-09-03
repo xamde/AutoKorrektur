@@ -25,7 +25,7 @@
 - [ ] **REL-02. Privacy Policy Hosting**
   - Publish [PRIVACY_POLICY.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/PRIVACY_POLICY.md) to GitHub Pages or project website.
 - [ ] **REL-03. Release App Bundle Generation**
-  - Build signed `.aab` bundle via `./gradlew bundleRelease` and upload to Play Console Internal Testing track.
+  - Build signed `.aab` bundle via `./gradlew bundleCoreRelease` (`core` is the Play Store flavor) and upload to Play Console Internal Testing track.
 
 ---
 
