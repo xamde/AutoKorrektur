@@ -38,12 +38,12 @@ class YoloServiceImpl(
     override val isInitialized: Boolean
         get() = engine.isInitialized
 
-    override suspend fun initialize(modelName: String, useFP16: Boolean, config: YoloConfig) {
+    override suspend fun initialize(modelName: String, config: YoloConfig) {
         mutex.withLock {
             currentConfig = config
-            engine.initialize(modelName, useFP16)
+            engine.initialize(modelName)
         }
-        AppLogger.debug("YoloServiceImpl initialized with ${modelName}, fp16=$useFP16")
+        AppLogger.debug("YoloServiceImpl initialized with $modelName")
     }
 
     override suspend fun infer(

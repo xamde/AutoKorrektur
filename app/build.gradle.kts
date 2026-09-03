@@ -34,6 +34,17 @@ android {
         versionName = gitVersionNameProvider.getOrElse("1.0.0")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // MVP tier feature flags (see docs/MVP_FEATURE_FLAG_PLAN.md).
+        // Step 2 of the migration: hardcoded true here, no flavors yet, zero behavior change.
+        // Call sites will be gated one flag at a time before these become per-flavor values.
+        buildConfigField("boolean", "FEATURE_LIVE_AR", "true")
+        buildConfigField("boolean", "FEATURE_VIDEO_SNIPPETS", "true")
+        buildConfigField("boolean", "FEATURE_CLOUD_SDXL", "true")
+        buildConfigField("boolean", "FEATURE_HIGH_RES_PROGRESSIVE", "true")
+        buildConfigField("boolean", "FEATURE_MANUAL_MASK_BRUSH", "true")
+        buildConfigField("boolean", "FEATURE_BATCH_PROCESSING", "true")
+        buildConfigField("boolean", "FEATURE_EXTRA_EXPORT_LAYOUTS", "true")
     }
 
     val keystorePropertiesFile = rootProject.file("keystore.properties")
@@ -57,6 +68,10 @@ android {
             enableUnitTestCoverage = true
             enableAndroidTestCoverage = true
             buildConfigField("String", "BACKEND_URL", "\"http://127.0.0.1:8000/v1/inpaint\"")
+            // Evaluation-mode dev sliders (mask upscale/downshift, score threshold, model
+            // chooser) — never a real end-user feature, so this stays debug-only regardless
+            // of tier flavor.
+            buildConfigField("boolean", "FEATURE_EVALUATION_MODE", "true")
         }
         release {
             isMinifyEnabled = true
@@ -67,6 +82,7 @@ android {
                 "BACKEND_URL",
                 "\"https://api.autokorrektur.example.com/v1/inpaint\""
             )
+            buildConfigField("boolean", "FEATURE_EVALUATION_MODE", "false")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

@@ -19,7 +19,7 @@ class YoloTFLiteEngineInstrumentedTest : AndroidInstrumentedBaseTest() {
     fun testYoloTFLiteEngine_lifecycleAndInference() = runBlocking {
         val engine = YoloTFLiteEngine(appContext)
         try {
-            engine.initialize(modelName = "yolo11s", useFP16 = false)
+            engine.initialize(modelName = "yolo11s")
             assertTrue(engine.isInitialized)
 
             // Create 640x640 RGB Mat

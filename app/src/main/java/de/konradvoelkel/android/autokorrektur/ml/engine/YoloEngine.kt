@@ -14,7 +14,7 @@ interface YoloEngine {
     val isClosed: Boolean
 
     @Throws(ModelLoadException::class)
-    suspend fun initialize(modelName: String = "yolo11s", useFP16: Boolean = false)
+    suspend fun initialize(modelName: String = "yolo11s")
 
     @Throws(InferenceException::class)
     fun run(rgbMat: Mat): RawOutputs

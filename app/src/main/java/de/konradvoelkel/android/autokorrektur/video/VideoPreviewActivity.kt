@@ -85,7 +85,7 @@ class VideoPreviewActivity : AppCompatActivity() {
             try {
                 val yoloService = YoloServiceImpl(YoloTFLiteEngine(this@VideoPreviewActivity))
                 val inpaintingEngine = MiGanInference(this@VideoPreviewActivity)
-                yoloService.initialize("yolo11s", useFP16 = false)
+                yoloService.initialize("yolo11s")
                 inpaintingEngine.initialize()
 
                 val processor = VideoInpaintProcessor(yoloService, inpaintingEngine)

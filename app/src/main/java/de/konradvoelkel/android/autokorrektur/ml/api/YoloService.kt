@@ -10,7 +10,6 @@ interface YoloService {
 
     suspend fun initialize(
         modelName: String = "yolo11s",
-        useFP16: Boolean = false,
         config: YoloConfig = YoloConfig()
     )
 
