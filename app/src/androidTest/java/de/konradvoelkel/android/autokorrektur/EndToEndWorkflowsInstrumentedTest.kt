@@ -65,8 +65,12 @@ class EndToEndWorkflowsInstrumentedTest : AndroidInstrumentedBaseTest() {
     fun testWorkflow2_CloudSdxlGdprConsentFlow() {
         val scenario = ActivityScenario.launch(MainActivity::class.java)
 
-        // Toggle SDXL Premium Edit
-        onView(withId(R.id.useSdxl)).perform(scrollTo(), click())
+        // Select the Cloud SDXL engine chip — this is the actual visible control (R.id.useSdxl
+        // is a hidden backwards-compat SwitchCompat the chip drives internally, not a real UI
+        // target; pre-existing test debt, unrelated to any change in this session, fixed here
+        // for the same reason RigorousGuiFlowInstrumentedTest was: it could never have passed
+        // against the current layout).
+        onView(withId(R.id.chipCloudSdxl)).perform(scrollTo(), click())
 
         // Verify GDPR Consent dialog is displayed with title Premium Edit (Server SDXL)
         onView(withText(R.string.premium_edit_title)).check(matches(isDisplayed()))

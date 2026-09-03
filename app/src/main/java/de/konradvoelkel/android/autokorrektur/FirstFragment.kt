@@ -76,7 +76,7 @@ class FirstFragment : Fragment() {
         if (result.resultCode == Activity.RESULT_OK) {
             val uri = result.data?.data
             if (uri != null) {
-                viewModel.setSelectedImageUri(uri)
+                onImageSelected(uri)
             } else {
                 showSnackbar(getString(R.string.error_gallery_failed))
             }
@@ -96,7 +96,7 @@ class FirstFragment : Fragment() {
     ) { success ->
         if (success) {
             pendingCameraUri?.let { uri ->
-                viewModel.setSelectedImageUri(uri)
+                onImageSelected(uri)
             }
         }
     }
@@ -159,8 +159,40 @@ class FirstFragment : Fragment() {
             else -> null
         }
         targetUri?.let { uri ->
-            viewModel.setSelectedImageUri(uri)
+            onImageSelected(uri)
         }
+    }
+
+    /**
+     * Records the newly selected/captured image and, when this tier offers no real inpainting
+     * engine choice (see [autoStartInferenceEnabled]), immediately kicks off processing instead
+     * of waiting for a manual Start tap — see docs/MVP_FEATURE_FLAG_PLAN.md §1 ("no screen the
+     * user must configure before their first result").
+     */
+    private fun onImageSelected(uri: Uri) {
+        viewModel.setSelectedImageUri(uri)
+        if (autoStartInferenceEnabled) {
+            startInferenceNow()
+        }
+    }
+
+    /**
+     * True when this build's tier offers no real choice between inpainting engines (only Fast
+     * On-Device is available — see [applyFeatureFlags]), so there's nothing for the user to
+     * decide before processing starts.
+     */
+    private val autoStartInferenceEnabled: Boolean
+        get() = !BuildConfig.FEATURE_HIGH_RES_PROGRESSIVE && !BuildConfig.FEATURE_CLOUD_SDXL
+
+    private fun startInferenceNow() {
+        viewModel.startInference(
+            downscaleMp = getDownscaleMpFromSpinner(),
+            maskUpscale = getMaskUpscaleFromSlider(),
+            scoreThreshold = getScoreThresholdFromSlider(),
+            useServerSdxl = binding.useSdxl.isChecked,
+            downshift = getDownshiftFromSlider(),
+            segModel = binding.segModel.selectedItem.toString()
+        )
     }
 
     private fun observeViewModel() {
@@ -191,9 +223,14 @@ class FirstFragment : Fragment() {
             }
 
             is MainUiState.Loading -> {
-                binding.startInference.isEnabled = false
-                binding.startInference.text =
-                    getString(R.string.loading_status, state.stage, state.percent)
+                val statusText = getString(R.string.loading_status, state.stage, state.percent)
+                if (autoStartInferenceEnabled) {
+                    binding.processingStatusText.visibility = View.VISIBLE
+                    binding.processingStatusText.text = statusText
+                } else {
+                    binding.startInference.isEnabled = false
+                    binding.startInference.text = statusText
+                }
                 binding.fileSelect.isEnabled = false
                 binding.batchMode.isEnabled = false
 
@@ -279,10 +316,14 @@ class FirstFragment : Fragment() {
                 displayImage(uri, getString(R.string.label_image_numbered, index + 1))
             }
             binding.fileSelect.text = getString(R.string.select_multiple_images)
+            // Camera capture doesn't fit batch multi-select; fileSelect alone (as the
+            // multi-image gallery picker) takes over the whole row.
+            binding.btnTakePhoto.visibility = View.GONE
         } else {
             clearImagesContainer()
             props.selectedImageUri?.let { displayImage(it, getString(R.string.label_original)) }
             binding.fileSelect.text = getString(R.string.select_image)
+            binding.btnTakePhoto.visibility = View.VISIBLE
         }
         if (viewModel.uiState.value !is MainUiState.Success) {
             binding.beforeAfterSliderView.visibility = View.GONE
@@ -311,6 +352,9 @@ class FirstFragment : Fragment() {
     }
 
     private fun updateInferenceButtonState(props: MainUiProperties) {
+        // Not currently processing (Idle/Success) — nothing to show in the auto-start tier's
+        // status slot; startInference itself stays permanently hidden there (applyFeatureFlags).
+        binding.processingStatusText.visibility = View.GONE
         if (props.isBatchMode) {
             binding.startInference.isEnabled = props.selectedImageUris.isNotEmpty()
             binding.startInference.text = if (props.selectedImageUris.isNotEmpty()) {
@@ -326,9 +370,7 @@ class FirstFragment : Fragment() {
 
     /**
      * Hides UI entry points for features not present in this build's tier
-     * (see docs/MVP_FEATURE_FLAG_PLAN.md). All BuildConfig.FEATURE_* flags are currently
-     * hardcoded true (no product flavors yet — that's migration step 4), so this is a no-op
-     * today; it exists so the tier cut in step 4 is a Gradle-only change with no further UI code.
+     * (see docs/MVP_FEATURE_FLAG_PLAN.md).
      */
     private fun applyFeatureFlags() {
         if (!BuildConfig.FEATURE_LIVE_AR) {
@@ -348,6 +390,25 @@ class FirstFragment : Fragment() {
         }
         if (!BuildConfig.FEATURE_EVALUATION_MODE) {
             binding.evaluationModeContainer.visibility = View.GONE
+        }
+        // Fast On-Device is always available; High-Res and Cloud are the only other options.
+        // A chip-group "choice" between one always-checked pill and nothing else isn't a real
+        // choice, so don't show it as one — this is exactly the plan's own "no engine picker
+        // unless there's something to pick" principle (docs/MVP_FEATURE_FLAG_PLAN.md §1).
+        if (!BuildConfig.FEATURE_HIGH_RES_PROGRESSIVE && !BuildConfig.FEATURE_CLOUD_SDXL) {
+            binding.premiumEditCard.visibility = View.GONE
+        }
+        // No engine choice to make before starting (see autoStartInferenceEnabled) means the
+        // manual Start button isn't needed either — processing begins as soon as an image is
+        // selected (onImageSelected), and processingStatusText carries progress feedback instead.
+        if (autoStartInferenceEnabled) {
+            binding.startInference.visibility = View.GONE
+        }
+        // The Options panel's only feature not already covered by a dedicated flag above is
+        // batch processing — with it off, the panel has nothing left worth surfacing an entry
+        // point for.
+        if (!BuildConfig.FEATURE_BATCH_PROCESSING) {
+            binding.optionsButton.visibility = View.GONE
         }
     }
 
@@ -379,8 +440,12 @@ class FirstFragment : Fragment() {
             if (binding.batchMode.isChecked) {
                 multipleImagePickerLauncher.launch("image/*")
             } else {
-                selectImage()
+                chooseFromGallery()
             }
+        }
+
+        binding.btnTakePhoto.setOnClickListener {
+            takePhoto()
         }
 
         binding.btnMaskBrush.setOnClickListener {
@@ -409,14 +474,7 @@ class FirstFragment : Fragment() {
                     )
                     sheet.onMaskApplied = { _ ->
                         showSnackbar("Maske angepasst 🖌️ Inpainting wird gestartet...")
-                        viewModel.startInference(
-                            downscaleMp = getDownscaleMpFromSpinner(),
-                            maskUpscale = getMaskUpscaleFromSlider(),
-                            scoreThreshold = getScoreThresholdFromSlider(),
-                            useServerSdxl = binding.useSdxl.isChecked,
-                            downshift = getDownshiftFromSlider(),
-                            segModel = binding.segModel.selectedItem.toString()
-                        )
+                        startInferenceNow()
                     }
                     sheet.show(childFragmentManager, "MaskBrushBottomSheet")
                 } catch (e: Exception) {
@@ -428,14 +486,7 @@ class FirstFragment : Fragment() {
         }
 
         binding.startInference.setOnClickListener {
-            viewModel.startInference(
-                downscaleMp = getDownscaleMpFromSpinner(),
-                maskUpscale = getMaskUpscaleFromSlider(),
-                scoreThreshold = getScoreThresholdFromSlider(),
-                useServerSdxl = binding.useSdxl.isChecked,
-                downshift = getDownshiftFromSlider(),
-                segModel = binding.segModel.selectedItem.toString()
-            )
+            startInferenceNow()
         }
 
         binding.download.setOnClickListener {
@@ -556,23 +607,6 @@ class FirstFragment : Fragment() {
         binding.segModel.setSelection(1)
     }
 
-    private fun selectImage() {
-        val options = arrayOf(
-            getString(R.string.take_photo),
-            getString(R.string.choose_from_gallery),
-            getString(R.string.cancel)
-        )
-        AlertDialog.Builder(requireContext())
-            .setTitle(R.string.photo_selection_title)
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> takePhoto()
-                    1 -> chooseFromGallery()
-                }
-            }
-            .show()
-    }
-
     private fun takePhoto() {
         if (ContextCompat.checkSelfPermission(
                 requireContext(),
@@ -604,7 +638,7 @@ class FirstFragment : Fragment() {
     private val pickVisualMediaLauncher =
         registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) {
-            viewModel.setSelectedImageUri(uri)
+            onImageSelected(uri)
         }
     }
 
@@ -712,6 +746,23 @@ class FirstFragment : Fragment() {
         }
         val inpainted = state.result.inpaintedBitmap ?: return
         val currentOriginalBitmap = state.result.originalBitmap
+
+        if (!BuildConfig.FEATURE_EXTRA_EXPORT_LAYOUTS) {
+            // Only one export shape exists in this tier — the bottom sheet's layout/ratio
+            // picker would be a choice with a single option, i.e. not a real choice, so skip
+            // straight to composing and sharing it (docs/MVP_FEATURE_FLAG_PLAN.md §1).
+            viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    val uri = de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils
+                        .exportSplitCardForSharing(requireContext(), currentOriginalBitmap, inpainted)
+                    de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils
+                        .shareImage(requireContext(), uri, getString(R.string.share_chooser_title))
+                } catch (e: Exception) {
+                    showSnackbar(getString(R.string.export_error_failed, e.message))
+                }
+            }
+            return
+        }
 
         val sheet = de.konradvoelkel.android.autokorrektur.ui.export.InstagramExportBottomSheet.newInstance(
             before = currentOriginalBitmap,

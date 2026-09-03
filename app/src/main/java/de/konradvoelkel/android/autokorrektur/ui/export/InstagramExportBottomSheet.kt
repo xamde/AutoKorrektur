@@ -54,13 +54,15 @@ class InstagramExportBottomSheet : BottomSheetDialogFragment() {
 
     /**
      * MVP tier ships exactly one export shape (the split card, one aspect ratio) — see
-     * docs/MVP_FEATURE_FLAG_PLAN.md §2. Currently a no-op: FEATURE_EXTRA_EXPORT_LAYOUTS is
-     * hardcoded true until migration step 4 introduces product flavors.
+     * docs/MVP_FEATURE_FLAG_PLAN.md §2. With only one layout and one ratio possible, the
+     * picker rows themselves aren't a real choice either — hide the whole row (label + chip
+     * group), not just the extra chips inside it, so `core` doesn't show a single-option
+     * "choice" that can't do anything except stay selected.
      */
     private fun applyFeatureFlags() {
         if (!de.konradvoelkel.android.autokorrektur.BuildConfig.FEATURE_EXTRA_EXPORT_LAYOUTS) {
-            binding.chipCarouselPair.visibility = View.GONE
-            binding.chipAnimatedVideo.visibility = View.GONE
+            binding.tvExportLayoutTypeLabel.visibility = View.GONE
+            binding.chipGroupLayout.visibility = View.GONE
             binding.tvExportAspectRatioLabel.visibility = View.GONE
             binding.chipGroupRatio.visibility = View.GONE
         }
@@ -123,12 +125,10 @@ class InstagramExportBottomSheet : BottomSheetDialogFragment() {
                     }
 
                     else -> { // Split Card
-                        val splitBitmap = InstagramExportUtils.createComparisonBitmap(before, after, ratio)
-                        val imageUri = InstagramExportUtils.saveBitmapForSharing(requireContext(), splitBitmap)
-                        splitBitmap.recycle()
+                        val imageUri = InstagramExportUtils.exportSplitCardForSharing(requireContext(), before, after, ratio)
 
                         withContext(Dispatchers.Main) {
-                            shareSingleImage(imageUri)
+                            InstagramExportUtils.shareImage(requireContext(), imageUri, getString(R.string.share_chooser_title))
                             dismiss()
                         }
                     }
@@ -141,29 +141,6 @@ class InstagramExportBottomSheet : BottomSheetDialogFragment() {
                     binding.btnExportInstagram.text = getString(R.string.btn_export_share)
                 }
             }
-        }
-    }
-
-    private fun shareSingleImage(uri: Uri) {
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "image/jpeg"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            setPackage("com.instagram.android")
-        }
-
-        if (intent.resolveActivity(requireContext().packageManager) != null) {
-            startActivity(intent)
-        } else {
-            val chooser = Intent.createChooser(
-                Intent(Intent.ACTION_SEND).apply {
-                    type = "image/jpeg"
-                    putExtra(Intent.EXTRA_STREAM, uri)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                },
-                "Bild teilen via"
-            )
-            startActivity(chooser)
         }
     }
 
