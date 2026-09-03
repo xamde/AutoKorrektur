@@ -47,11 +47,16 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
+      # Product flavors were introduced in docs/MVP_FEATURE_FLAG_PLAN.md; CI validates the
+      # `full` flavor (all FEATURE_* flags true, all ABIs) since it's the only one that
+      # exercises every code path and matches the pre-flavor app exactly — no coverage
+      # regression from adding flavors. `core` (the actual Play Store candidate) is validated
+      # separately below via its release bundle build.
       - name: Run Android Lint
-        run: ./gradlew lintDebug
+        run: ./gradlew lintFullDebug
 
       - name: Run Android Unit Tests & Generate JaCoCo Coverage
-        run: ./gradlew testDebugUnitTest jacocoTestReport
+        run: ./gradlew testFullDebugUnitTest jacocoTestReport
 
       - name: Upload Test & Coverage Reports
         if: always()
@@ -61,7 +66,7 @@ jobs:
           path: |
             app/build/reports/tests/
             app/build/reports/jacoco/
-            app/build/reports/lint-results-debug.html
+            app/build/reports/lint-results-fullDebug.html
           if-no-files-found: ignore
 
       - name: Enable KVM group perms for Hardware Acceleration
@@ -79,15 +84,15 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: ./gradlew connectedDebugAndroidTest
+          script: ./gradlew connectedFullDebugAndroidTest
 
       - name: Build Production Release App Bundle (AAB)
-        run: ./gradlew :app:bundleRelease
+        run: ./gradlew :app:bundleCoreRelease
 
       - name: Upload Release App Bundle
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: release-app-bundle
-          path: app/build/outputs/bundle/release/*.aab
+          path: app/build/outputs/bundle/coreRelease/*.aab
           if-no-files-found: ignore

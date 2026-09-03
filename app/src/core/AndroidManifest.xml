@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  core/plus flavor override (identical file, see app/src/plus/AndroidManifest.xml): FEATURE_LIVE_AR
+  is false in these tiers (see app/build.gradle.kts, docs/MVP_FEATURE_FLAG_PLAN.md), so Studio
+  (MainActivity) is the app's entry point instead of the AR camera. Swaps which activity carries
+  the MAIN/LAUNCHER intent-filter; ArCameraActivity itself stays in the APK (per the plan, cut
+  flags remove reachability, not code) but is no longer externally launchable.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <activity
+            android:name=".ar.ArCameraActivity"
+            android:exported="false"
+            tools:node="merge"
+            tools:replace="android:exported">
+            <intent-filter tools:node="removeAll" />
+        </activity>
+
+        <activity
+            android:name="MainActivity"
+            android:exported="true"
+            tools:node="merge"
+            tools:replace="android:exported">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
