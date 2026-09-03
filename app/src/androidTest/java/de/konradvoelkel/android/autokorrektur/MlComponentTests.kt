@@ -66,30 +66,6 @@ class MlComponentTests :
     }
 
     @Test
-    fun testYoloServiceModels() = kotlinx.coroutines.runBlocking {
-        try {
-            val yoloService1 = YoloServiceImpl(YoloTFLiteEngine(appContext))
-            try {
-                yoloService1.initialize("yolo11s", useFP16 = true)
-            } catch (_: Exception) {
-            } finally {
-                yoloService1.close()
-            }
-
-            val yoloService2 = YoloServiceImpl(YoloTFLiteEngine(appContext))
-            try {
-                yoloService2.initialize("yolo11s", useFP16 = false)
-            } catch (e: Exception) {
-                fail("YoloService (FP32) initialization failed: ${e.message}")
-            } finally {
-                yoloService2.close()
-            }
-        } catch (e: Exception) {
-            fail("YoloService creation should not crash: ${e.message}")
-        }
-    }
-
-    @Test
     fun testMiGanOrderInCHWAsBytes() {
         val miGanInference = MiGanInference(appContext)
         assertNotNull("MiGanInference should not be null", miGanInference)

@@ -47,7 +47,7 @@ class RealtimeArPipeline(
      */
     suspend fun initialize(modelName: String = "yolo11s") {
         if (_isInitialized) return
-        yoloService.initialize(modelName = modelName, useFP16 = false)
+        yoloService.initialize(modelName = modelName)
         _isInitialized = true
         AppLogger.info("RealtimeArPipeline: YOLO initialized with model $modelName")
     }

@@ -37,3 +37,8 @@ __pycache__/
 .vscode/
 .coverage
 
+# Release signing — NEVER commit these to a public repo
+/keystore.properties
+*.keystore
+*.jks
+

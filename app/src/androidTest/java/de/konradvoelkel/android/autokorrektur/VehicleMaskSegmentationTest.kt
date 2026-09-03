@@ -31,7 +31,7 @@ class VehicleMaskSegmentationTest : AndroidInstrumentedBaseTest() {
     @Test
     fun testMaskSegmentationOnCorpusImages() = kotlinx.coroutines.runBlocking {
         val yoloService = YoloServiceImpl(YoloTFLiteEngine(appContext))
-        yoloService.initialize("yolo11s", useFP16 = false)
+        yoloService.initialize("yolo11s")
 
         val imageProcessor = ImageProcessor(appContext)
 
@@ -78,7 +78,7 @@ class VehicleMaskSegmentationTest : AndroidInstrumentedBaseTest() {
     @Test
     fun testScoreThresholdSensitivity() = kotlinx.coroutines.runBlocking {
         val yoloService = YoloServiceImpl(YoloTFLiteEngine(appContext))
-        yoloService.initialize("yolo11s", useFP16 = false)
+        yoloService.initialize("yolo11s")
 
         val testContext = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().context
         val stream = testContext.assets.open("sample_street_with_car.jpg")

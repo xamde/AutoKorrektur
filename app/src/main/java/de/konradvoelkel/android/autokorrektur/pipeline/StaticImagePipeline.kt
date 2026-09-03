@@ -68,7 +68,7 @@ class StaticImagePipeline(
         val modelName = "yolo11s"
         AppLogger.info("StaticImagePipeline initializing with model: $modelName")
 
-        yoloService.initialize(modelName = modelName, useFP16 = false)
+        yoloService.initialize(modelName = modelName)
         miGanInference.initialize()
     }
 

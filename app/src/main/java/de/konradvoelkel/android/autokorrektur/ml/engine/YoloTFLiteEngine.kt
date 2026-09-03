@@ -54,18 +54,14 @@ class YoloTFLiteEngine(private val context: Context) : YoloEngine {
         get() = interpreter == null
 
     @Throws(ModelLoadException::class)
-    override suspend fun initialize(modelName: String, useFP16: Boolean) =
+    override suspend fun initialize(modelName: String) =
         withContext(Dispatchers.IO) {
         synchronized(lock) {
             if (isInitialized) {
                 AppLogger.debug("YoloTFLiteEngine already initialized")
                 return@withContext
             }
-            val modelFile = if (useFP16) {
-                "model/${modelName}-seg_saved_model/${modelName}-seg_float16.tflite"
-            } else {
-                "model/${modelName}-seg_saved_model/${modelName}-seg_float32.tflite"
-            }
+            val modelFile = "model/${modelName}-seg_saved_model/${modelName}-seg_float32.tflite"
             try {
                 val assetFd = context.assets.openFd(modelFile)
                 val fileChannel = java.io.FileInputStream(assetFd.fileDescriptor).channel

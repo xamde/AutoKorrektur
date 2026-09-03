@@ -36,7 +36,7 @@ class MiGanDisplayBitmapPipelineTest : AndroidInstrumentedBaseTest() {
     fun setUp() = kotlinx.coroutines.runBlocking {
         assertTrue("OpenCV initialization failed", OpenCVLoader.initLocal())
         yoloService = YoloServiceImpl(YoloTFLiteEngine(appContext))
-        yoloService.initialize("yolo11s", useFP16 = false)
+        yoloService.initialize("yolo11s")
         miGanInference = MiGanInference(appContext)
         miGanInference.initialize()
         imageProcessor = ImageProcessor(appContext)
