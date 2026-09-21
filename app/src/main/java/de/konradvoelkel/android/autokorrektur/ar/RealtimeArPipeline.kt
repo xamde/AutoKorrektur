@@ -3,6 +3,7 @@ package de.konradvoelkel.android.autokorrektur.ar
 import android.graphics.Bitmap
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloService
 import de.konradvoelkel.android.autokorrektur.ml.preprocess.DefaultPreprocessor
+import de.konradvoelkel.android.autokorrektur.telemetry.Telemetry
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +41,13 @@ class RealtimeArPipeline(
     private var lastFrameTimeNs = 0L
     private var smoothedFps = 30f
 
+    // Session counters for the `ar_session` diagnostics line written by close() (opt-in).
+    private val sessionStartNs = System.nanoTime()
+    private val framesProcessed = java.util.concurrent.atomic.AtomicInteger(0)
+    private val framesDropped = java.util.concurrent.atomic.AtomicInteger(0)
+    private val framesFailed = java.util.concurrent.atomic.AtomicInteger(0)
+    private val inferenceNsTotal = java.util.concurrent.atomic.AtomicLong(0L)
+
     private var reusableOutputBitmap: Bitmap? = null
 
     /**
@@ -63,12 +71,14 @@ class RealtimeArPipeline(
 
         if (!isProcessingFrame.compareAndSet(false, true)) {
             // Frame dropped cleanly to preserve camera preview framerate
+            framesDropped.incrementAndGet()
             return
         }
 
         val frameCopy = frameRgbaMat.clone()
 
         pipelineScope.launch {
+            val frameStartNs = System.nanoTime()
             try {
                 val origW = frameCopy.cols()
                 val origH = frameCopy.rows()
@@ -128,7 +138,10 @@ class RealtimeArPipeline(
 
                 // 8. Dispatch to listener
                 onFrameRendered?.invoke(outputBitmap, smoothedFps)
+                framesProcessed.incrementAndGet()
+                inferenceNsTotal.addAndGet(System.nanoTime() - frameStartNs)
             } catch (e: Exception) {
+                framesFailed.incrementAndGet()
                 AppLogger.error("RealtimeArPipeline: Frame processing failed", e)
             } finally {
                 frameCopy.release()
@@ -149,6 +162,19 @@ class RealtimeArPipeline(
         if (_isClosed) return
         _isClosed = true
         pipelineScope.cancel()
+        val processed = framesProcessed.get()
+        val durationMs = (System.nanoTime() - sessionStartNs) / 1_000_000
+        Telemetry.record(
+            "ar_session",
+            mapOf(
+                "duration_ms" to durationMs,
+                "frames_processed" to processed,
+                "frames_dropped" to framesDropped.get(),
+                "frames_failed" to framesFailed.get(),
+                "avg_frame_ms" to if (processed > 0) inferenceNsTotal.get() / 1_000_000 / processed else null,
+                "avg_fps" to if (durationMs > 0) processed * 1000.0 / durationMs else null,
+            )
+        )
         accumulator.close()
         yoloService.close()
         AppLogger.info("RealtimeArPipeline: Released all resources")

@@ -9,6 +9,7 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import de.konradvoelkel.android.autokorrektur.databinding.ActivityMainBinding
+import de.konradvoelkel.android.autokorrektur.ui.diagnostics.DiagnosticsDialog
 
 /**
  * Main application host activity managing the toolbar, navigation graph, and global option menus.
@@ -52,6 +53,10 @@ class MainActivity : AppCompatActivity() {
                 showAboutDialog()
                 true
             }
+            R.id.action_diagnostics -> {
+                DiagnosticsDialog.show(this)
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }
@@ -59,7 +64,7 @@ class MainActivity : AppCompatActivity() {
     private fun showAboutDialog() {
         com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
             .setTitle(R.string.about_dialog_title)
-            .setMessage(R.string.about_dialog_content)
+            .setMessage(getString(R.string.about_dialog_content, BuildConfig.VERSION_NAME))
             .setPositiveButton(android.R.string.ok, null)
             .show()
     }

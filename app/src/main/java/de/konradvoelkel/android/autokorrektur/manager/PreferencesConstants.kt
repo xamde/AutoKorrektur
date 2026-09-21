@@ -9,4 +9,6 @@ object PreferencesConstants {
     const val KEY_DEVICE_UUID = "device_uuid"
     const val KEY_QUOTA_DATE = "sdxl_quota_date"
     const val KEY_USED_COUNT = "sdxl_quota_used"
+    const val KEY_TELEMETRY_ENABLED = "telemetry_enabled"
+    const val KEY_TELEMETRY_INSTALL_ID = "telemetry_install_id"
 }

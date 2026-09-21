@@ -2,6 +2,8 @@ package de.konradvoelkel.android.autokorrektur.video
 
 import android.graphics.Bitmap
 import android.media.Image
+import de.konradvoelkel.android.autokorrektur.pipeline.PipelineStage
+import de.konradvoelkel.android.autokorrektur.telemetry.Telemetry
 import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
@@ -56,12 +58,16 @@ class VideoInpaintProcessor(
         inputFile: File,
         outputFile: File,
         maxFps: Int = 15,
-        onProgress: ((stage: String, percent: Int) -> Unit)? = null
+        onProgress: ((stage: PipelineStage, percent: Int) -> Unit)? = null
     ): VideoProcessingResult = withContext(Dispatchers.Default) {
         val retriever = MediaMetadataRetriever()
         val accumulator = TemporalBackgroundAccumulator()
         val preprocessor = DefaultPreprocessor()
         val extractor = MediaExtractor()
+        val startNs = System.nanoTime()
+        var framesDone = 0
+        var success = false
+        var errorName: String? = null
 
         try {
             retriever.setDataSource(inputFile.absolutePath)
@@ -89,7 +95,7 @@ class VideoInpaintProcessor(
             val totalFrames = ((durationMs / frameIntervalMs).toInt()).coerceIn(1, 300)
 
             AppLogger.info("Starting VideoInpaintProcessor: $totalFrames frames, ${targetW}x${targetH} @ ${maxFps}fps")
-            onProgress?.invoke("Preparing Video Encoder", 2)
+            onProgress?.invoke(PipelineStage.PREPARING_ENCODER, 2)
 
             val encoder = VideoEncoder(
                 width = targetW,
@@ -218,7 +224,7 @@ class VideoInpaintProcessor(
                                     nextExpectedTimeUs += frameIntervalUs
 
                                     val percent = (5 + (decodedFrameCount * 90 / totalFrames)).coerceAtMost(98)
-                                    onProgress?.invoke("Inpainting Frame $decodedFrameCount/$totalFrames", percent)
+                                    onProgress?.invoke(PipelineStage.inpaintingFrame(decodedFrameCount, totalFrames), percent)
                                 }
                             }
                             codec.releaseOutputBuffer(outIndex, false)
@@ -226,7 +232,7 @@ class VideoInpaintProcessor(
                     }
                 }
 
-                onProgress?.invoke("Finalizing MP4 Video", 99)
+                onProgress?.invoke(PipelineStage.FINALIZING_VIDEO, 99)
                 encoder.finish()
             } finally {
                 encoder.release()
@@ -234,7 +240,9 @@ class VideoInpaintProcessor(
                 codec.release()
             }
 
-            onProgress?.invoke("Video Inpainting Complete", 100)
+            onProgress?.invoke(PipelineStage.VIDEO_COMPLETED, 100)
+            framesDone = decodedFrameCount
+            success = true
             return@withContext VideoProcessingResult(
                 outputFile = outputFile,
                 totalFrames = decodedFrameCount,
@@ -242,10 +250,23 @@ class VideoInpaintProcessor(
                 width = targetW,
                 height = targetH
             )
+        } catch (e: Exception) {
+            errorName = e.javaClass.simpleName
+            throw e
         } finally {
             retriever.release()
             extractor.release()
             accumulator.close()
+            Telemetry.record(
+                "video_inpaint",
+                mapOf(
+                    "total_ms" to (System.nanoTime() - startNs) / 1_000_000,
+                    "frames" to framesDone,
+                    "max_fps" to maxFps,
+                    "success" to success,
+                    "error" to errorName,
+                )
+            )
         }
     }
 

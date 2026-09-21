@@ -14,6 +14,7 @@ import de.konradvoelkel.android.autokorrektur.ml.engine.YoloTFLiteEngine
 import de.konradvoelkel.android.autokorrektur.ml.config.YoloConfig
 import de.konradvoelkel.android.autokorrektur.ml.progressive.ProgressiveTileInpainter
 import de.konradvoelkel.android.autokorrektur.model.InpaintingQualityMode
+import de.konradvoelkel.android.autokorrektur.telemetry.Telemetry
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import de.konradvoelkel.android.autokorrektur.utils.DevicePerformanceHelper
 import kotlinx.coroutines.Dispatchers
@@ -83,7 +84,7 @@ class StaticImagePipeline(
      * @param useServerSdxl True to use remote SDXL, false for on-device MI-GAN
      * @param qualityMode Inpainting computation and resolution mode
      * @param onMaskGenerated Optional callback receiving the intermediate mask Bitmap
-     * @param onProgressUpdate Optional progress reporter callback
+     * @param onProgressUpdate Optional progress reporter callback (localizable [PipelineStage], percent)
      * @param onIntermediateInpaintUpdate Optional callback for progressive inpainting preview updates
      */
     suspend fun processImage(
@@ -94,22 +95,32 @@ class StaticImagePipeline(
         useServerSdxl: Boolean = false,
         qualityMode: InpaintingQualityMode = if (useServerSdxl) InpaintingQualityMode.CLOUD_SDXL else InpaintingQualityMode.FAST_PREVIEW,
         onMaskGenerated: ((Bitmap) -> Unit)? = null,
-        onProgressUpdate: ((stage: String, percent: Int) -> Unit)? = null,
+        onProgressUpdate: ((stage: PipelineStage, percent: Int) -> Unit)? = null,
         onIntermediateInpaintUpdate: ((Bitmap) -> Unit)? = null
     ): PipelineResult = withContext(Dispatchers.Default) {
         if (!isInitialized) {
             AppLogger.info("StaticImagePipeline processImage called on uninitialized pipeline; auto-initializing now...")
-            onProgressUpdate?.invoke("Initializing Neural Engines", 10)
+            onProgressUpdate?.invoke(PipelineStage.INITIALIZING_ENGINES, 10)
             initialize()
         }
 
         var processedImage: ImageProcessor.ProcessedImage? = null
         var maskMat: Mat? = null
+        // Diagnostics (opt-in, PRIVACY_POLICY.md §6): stage timings, pixel counts, detection
+        // count and the outcome. Primitives only — never the image, the URI or an error message.
+        val runStartNs = System.nanoTime()
+        var preprocessMs = -1L
+        var segmentationMs = -1L
+        var inpaintMs = -1L
+        var detectionCount = -1
+        var inputPixels = -1L
+        val effectiveMode = if (useServerSdxl) InpaintingQualityMode.CLOUD_SDXL else qualityMode
         try {
             currentCoroutineContext().ensureActive()
 
             // 1. Process Input
-            onProgressUpdate?.invoke("Loading & Preprocessing Image", 25)
+            onProgressUpdate?.invoke(PipelineStage.LOADING_IMAGE, 25)
+            var stageStartNs = System.nanoTime()
             val effectiveDownscaleMp = if (qualityMode == InpaintingQualityMode.HIGH_RES_PROGRESSIVE) null else downscaleMp
             processedImage = imageProcessor.processInputImage(
                 imageUri = uri,
@@ -117,11 +128,14 @@ class StaticImagePipeline(
                 modelHeight = 640,
                 downscaleMp = effectiveDownscaleMp
             )
+            preprocessMs = (System.nanoTime() - stageStartNs) / 1_000_000
+            inputPixels = processedImage.originalMat.cols().toLong() * processedImage.originalMat.rows()
             
             currentCoroutineContext().ensureActive()
 
             // 2. YOLO Mask Generation
-            onProgressUpdate?.invoke("Running YOLO Segmentation", 50)
+            onProgressUpdate?.invoke(PipelineStage.SEGMENTATION, 50)
+            stageStartNs = System.nanoTime()
             val config = YoloConfig(scoreThreshold = scoreThreshold)
             val yoloResult = yoloService.inferDetailed(
                 transformedMat = processedImage.transformedMat,
@@ -133,6 +147,8 @@ class StaticImagePipeline(
                 overrideConfig = config
             )
             maskMat = yoloResult.mask
+            segmentationMs = (System.nanoTime() - stageStartNs) / 1_000_000
+            detectionCount = yoloResult.detections.size
             
             // Generate Mask Bitmap for UI
             val maskBitmap = Bitmap.createBitmap(
@@ -147,9 +163,10 @@ class StaticImagePipeline(
 
             // 3. Neural Inpainting based on Quality Mode
             val isServer = (qualityMode == InpaintingQualityMode.CLOUD_SDXL) || useServerSdxl
+            stageStartNs = System.nanoTime()
             val inpaintedBitmap = when {
                 isServer -> {
-                    onProgressUpdate?.invoke("Running Cloud SDXL Inpainting", 75)
+                    onProgressUpdate?.invoke(PipelineStage.INPAINTING_CLOUD, 75)
                     serverSdxlApi.processWithSdxl(
                         originalBitmap = processedImage.originalBitmap,
                         maskBitmap = maskBitmap,
@@ -157,7 +174,7 @@ class StaticImagePipeline(
                     )
                 }
                 qualityMode == InpaintingQualityMode.HIGH_RES_PROGRESSIVE -> {
-                    onProgressUpdate?.invoke("Running High-Res Progressive Inpainting", 60)
+                    onProgressUpdate?.invoke(PipelineStage.INPAINTING_HIGH_RES, 60)
                     val progressiveInpainter = ProgressiveTileInpainter(miGanInference)
                     val inpaintMat = progressiveInpainter.inpaintProgressive(
                         fullImageMat = processedImage.originalMat,
@@ -174,7 +191,7 @@ class StaticImagePipeline(
                     outBmp
                 }
                 else -> {
-                    onProgressUpdate?.invoke("Running On-Device Inpainting", 75)
+                    onProgressUpdate?.invoke(PipelineStage.INPAINTING_ON_DEVICE, 75)
                     val inpaintMat = miGanInference.inpaint(
                         imageMat = processedImage.originalMat,
                         maskMat = maskMat
@@ -185,9 +202,12 @@ class StaticImagePipeline(
                 }
             }
             
+            inpaintMs = (System.nanoTime() - stageStartNs) / 1_000_000
+            
             currentCoroutineContext().ensureActive()
 
-            onProgressUpdate?.invoke("Completed", 100)
+            recordRun(effectiveMode, runStartNs, preprocessMs, segmentationMs, inpaintMs, inputPixels, detectionCount, downscaleMp, error = null)
+            onProgressUpdate?.invoke(PipelineStage.COMPLETED, 100)
             return@withContext PipelineResult(
                 originalBitmap = processedImage.originalBitmap,
                 maskBitmap = maskBitmap,
@@ -198,6 +218,7 @@ class StaticImagePipeline(
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             AppLogger.error("StaticImagePipeline Error", e)
+            recordRun(effectiveMode, runStartNs, preprocessMs, segmentationMs, inpaintMs, inputPixels, detectionCount, downscaleMp, error = e)
             return@withContext PipelineResult(
                 originalBitmap = processedImage?.originalBitmap ?: createBitmap(1, 1),
                 maskBitmap = createBitmap(1, 1),
@@ -214,6 +235,35 @@ class StaticImagePipeline(
     fun close() {
         yoloService.close()
         miGanInference.close()
+    }
+
+    /** One `pipeline_run` diagnostics line; -1 marks a stage that was never reached. */
+    private fun recordRun(
+        mode: InpaintingQualityMode,
+        runStartNs: Long,
+        preprocessMs: Long,
+        segmentationMs: Long,
+        inpaintMs: Long,
+        inputPixels: Long,
+        detectionCount: Int,
+        downscaleMp: Float?,
+        error: Exception?
+    ) {
+        Telemetry.record(
+            "pipeline_run",
+            mapOf(
+                "mode" to mode.name,
+                "total_ms" to (System.nanoTime() - runStartNs) / 1_000_000,
+                "preprocess_ms" to preprocessMs,
+                "segmentation_ms" to segmentationMs,
+                "inpaint_ms" to inpaintMs,
+                "input_pixels" to inputPixels,
+                "downscale_mp" to downscaleMp,
+                "detections" to detectionCount,
+                "success" to (error == null),
+                "error" to error?.javaClass?.simpleName,
+            )
+        )
     }
 
     companion object {

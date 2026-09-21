@@ -14,6 +14,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import de.konradvoelkel.android.autokorrektur.R
 import de.konradvoelkel.android.autokorrektur.databinding.BottomSheetInstagramExportBinding
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
+import de.konradvoelkel.android.autokorrektur.telemetry.Telemetry
 import de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -86,6 +87,12 @@ class InstagramExportBottomSheet : BottomSheetDialogFragment() {
         binding.btnExportInstagram.isEnabled = false
         binding.btnExportInstagram.text = getString(R.string.export_btn_exporting)
 
+        val layoutName = when (binding.chipGroupLayout.checkedChipId) {
+            R.id.chipCarouselPair -> "carousel"
+            R.id.chipAnimatedVideo -> "video_sweep"
+            else -> "split_card"
+        }
+        val exportStartNs = System.nanoTime()
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 when (binding.chipGroupLayout.checkedChipId) {
@@ -133,8 +140,10 @@ class InstagramExportBottomSheet : BottomSheetDialogFragment() {
                         }
                     }
                 }
+                recordExport(layoutName, ratio, exportStartNs, error = null)
             } catch (e: Exception) {
                 AppLogger.error("Instagram export failed", e)
+                recordExport(layoutName, ratio, exportStartNs, error = e)
                 withContext(Dispatchers.Main) {
                     Toast.makeText(requireContext(), getString(R.string.export_error_failed, e.message), Toast.LENGTH_LONG).show()
                     binding.btnExportInstagram.isEnabled = true
@@ -142,6 +151,19 @@ class InstagramExportBottomSheet : BottomSheetDialogFragment() {
                 }
             }
         }
+    }
+
+    private fun recordExport(layout: String, ratio: InstagramExportUtils.AspectRatio, startNs: Long, error: Exception?) {
+        Telemetry.record(
+            "export",
+            mapOf(
+                "layout" to layout,
+                "ratio" to ratio.name,
+                "total_ms" to (System.nanoTime() - startNs) / 1_000_000,
+                "success" to (error == null),
+                "error" to error?.javaClass?.simpleName,
+            )
+        )
     }
 
     private fun shareMultipleImages(uris: ArrayList<Uri>) {
