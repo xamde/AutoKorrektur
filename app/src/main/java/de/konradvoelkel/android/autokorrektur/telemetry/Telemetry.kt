@@ -15,14 +15,14 @@ import java.util.Locale
 import java.util.UUID
 
 /**
- * Opt-in, on-device-only diagnostics ("Diagnosedaten", PRIVACY_POLICY.md §6).
+ * Opt-in, on-device-only diagnostics ("Diagnosedaten", PRIVACY_POLICY.md §5).
  *
  * What it is: a process-wide facade the pipelines call with small, primitive-only event maps
  * (`Telemetry.record("pipeline_run", mapOf("total_ms" to 812, ...))`). Events are appended to a
  * size-capped JSON Lines file in the app's private `filesDir` by [TelemetryStore]. Nothing is
  * ever uploaded: the only way a line leaves the device is the user sharing the export file from
  * the Diagnostics dialog. There is no server side and no network code here on purpose — if that
- * ever changes, PRIVACY_POLICY.md §6, the Play Data Safety form and the consent copy change first.
+ * ever changes, PRIVACY_POLICY.md §5, the Play Data Safety form and the consent copy change first.
  *
  * What it records (and what it must not): timings, sizes in pixels, modes, counts, error class
  * names, device model / RAM / cores / Android version, app version, and a random install id

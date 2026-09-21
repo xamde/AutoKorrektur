@@ -7,7 +7,7 @@ package de.konradvoelkel.android.autokorrektur.telemetry
  * Serialised by [toJsonLine] as a single JSON object per line (JSON Lines), without any JSON
  * library so the store is unit-testable on the plain JVM (`org.json` is an Android stub there).
  * Field values are deliberately restricted to primitives: nothing in here should ever be able to
- * carry an image, a URI or a file path — see PRIVACY_POLICY.md §6 for what may be recorded.
+ * carry an image, a URI or a file path — see PRIVACY_POLICY.md §5 for what may be recorded.
  */
 data class TelemetryEvent(
     val name: String,

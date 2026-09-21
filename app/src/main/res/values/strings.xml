@@ -182,7 +182,7 @@
     <string name="csv_export_failed">Failed to export CSV report</string>
     <string name="share_video_chooser_title">Share video via</string>
 
-    <!-- Diagnostics (opt-in, on-device telemetry; PRIVACY_POLICY.md §6) -->
+    <!-- Diagnostics (opt-in, on-device telemetry; PRIVACY_POLICY.md §5) -->
     <string name="action_diagnostics">Diagnostics</string>
     <string name="diagnostics_title">Diagnostics</string>
     <string name="diagnostics_switch">Record diagnostics on this device</string>

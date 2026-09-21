@@ -35,23 +35,13 @@ Wenn du den **AR-Modus**, den **Schnell-Modus** oder den **Progressiven High-Res
 
 ---
 
-## 4. Optionale Cloud-Verarbeitung (Cloud SDXL – Frankfurt, Deutschland)
-
-AutoKorrektur bietet die optionale Funktion, Bilder über einen spezialisierten Server in photorealistischer SDXL-Qualität zu veredeln.
-
-- **Ausdrückliche Einwilligung (Opt-In)**: Diese Funktion ist standardmäßig deaktiviert und erfordert vor der ersten Nutzung deine ausdrückliche Zustimmung via DSGVO-Einwilligungsdialog.
-- **Standort der Server**: Die Verarbeitung erfolgt ausschließlich auf Servern in **Frankfurt am Main, Deutschland** unter strikter Einhaltung der Datenschutz-Grundverordnung (DSGVO / GDPR).
-- **Flüchtige Verarbeitung (Zero-Storage Policy)**: Das hochgeladene Bild wird ausschließlich im Arbeitsspeicher (RAM) der Inpainting-Engine verarbeitet. Nach Abschluss der Inferenz und Übertragung des Ergebnisses an dein Smartphone wird das Bild **unverzüglich und unwiederbringlich aus dem Speicher gelöscht**. Es findet keine Protokollierung oder Speicherung deiner Bilder auf Festplatten statt.
-
----
-
-## 5. Weitergabe von Daten an Dritte
+## 4. Weitergabe von Daten an Dritte
 
 Deine Daten werden weder verkauft, noch an Werbenetzwerke oder unbefugte Dritte weitergegeben. Wenn du fertige Bilder oder Videos über Instagram oder andere Apps teilst, erfolgt dies ausschließlich über das standardmäßige Android-Freigabesystem (`Intent.ACTION_SEND`), über das du jederzeit die volle Kontrolle behältst.
 
 ---
 
-## 6. Optionale Diagnosedaten (nur auf dem Gerät, Opt-In)
+## 5. Optionale Diagnosedaten (nur auf dem Gerät, Opt-In)
 
 Um die App auf möglichst vielen Geräten schnell und stabil zu machen, kannst du unter **„Diagnosedaten“** im Menü das Mitschreiben technischer Messwerte einschalten. Standardmäßig ist das **ausgeschaltet**.
 
@@ -64,6 +54,6 @@ Unabhängig davon führt die App ein technisches Protokoll (Log) im app-eigenen 
 
 ---
 
-## 7. Kontakt & Open-Source
+## 6. Kontakt & Open-Source
 
 AutoKorrektur ist ein Open-Source-Projekt (GNU AGPLv3) im Dienste der Mobilitätswende und lebenswerter Städte. Verantwortlich für die Datenverarbeitung ist Konrad Völkel, Düsseldorf; die vollständige Anschrift steht im [Impressum](https://autokorrektur.org/impressum). Bei Fragen zum Datenschutz erreichst du uns per E-Mail unter autokorrektur [at] konradvoelkel [punkt] com oder über das [GitHub-Repository](https://github.com/xamde/AutoKorrektur) des Projekts. Du hast die Rechte aus Art. 15–21 DSGVO und das Recht auf Beschwerde bei einer Aufsichtsbehörde.

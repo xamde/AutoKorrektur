@@ -179,7 +179,7 @@
     <string name="csv_export_failed">CSV-Bericht konnte nicht exportiert werden</string>
     <string name="share_video_chooser_title">Video teilen via</string>
 
-    <!-- Diagnosedaten (Opt-In, nur auf dem Gerät; PRIVACY_POLICY.md §6) -->
+    <!-- Diagnosedaten (Opt-In, nur auf dem Gerät; PRIVACY_POLICY.md §5) -->
     <string name="action_diagnostics">Diagnosedaten</string>
     <string name="diagnostics_title">Diagnosedaten</string>
     <string name="diagnostics_switch">Diagnosedaten auf diesem Gerät aufzeichnen</string>

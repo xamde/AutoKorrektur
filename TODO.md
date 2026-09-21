@@ -14,7 +14,7 @@
   - Execute test scenarios outlined in [TODO-for-human.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/TODO-for-human.md) and [docs/FIELD_TESTING_AND_DATA_COLLECTION.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/docs/FIELD_TESTING_AND_DATA_COLLECTION.md).
 - [ ] **FT-02. Batch Telemetry & CSV Metric Collection**
   - Run multi-photo batch processing across varied lighting conditions and export execution CSVs for performance review.
-  - Since 2026-09-21 every flavor (incl. `core`) also has opt-in on-device diagnostics: menu → Diagnostics → switch on, use the app, Export (share sheet) → `autokorrektur-diagnostics-<date>.jsonl` with per-stage timings, AR fps, export durations and crash lines. Off by default; see `PRIVACY_POLICY.md` §6.
+  - Since 2026-09-21 every flavor (incl. `core`) also has opt-in on-device diagnostics: menu → Diagnostics → switch on, use the app, Export (share sheet) → `autokorrektur-diagnostics-<date>.jsonl` with per-stage timings, AR fps, export durations and crash lines. Off by default; see `PRIVACY_POLICY.md` §5.
 - [ ] **FT-03. Social Media Split Export Trials**
   - Generate split cards, 4:5 carousels, and animated sweep MP4s on real street photos to verify Instagram readiness.
 

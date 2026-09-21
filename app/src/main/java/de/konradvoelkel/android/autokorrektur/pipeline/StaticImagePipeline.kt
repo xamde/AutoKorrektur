@@ -106,7 +106,7 @@ class StaticImagePipeline(
 
         var processedImage: ImageProcessor.ProcessedImage? = null
         var maskMat: Mat? = null
-        // Diagnostics (opt-in, PRIVACY_POLICY.md §6): stage timings, pixel counts, detection
+        // Diagnostics (opt-in, PRIVACY_POLICY.md §5): stage timings, pixel counts, detection
         // count and the outcome. Primitives only — never the image, the URI or an error message.
         val runStartNs = System.nanoTime()
         var preprocessMs = -1L

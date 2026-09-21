@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Opt-in, on-device-only diagnostics (`telemetry/` package, "Diagnostics" menu entry on every flavor): when the user switches it on, the pipelines append primitive-only JSON Lines events (`session_start`, `pipeline_run` with per-stage timings/pixel count/detections/outcome, `ar_session`, `video_inpaint`, `export`, `crash` = exception class + first in-app frame) to a 2 MB-capped file in the app's private storage. Nothing is uploaded; the dialog offers Export (share sheet via FileProvider) and Delete. Off by default; `Telemetry.record()` is a no-op until enabled. Documented in `PRIVACY_POLICY.md` §6 / `PRIVACY_POLICY.en.md` §6. `TelemetryStoreTest` covers the store and encoding on the JVM.
+- Opt-in, on-device-only diagnostics (`telemetry/` package, "Diagnostics" menu entry on every flavor): when the user switches it on, the pipelines append primitive-only JSON Lines events (`session_start`, `pipeline_run` with per-stage timings/pixel count/detections/outcome, `ar_session`, `video_inpaint`, `export`, `crash` = exception class + first in-app frame) to a 2 MB-capped file in the app's private storage. Nothing is uploaded; the dialog offers Export (share sheet via FileProvider) and Delete. Off by default; `Telemetry.record()` is a no-op until enabled. Documented in `PRIVACY_POLICY.md` §5 / `PRIVACY_POLICY.en.md` §6. `TelemetryStoreTest` covers the store and encoding on the JVM.
 - `PipelineStage`: localizable progress steps replacing the hard-coded English stage strings the pipelines used to hand the UI (`"Running YOLO Segmentation"` next to "Verarbeitung…" on German devices). `MainUiState.Loading` now carries a `PipelineStage` plus batch position; `FirstFragment`/`VideoPreviewActivity` resolve the text in the current locale.
 - `PRIVACY_POLICY.en.md`: English translation of the privacy policy (German text stays binding).
 - `site/`: the static website for autokorrektur.org (landing page de/en, `/privacy`, `/privacy-en`, `/impressum`) — `build.sh` renders the two policy files with pandoc so the hosted text cannot drift, `deploy.sh` rsyncs to the Hetzner VPS whose Caddy/DNS config lives in the infrastructure repo (`~/files/work/server`, role `autokorrektur`). Same shape as laberampel.de.
@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replaced ThreadLocal prototype channel buffers in `YoloMaskAssembler` to reduce per-frame GC allocations.
 
 ### Removed
+- `PRIVACY_POLICY.md` / `.en.md` §4 "Optional cloud processing (Cloud SDXL – Frankfurt)": the cloud tier is unfinished and off in every public flavor, so the policy (and the hosted site) no longer describes it; the text is in git history for when it ships.
 - Dead `useFP16` code path through `YoloEngine`/`YoloTFLiteEngine`/`YoloService`/`YoloServiceImpl` and the unused `yolo11s-seg_float16.tflite` asset (~20MB). Audit found every production call site hardcoded `useFP16 = false`; the only path that ever requested the fp16 model was one instrumented test that already tolerated its failure. Not a real NNAPI fallback — that fallback (NNAPI→CPU) operates on whichever single model buffer was already loaded, never re-selects a model file. See `docs/MVP_FEATURE_FLAG_PLAN.md` §3.
 
 ### Fixed

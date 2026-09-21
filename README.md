@@ -25,7 +25,7 @@ This project is a native Android reimplementation and major architectural evolut
 
 The primary mission is to empower mobility activists, urban planners, and citizens to visualize what our cities could look like when public space is reclaimed from parked cars for people, greenery, and sustainable mobility.
 
-Default processing is executed **100% on-device** without accounts or tracking; the only diagnostics are an opt-in, on-device file the user can export by hand (`PRIVACY_POLICY.md` §6). Usage is free and open source.
+Default processing is executed **100% on-device** without accounts or tracking; the only diagnostics are an opt-in, on-device file the user can export by hand (`PRIVACY_POLICY.md` §5). Usage is free and open source.
 
 ---
 

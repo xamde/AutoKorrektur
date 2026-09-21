@@ -37,23 +37,13 @@ When you use the **AR mode**, the **Fast mode** or the **Progressive High-Res mo
 
 ---
 
-## 4. Optional cloud processing (Cloud SDXL – Frankfurt, Germany)
-
-AutoKorrektur offers the optional feature of refining images in photorealistic SDXL quality on a dedicated server.
-
-- **Explicit consent (opt-in)**: this feature is off by default and requires your explicit consent through a GDPR consent dialog before first use.
-- **Server location**: processing happens exclusively on servers in **Frankfurt am Main, Germany**, in strict compliance with the General Data Protection Regulation (GDPR).
-- **Ephemeral processing (zero-storage policy)**: the uploaded image is processed only in the inpainting engine's working memory (RAM). Once inference is complete and the result has been sent back to your phone, the image is **deleted from memory immediately and irrecoverably**. Your images are neither logged nor written to disk.
-
----
-
-## 5. Disclosure to third parties
+## 4. Disclosure to third parties
 
 Your data is neither sold nor passed on to advertising networks or other unauthorised third parties. When you share finished images or videos via Instagram or other apps, this happens solely through Android's standard share system (`Intent.ACTION_SEND`), over which you keep full control at all times.
 
 ---
 
-## 6. Optional diagnostics (on the device only, opt-in)
+## 5. Optional diagnostics (on the device only, opt-in)
 
 To make the app fast and stable on as many devices as possible, you can switch on the recording of technical measurements under **"Diagnostics"** in the menu. It is **off by default**.
 
@@ -66,6 +56,6 @@ Independently of this, the app keeps a technical log in its own storage area; it
 
 ---
 
-## 7. Contact and open source
+## 6. Contact and open source
 
 AutoKorrektur is an open-source project (GNU AGPLv3) in the service of the mobility transition and liveable cities. The controller responsible for data processing is Konrad Völkel, Düsseldorf; the full postal address is in the [Impressum](https://autokorrektur.org/impressum) (German). For privacy questions, reach us by e-mail at autokorrektur [at] konradvoelkel [dot] com or through the project's [GitHub repository](https://github.com/xamde/AutoKorrektur). You have the rights under Articles 15–21 GDPR and the right to lodge a complaint with a supervisory authority.
