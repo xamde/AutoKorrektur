@@ -34,7 +34,7 @@ Default processing is executed **100% on-device** without accounts or tracking; 
 This codebase serves as a benchmark for how far modern **Agentic AI** and **Vibe Coding** can go when building production-grade mobile applications with complex native requirements:
 
 1. **Vibe Coding to Native Execution**: High-level activist persona workflows, user interviews, and intuitive design goals ("vibe") translated directly into low-level C++/JNI OpenCV operations, Android MediaCodec hardware video encoders, and StateFlow architectures.
-2. **Autonomous Tool Augmentation**: AI agents orchestrating compiler checks, running headless test suites, executing wireless ADB debugging (`adb -s 192.168.178.117:44077`), capturing physical Pixel screen artifacts, and resolving JNI lifecycle edge cases autonomously.
+2. **Autonomous Tool Augmentation**: AI agents orchestrating compiler checks, running headless test suites, executing wireless ADB debugging against a physical Pixel, capturing screen artifacts, and resolving JNI lifecycle edge cases autonomously.
 3. **Rigorous Verification Loop**: Combining prompt-driven engineering with deterministic engineering standards: strict ProGuard/R8 rules, 75+ unit and instrumented tests, automated detekt static analysis, and zero-storage GDPR compliance.
 
 ---
@@ -72,7 +72,7 @@ This codebase serves as a benchmark for how far modern **Agentic AI** and **Vibe
 ## 🛠️ Tech Stack
 
 - **Android Client**: Kotlin, ONNX Runtime, OpenCV Android SDK 5, TensorFlow Lite, CameraX (Core, Camera2, Lifecycle, View, Video), AndroidX, Material3 Design.
-- **Python Backend**: FastAPI, Uvicorn, Pytest, Docker, Caddy. See [backend/README.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/backend/README.md).
+- **Python Backend**: FastAPI, Uvicorn, Pytest, Docker, Caddy. See [backend/README.md](backend/README.md).
 - **ML Models**:
   - Detection / Segmentation: **YOLOv11-seg** (On-Device TFLite/ONNX)
   - Inpainting: **MI-GAN** (On-Device) and **SDXL** (Optional Frankfurt Cloud Backend)
@@ -90,7 +90,7 @@ ABIs) and is the day-to-day dev target; `core` is the Play Store candidate.
 # Build Debug APK (dev target: full flavor, or drop "Full" to build all 4 flavors at once)
 ./gradlew assembleFullDebug
 
-# Run Unit Tests (75+ passing)
+# Run Unit Tests
 ./gradlew testFullDebugUnitTest
 
 # Build Release APK (with ProGuard/R8 minification) — core is the Play Store flavor
@@ -164,28 +164,28 @@ To navigate the comprehensive project documentation:
 
 | Category | Document | Description |
 |---|---|---|
-| **🧪 Testing & Field Operations** | [TODO-for-human.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/TODO-for-human.md) | Step-by-step physical phone testing guide, camera walkthroughs & checklist. |
-| | [docs/FIELD_TESTING_AND_DATA_COLLECTION.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/docs/FIELD_TESTING_AND_DATA_COLLECTION.md) | Field testing protocol, batch CSV metrics collection, and ADB telemetry. |
-| | [docs/TESTING_INSIGHTS_FROM_THESES.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/docs/TESTING_INSIGHTS_FROM_THESES.md) | 5-criteria evaluation framework, failure mode taxonomy & edge cases. |
-| | [TESTING.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/TESTING.md) | Testing guidelines, hardware matrix, unit & instrumented test suites. |
-| **🏗️ Architecture & Engineering** | [ARCHITECTURE.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/ARCHITECTURE.md) | System architecture, CameraX AR loop, and MediaCodec video pipeline. |
-| | [docs/IMAGE_PIPELINE_SPECIFICATION.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/docs/IMAGE_PIPELINE_SPECIFICATION.md) | ML pipeline specification, coordinate math, and tensor normalization. |
-| | [walkthrough.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/walkthrough.md) | Implementation walkthrough of newly added features and UI components. |
-| **🚀 Release & Play Store** | [docs/PLAY_STORE_LISTING.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/docs/PLAY_STORE_LISTING.md) | Google Play Store copy and metadata in German and English. |
-| | [RELEASE_CHECKLIST.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/RELEASE_CHECKLIST.md) | Play Store release pre-flight checks, signing keys, and AAB bundle steps. |
-| | [PRIVACY_POLICY.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/PRIVACY_POLICY.md) | GDPR/DSGVO privacy policy (German, binding), on-device guarantees, zero-storage terms, opt-in diagnostics. [PRIVACY_POLICY.en.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/PRIVACY_POLICY.en.md) is the English translation. |
-| | [site/](file:///home/konrad/files/work/__drafts/AutoKorrektur/site/) | Static website for autokorrektur.org (landing de/en, `/privacy`, `/privacy-en`, Impressum); `build.sh` + `deploy.sh`, server side in the infrastructure repo. |
-| | [HUMAN_RELEASE_CHECKLIST.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/HUMAN_RELEASE_CHECKLIST.md) | What only the owner can do before the Play upload: tag, keystore (done), privacy hosting, Data Safety, assets. |
-| | [CHANGELOG.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/CHANGELOG.md) | Version history, release tags, and feature changelog. |
-| **☁️ Backend & Cloud** | [backend/README.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/backend/README.md) | FastAPI SDXL cloud inpainting server documentation. |
-| | [backend/DEPLOY_FRANKFURT.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/backend/DEPLOY_FRANKFURT.md) | Deployment guide for German Frankfurt VPS with Docker & Caddy SSL. |
-| **🧭 Product & Roadmaps** | [TODO.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/TODO.md) | Active milestone roadmap (Field Testing, Play Store, Cloud Backend). |
-| | [docs/ARCHIVE_TODO.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/docs/ARCHIVE_TODO.md) | Historical archive of completed milestones M1–M8 and Phases 1–4. |
-| | [docs/PERSONAS.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/docs/PERSONAS.md) | User personas (Mobility Activists, Lot Managers, Photographers). |
+| **🧪 Testing & Field Operations** | [TODO-for-human.md](TODO-for-human.md) | Step-by-step physical phone testing guide, camera walkthroughs & checklist. |
+| | [docs/FIELD_TESTING_AND_DATA_COLLECTION.md](docs/FIELD_TESTING_AND_DATA_COLLECTION.md) | Field testing protocol, batch CSV metrics collection, and ADB telemetry. |
+| | [docs/TESTING_INSIGHTS_FROM_THESES.md](docs/TESTING_INSIGHTS_FROM_THESES.md) | 5-criteria evaluation framework, failure mode taxonomy & edge cases. |
+| | [TESTING.md](TESTING.md) | Testing guidelines, hardware matrix, unit & instrumented test suites. |
+| **🏗️ Architecture & Engineering** | [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture, CameraX AR loop, and MediaCodec video pipeline. |
+| | [docs/IMAGE_PIPELINE_SPECIFICATION.md](docs/IMAGE_PIPELINE_SPECIFICATION.md) | ML pipeline specification, coordinate math, and tensor normalization. |
+| | [walkthrough.md](walkthrough.md) | Implementation walkthrough of newly added features and UI components. |
+| **🚀 Release & Play Store** | [docs/PLAY_STORE_LISTING.md](docs/PLAY_STORE_LISTING.md) | Google Play Store copy and metadata in German and English. |
+| | [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) | Play Store release pre-flight checks, signing keys, and AAB bundle steps. |
+| | [PRIVACY_POLICY.md](PRIVACY_POLICY.md) | GDPR/DSGVO privacy policy (German, binding), on-device guarantees, zero-storage terms, opt-in diagnostics. [PRIVACY_POLICY.en.md](PRIVACY_POLICY.en.md) is the English translation. |
+| | [site/](site/) | Static website for autokorrektur.org (landing de/en, `/privacy`, `/privacy-en`, Impressum); `build.sh` + `deploy.sh`, server side in the infrastructure repo. |
+| | [HUMAN_RELEASE_CHECKLIST.md](HUMAN_RELEASE_CHECKLIST.md) | What only the owner can do before the Play upload: tag, keystore (done), privacy hosting, Data Safety, assets. |
+| | [CHANGELOG.md](CHANGELOG.md) | Version history, release tags, and feature changelog. |
+| **☁️ Backend & Cloud** | [backend/README.md](backend/README.md) | FastAPI SDXL cloud inpainting server documentation. |
+| | [backend/DEPLOY_FRANKFURT.md](backend/DEPLOY_FRANKFURT.md) | Deployment guide for German Frankfurt VPS with Docker & Caddy SSL. |
+| **🧭 Product & Roadmaps** | [TODO.md](TODO.md) | Active milestone roadmap (Field Testing, Play Store, Cloud Backend). |
+| | [docs/ARCHIVE_TODO.md](docs/ARCHIVE_TODO.md) | Historical archive of completed milestones M1–M8 and Phases 1–4. |
+| | [docs/PERSONAS.md](docs/PERSONAS.md) | User personas (Mobility Activists, Lot Managers, Photographers). |
 
 ---
 
 ## ⚖️ License
 
 The licensing of this project is governed by its machine learning dependencies (YOLOv11-seg licensed under GNU AGPLv3).  
-Therefore, this project is licensed under the **GNU AGPLv3 License**. See [LICENSE](file:///home/konrad/files/work/__drafts/AutoKorrektur/LICENSE) for details.
+Therefore, this project is licensed under the **GNU AGPLv3 License**. See [LICENSE](LICENSE) for details.

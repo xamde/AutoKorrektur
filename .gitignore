@@ -45,3 +45,9 @@ __pycache__/
 
 # autokorrektur.org build output (site/build.sh)
 /site/dist
+/.idea/planningMode.xml
+/.idea/deviceManager.xml
+
+# backend runtime secrets (REDIS_PASSWORD etc.)
+/backend/.env
+/site/deploy.local.env

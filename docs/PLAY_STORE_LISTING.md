@@ -1,57 +1,61 @@
 # Google Play Store Listing: AutoKorrektur
 
+> Describes the **`core` flavor**, the only one that goes to Google Play (`docs/MVP_FEATURE_FLAG_PLAN.md`):
+> photo in, cars removed on-device, before/after slider, split card shared through the Android
+> share sheet, in-app gallery of past shots. Play's policy forbids advertising features the
+> uploaded build doesn't have, so the AR / video / high-res / cloud / brush / batch copy that used
+> to be here is not in the listing until those features are promoted into `core` (the old text is in
+> git history, commit e1127ba and before). Privacy policy URL: https://autokorrektur.org/privacy.
+
 ## 1. App-Details & Metadaten
 
-- **App-Name (Deutsch)**: `AutoKorrektur – Autofreie Visionen & AR`
-- **App Name (English)**: `AutoKorrektur – Car-Free AR & Inpainting`
+- **App-Name (Deutsch)**: `AutoKorrektur – Deine Straße ohne Autos`
+- **App Name (English)**: `AutoKorrektur – Your Street Without Cars`
 - **Paketname**: `de.konradvoelkel.android.autokorrektur`
-- **Kategorie**: Fotografie / Tools / Mobilität & Reisen
+- **Kategorie**: Fotografie
 - **Altersfreigabe**: USK 0 / PEGI 3 / Everyone
+- **Datenschutzerklärung**: https://autokorrektur.org/privacy (English: /privacy-en)
+- **Website**: https://autokorrektur.org · **E-Mail**: autokorrektur@konradvoelkel.com
 
 ---
 
-## 2. Kurzbeschreibungen (Max. 80 Zeichen)
+## 2. Kurzbeschreibungen (max. 80 Zeichen)
 
 ### Deutsch
-> Entdecke & visualisiere deine Stadt ohne Autos live in Augmented Reality & KI.
+> Entferne parkende Autos aus deinen Fotos – KI komplett auf dem Gerät, ohne Konto.
 
 ### English
-> Visualize car-free cities live with Augmented Reality & on-device AI inpainting.
+> Remove parked cars from your photos – AI entirely on your device, no account.
 
 ---
 
 ## 3. Vollständige Beschreibung (Deutsch)
 
 ```markdown
-Stell dir deine Straße vor – ohne Blechlawinen, ohne zugeparkte Gehwege, ohne Lärm. Mit **AutoKorrektur** wird diese Vision in Echtzeit Wirklichkeit!
+Stell dir deine Straße vor – ohne Blechlawinen, ohne zugeparkte Gehwege. AutoKorrektur zeigt dir, wie das aussieht: Foto rein, Autos raus.
 
-AutoKorrektur ist das ultimative Werkzeug für Mobilitätsaktivist:innen, Stadtplaner:innen und alle Menschen, die sich lebenswertere, menschengerechte Städte wünschen. Richte einfach deine Kamera auf parkende oder fahrende Autos und erlebe live auf deinem Bildschirm, wie viel Raum, Licht und Lebensqualität ohne Autos frei wird.
+AutoKorrektur ist ein Werkzeug für Mobilitätsaktivist:innen, Stadtplaner:innen und alle, die zeigen wollen, wie viel Platz eine Straße ohne Autos hat. Mach ein Foto oder wähle eines aus der Galerie, und die App entfernt die parkenden Fahrzeuge – die komplette KI läuft auf deinem Smartphone.
 
-### 🌟 Hauptfunktionen
+🌟 Funktionen
 
-📸 **Echtzeit-AR-Modus (30–60 FPS)**
-Erlebe den AR-Durchblick: Parkende Autos werden live und flüssig direkt im Kamerasucher entfernt. Halte inne, blicke durch dein Smartphone und sieh die lebenswerte Zukunft deiner Stadt.
+📸 Foto rein, Autos raus
+Eine Segmentierungs-KI (YOLOv11) findet die Fahrzeuge, ein Inpainting-Netz (MI-GAN) füllt die Lücke mit plausibler Straße, Grün und Gehweg. Alles auf dem Gerät, nach der Installation ohne Internet.
 
-🎥 **5-Sekunden AR-Videoclips für Reels & Stories**
-Halte den Auslöser gedrückt, um kurze AR-Videoclips aufzunehmen. Unsere temporale KI-Videoberechnung entfernt Fahrzeuge Frame für Frame – stabilisiert, artefaktfrei und bereit für Instagram Reels, TikTok und Stories.
+↔️ Vorher / Nachher
+Ein Schieberegler zeigt den Unterschied. Die App merkt sich deine autofreien Aufnahmen in einer kleinen Galerie.
 
-💎 **Dreistufige Inpainting-Engine im Studio**
-- ⚡ **Schnell (On-Device)**: Blitzschnelle Vorschau direkt auf deinem Gerät.
-- 💎 **Progressiv High-Res (On-Device)**: Mehrstufiges Kachel-Inpainting in voller Kamerasensor-Auflösung mit weichen Gaußschen Übergängen.
-- ☁️ **Cloud SDXL (Frankfurt)**: Optionale ultra-hochauflösende generative Server-Vollendung für Plakate und Pressefotos.
+📤 Teilen in zwei Tipps
+Die fertige Split-Karte („VORHER / AUTOFREI“) teilst du über das normale Android-Teilen-Menü – Instagram, Signal, E-Mail, was du willst – oder speicherst sie in deine Galerie.
 
-🖌️ **Manueller Masken-Pinsel & Radierer**
-Pinsel über asymmetrische Schatten, Spiegelungen oder Anhänger – oder nutze den Radierer, um Fahrräder, Lastenräder und Fußgänger:innen gezielt zu schützen.
+🔒 Datenschutz
+• Die App hat keine Internet-Berechtigung: Deine Fotos verlassen dein Gerät nicht.
+• Kein Konto, keine Werbung, kein Tracking.
+• Optionale Diagnosedaten (Rechenzeiten, Gerätemodell – nie Bilder) bleiben auf dem Gerät, bis du sie selbst exportierst. Standardmäßig aus.
 
-🔄 **Instagram Multi-Layout Export**
-- **📸 Split-Karten**: Side-by-Side oder Stacked Vorher/Nachher-Grafiken mit präzisen Badges.
-- **🔄 2-Slide Swipe-Karussell**: Perfekt formatiert für 4:5 Portrait-Feeds.
-- **🎬 Animierter Video-Slider**: 3,5-Sekunden Swipe-Video mit animierter Vorher/Nachher-Trennlinie für Stories & Reels.
+🔬 Hintergrund
+Das Ergebnis ist eine Skizze, keine Fotomontage in Druckqualität: Schatten, Spiegelungen und verdeckte Details erfindet das Netz plausibel, aber nicht immer richtig. Die App baut auf zwei Bachelorarbeiten an der Heinrich-Heine-Universität Düsseldorf auf (Till Schellscheidt 2024, Ben Beckers 2025). Freie Software (AGPLv3), Quellcode auf GitHub.
 
-🔒 **Privatsphäre & Wissenschaft**
-- 100% On-Device KI-Verarbeitung ohne Account und ohne Tracking.
-- Optionale Cloud-Verarbeitung ausschließlich auf ISO-zertifizierten deutschen Servern in Frankfurt am Main mit Zero-Storage (Bilder werden im flüchtigen RAM verarbeitet und niemals gespeichert).
-- Basierend auf universitärer Spitzenforschung der Heinrich-Heine-Universität Düsseldorf (Till Schellscheidt 2024, Ben Beckers 2025, Dr. Konrad Völkel).
+Die KI-Modelle stecken in der App, deshalb ist sie einige hundert Megabyte groß. Android 10 oder neuer; ein Gerät mit 4 GB RAM oder mehr ist empfehlenswert.
 ```
 
 ---
@@ -59,33 +63,37 @@ Pinsel über asymmetrische Schatten, Spiegelungen oder Anhänger – oder nutze 
 ## 4. Full Description (English)
 
 ```markdown
-Imagine your street without parked cars, blocked sidewalks, and traffic noise. With **AutoKorrektur**, this vision becomes reality in real-time!
+Imagine your street without the wall of parked cars and the blocked sidewalks. AutoKorrektur shows you what that looks like: photo in, cars out.
 
-AutoKorrektur is the purpose-built visual tool for mobility activists, urban planners, and anyone advocating for human-centered, livable cities. Point your camera at parked vehicles and experience live on your display how much public space and beauty emerges when cars disappear.
+AutoKorrektur is a tool for mobility activists, urban planners and anyone who wants to show how much room a street has once the cars are gone. Take a photo or pick one from your gallery and the app removes the parked vehicles – the entire AI runs on your phone.
 
-### 🌟 Key Features
+🌟 Features
 
-📸 **Live Augmented Reality Mode (30–60 FPS)**
-Real-time car removal viewfinder: Vehicles disappear seamlessly while maintaining full camera fluidity. Walk through your neighborhood and experience the car-free future live.
+📸 Photo in, cars out
+A segmentation network (YOLOv11) finds the vehicles; an inpainting network (MI-GAN) fills the gap with plausible road, greenery and pavement. All on-device, no internet needed after installing.
 
-🎥 **5-Second AR Video Snippets for Reels & Stories**
-Long-press the shutter to record 5-second AR clips. Our temporal optical flow video inpainter processes footage frame-by-frame with zero flicker, ready for Instagram Reels and Stories.
+↔️ Before / after
+A slider shows the difference. The app keeps your car-free shots in a small gallery.
 
-💎 **Three-Tier Studio Inpainting Engine**
-- ⚡ **Fast (On-Device)**: Instant on-device preview in milliseconds.
-- 💎 **High-Res Progressive (On-Device)**: Multi-tile neural inpainting at native camera resolution with Gaussian feathered borders.
-- ☁️ **German Cloud SDXL**: Optional ultra-high-resolution photorealistic server generation for print posters and press campaigns.
+📤 Share in two taps
+The finished split card ("BEFORE / CAR-FREE") goes out through Android's ordinary share sheet – Instagram, Signal, e-mail, whatever you pick – or is saved to your gallery.
 
-🖌️ **Interactive Mask Brush & Eraser**
-Manually brush over deep asphalt shadows and tinted reflections, or use the eraser to protect bicycles, cargo bikes, and pedestrians.
+🔒 Privacy
+• The app has no internet permission: your photos never leave your device.
+• No account, no advertising, no tracking.
+• Optional diagnostics (compute times, device model – never images) stay on the device until you export them yourself. Off by default.
 
-🔄 **Social Media Multi-Layout Suite**
-- **📸 Split Comparison Cards**: Clean Side-by-Side or Stacked Vorher/Autofrei cards.
-- **🔄 2-Slide Swipe Carousels**: Synchronized dual slides for 4:5 portrait feeds.
-- **🎬 Animated Sweep Videos**: 3.5s looping split-slider MP4 video for Reels & Stories.
+🔬 Background
+The result is a sketch, not a print-quality montage: shadows, reflections and hidden details are invented plausibly, not always correctly. The app builds on two bachelor theses at Heinrich Heine University Düsseldorf (Till Schellscheidt 2024, Ben Beckers 2025). Free software (AGPLv3), source code on GitHub.
 
-🔒 **Privacy & Open Science**
-- 100% On-Device AI processing by default. No tracking, no account required; diagnostics are opt-in and never leave the device unless you export them yourself.
-- Optional Frankfurt, Germany cloud processing with zero-storage ephemeral memory.
-- Based on academic research at Heinrich Heine University Düsseldorf (Till Schellscheidt 2024, Ben Beckers 2025, Dr. Konrad Völkel).
+The models ship inside the app, which is why it is a few hundred megabytes. Android 10 or newer; a device with 4 GB of RAM or more is recommended.
 ```
+
+---
+
+## 5. Grafiken
+
+`media/play_store_assets/`: Feature-Grafik und Icon sind verwendbar. **Die drei Screenshots dort
+zeigen Live-AR, den Engine-Wähler und den Multi-Layout-Export – Funktionen, die `core` nicht hat.**
+Vor dem Upload neue Screenshots vom `core`-Build machen (Startbildschirm, Ergebnis mit Schieberegler,
+Teilen-Menü mit der Split-Karte, Galerie); Vorgehen wie in `HUMAN_RELEASE_CHECKLIST.md` §5.

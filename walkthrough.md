@@ -32,17 +32,17 @@ graph TD
   - **Boundary-$IoU$ ($d=4\text{px}$)**: Specifically measures **Guided Filter edge adherence** along bodywork contours.
   - **Non-Car Over-Masking Rate ($FPR_{bg}$)**: Specifically penalizes masking background buildings, roads, trees, and sky.
   - **Inpainting Fidelity ($PSNR$)**: Verifies exact RGB background preservation outside the vehicle hole.
-- Generates interactive visual diff reports: [`backend/benchmark_report.html`](file:///home/konrad/files/work/__drafts/AutoKorrektur/backend/benchmark_report.html).
+- Generates interactive visual diff reports: [`backend/benchmark_report.html`](backend/benchmark_report.html).
 
 ### C. On-Device Hardware Parity & Fidelity Matrix (`androidTest`)
-- [`MaskQualityBenchmarkTest.kt`](file:///home/konrad/files/work/__drafts/AutoKorrektur/app/src/androidTest/java/de/konradvoelkel/android/autokorrektur/ml/MaskQualityBenchmarkTest.kt): Evaluates on-device segmentation against ground-truth triples with memory-safe Mat lifecycle management.
-- [`InpaintingQualityBenchmarkTest.kt`](file:///home/konrad/files/work/__drafts/AutoKorrektur/app/src/androidTest/java/de/konradvoelkel/android/autokorrektur/ml/InpaintingQualityBenchmarkTest.kt): Validates that MI-GAN on-device neural inpainting preserves background pixels with $PSNR \ge 40\text{dB}$.
+- [`MaskQualityBenchmarkTest.kt`](app/src/androidTest/java/de/konradvoelkel/android/autokorrektur/ml/MaskQualityBenchmarkTest.kt): Evaluates on-device segmentation against ground-truth triples with memory-safe Mat lifecycle management.
+- [`InpaintingQualityBenchmarkTest.kt`](app/src/androidTest/java/de/konradvoelkel/android/autokorrektur/ml/InpaintingQualityBenchmarkTest.kt): Validates that MI-GAN on-device neural inpainting preserves background pixels with $PSNR \ge 40\text{dB}$.
 ### D. Physical Device Edge-Case Suite (`test` & `androidTest`)
-- [`ServerSdxlApiFallbackTest.kt`](file:///home/konrad/files/work/__drafts/AutoKorrektur/app/src/test/java/de/konradvoelkel/android/autokorrektur/ml/api/ServerSdxlApiFallbackTest.kt): Validates that physical network disconnects, host unreachable errors, socket timeouts, and HTTP 503 errors trigger typed exceptions and **strictly preserve daily edit quota**.
-- [`RotationLifecycleInferenceTest.kt`](file:///home/konrad/files/work/__drafts/AutoKorrektur/app/src/test/java/de/konradvoelkel/android/autokorrektur/viewmodel/RotationLifecycleInferenceTest.kt): Verifies that configuration changes and device rotations during or after ML inference maintain state continuity without triggering duplicate pipeline executions.
-- [`VehicleShadowSegmentationTest.kt`](file:///home/konrad/files/work/__drafts/AutoKorrektur/app/src/androidTest/java/de/konradvoelkel/android/autokorrektur/ml/VehicleShadowSegmentationTest.kt): Tests vehicle segmentation under harsh direct sunlight and cast shadows, ensuring tire contact points are isolated without ground artifacts.
-- [`ColorSpacePreservationTest.kt`](file:///home/konrad/files/work/__drafts/AutoKorrektur/app/src/androidTest/java/de/konradvoelkel/android/autokorrektur/ml/ColorSpacePreservationTest.kt): Verifies OpenCV RGBA <-> RGB <-> Grayscale color channel invariants and Guided Filter edge guidance consistency.
-- [`MultiVehicleClutteredSceneTest.kt`](file:///home/konrad/files/work/__drafts/AutoKorrektur/app/src/androidTest/java/de/konradvoelkel/android/autokorrektur/ml/MultiVehicleClutteredSceneTest.kt): Validates multi-car urban street scenes with parallel parking and curb clutter.
+- [`ServerSdxlApiFallbackTest.kt`](app/src/test/java/de/konradvoelkel/android/autokorrektur/ml/api/ServerSdxlApiFallbackTest.kt): Validates that physical network disconnects, host unreachable errors, socket timeouts, and HTTP 503 errors trigger typed exceptions and **strictly preserve daily edit quota**.
+- [`RotationLifecycleInferenceTest.kt`](app/src/test/java/de/konradvoelkel/android/autokorrektur/viewmodel/RotationLifecycleInferenceTest.kt): Verifies that configuration changes and device rotations during or after ML inference maintain state continuity without triggering duplicate pipeline executions.
+- [`VehicleShadowSegmentationTest.kt`](app/src/androidTest/java/de/konradvoelkel/android/autokorrektur/ml/VehicleShadowSegmentationTest.kt): Tests vehicle segmentation under harsh direct sunlight and cast shadows, ensuring tire contact points are isolated without ground artifacts.
+- [`ColorSpacePreservationTest.kt`](app/src/androidTest/java/de/konradvoelkel/android/autokorrektur/ml/ColorSpacePreservationTest.kt): Verifies OpenCV RGBA <-> RGB <-> Grayscale color channel invariants and Guided Filter edge guidance consistency.
+- [`MultiVehicleClutteredSceneTest.kt`](app/src/androidTest/java/de/konradvoelkel/android/autokorrektur/ml/MultiVehicleClutteredSceneTest.kt): Validates multi-car urban street scenes with parallel parking and curb clutter.
 
 ---
 

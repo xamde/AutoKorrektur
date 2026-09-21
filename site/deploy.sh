@@ -4,14 +4,15 @@
 # the domain, the headers and the certificate live there, this script only delivers files.
 # Same shape as Laberampel's site/deploy.sh.
 #
-# Environment (defaults from site/site.env):
-#   VPS_HOST   admin@<server>   (key via ~/.ssh/config)
+# Environment (defaults from site/site.env, then the gitignored site/deploy.local.env):
+#   VPS_HOST   user@<server>   (key via ~/.ssh/config) -- deploy.local.env only, the repo is public
 #   VPS_WWW    /srv/autokorrektur/www
 #   DRY_RUN=1  show what rsync would do, upload nothing
 set -euo pipefail
 cd "$(dirname "$0")"
 . ./site.env
-VPS_HOST=${VPS_HOST:?site.env: VPS_HOST missing}
+[ -f ./deploy.local.env ] && . ./deploy.local.env
+VPS_HOST=${VPS_HOST:?set VPS_HOST=user@host in site/deploy.local.env (gitignored)}
 VPS_WWW=${VPS_WWW:-/srv/autokorrektur/www}
 
 out=$(mktemp -d)

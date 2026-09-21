@@ -1,6 +1,6 @@
 # Android On-Device ML Vision & Inpainting Rules
 
-*See complete technical specification in [IMAGE_PIPELINE_SPECIFICATION.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/docs/IMAGE_PIPELINE_SPECIFICATION.md).*
+*See complete technical specification in [IMAGE_PIPELINE_SPECIFICATION.md](../../docs/IMAGE_PIPELINE_SPECIFICATION.md).*
 
 ## 1. Segmentation Mask Assembly Invariants
 - **Coordinate Space Normalization**: When mapping YOLO proposal boxes to prototype tensors, normalize box coordinates to $[0..1]$ before scaling by prototype grid dimensions to avoid edge-pixel clamping and background over-masking.

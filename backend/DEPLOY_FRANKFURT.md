@@ -24,13 +24,17 @@ cd AutoKorrektur/backend
 
 ### B. Configure Environment Variables (`.env`)
 ```bash
-cat << 'EOF' > .env
+cat << EOF > .env
 AUTOKORREKTUR_PORT=8000
 AUTOKORREKTUR_HOST=0.0.0.0
 AUTOKORREKTUR_MAX_DAILY_REQUESTS=2
-AUTOKORREKTUR_REDIS_URL=redis://localhost:6379/0
+REDIS_PASSWORD=$(openssl rand -hex 24)
 EOF
+chmod 600 .env
 ```
+`docker-compose.yml` builds the Redis URL from `REDIS_PASSWORD` and refuses to start without it
+(there is no default password any more); the app container reaches Redis on the compose network,
+the port is not published.
 
 ### C. Build & Run with Docker Compose
 ```bash

@@ -8,7 +8,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - AUTOKORREKTUR_REDIS_URL=redis://:${REDIS_PASSWORD:-autokorrektur_secret}@redis:6379/0
+      - AUTOKORREKTUR_REDIS_URL=redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}@redis:6379/0
       - AUTOKORREKTUR_ENABLE_SDXL_LOAD=false
       - AUTOKORREKTUR_STRICT_INTEGRITY_CHECK=false
     depends_on:
@@ -26,11 +26,11 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: redis-server --requirepass ${REDIS_PASSWORD:-autokorrektur_secret}
+    command: redis-server --requirepass ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
     networks:
       - autokorrektur-net
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-autokorrektur_secret}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}", "ping"]
       interval: 10s
       timeout: 3s
       retries: 3

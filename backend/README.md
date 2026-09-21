@@ -4,7 +4,7 @@ This backend service provides opt-in, photorealistic **SDXL Cloud Inpainting** f
 
 ## Best Practices & Standards (EiPy Compliant)
 
-- **Standard PEP 621 Packaging**: Dependencies and tooling configured in [pyproject.toml](file:///home/konrad/files/work/__drafts/AutoKorrektur/backend/pyproject.toml) managed via `uv`.
+- **Standard PEP 621 Packaging**: Dependencies and tooling configured in [pyproject.toml](../backend/pyproject.toml) managed via `uv`.
 - **Design by Contract (DbC)**: Preconditions and postconditions enforced at runtime via `icontract` (`@icontract.require`, `@icontract.ensure`).
 - **Code Quality & Type Safety**: Checked via `ruff` and `mypy` (`strict = true`).
 - **Concurrency & Reliability**: SDXL inference is guarded by an `asyncio.Semaphore(1)` to prevent
