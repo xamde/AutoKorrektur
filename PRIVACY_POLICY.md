@@ -2,42 +2,44 @@
 
 **Stand:** September 2026
 
-Die Entwickler von **AutoKorrektur** nehmen den Schutz deiner persönlichen Daten und deiner Privatsphäre sehr ernst. Diese Datenschutzerklärung informiert dich über die Art, den Umfang und den Zweck der Verarbeitung personenbezogener Daten innerhalb unserer Android-Anwendung.
+_Beschreibt die veröffentlichte App (Produkt-Flavor `core`, siehe `docs/MVP_FEATURE_FLAG_PLAN.md`). Funktionen anderer, nicht veröffentlichter Flavors (Live-AR, Videoclips, High-Res-Kachel-Inpainting, Cloud-Inpainting, Stapelverarbeitung) sind hier absichtlich nicht beschrieben; wird davon etwas veröffentlicht, wird dieser Text zuerst erweitert. Rendering auf autokorrektur.org: `site/build.sh`._
+
+Die Entwickler von **AutoKorrektur** nehmen den Schutz deiner persönlichen Daten und deiner Privatsphäre sehr ernst. Diese Datenschutzerklärung informiert dich darüber, welche Daten die Android-App AutoKorrektur verarbeitet – und welche nicht.
 
 ---
 
-## 1. Grundprinzip: On-Device & Datensparsamkeit
+## 1. Grundprinzip: alles auf deinem Gerät
 
 AutoKorrektur folgt dem Grundsatz der **Privacy by Design & Default**:
-- Die Nutzung der App erfordert **keine Registrierung**, **kein Benutzerkonto** und **keine Eingabe persönlicher Identitätsdaten**.
-- Wir setzen **keine Werbe-SDKs**, **keine Tracking-Tools** und **keine Verhaltensanalyse-Dienste** ein.
+- Die Nutzung der App erfordert **keine Registrierung**, **kein Benutzerkonto** und **keine Eingabe persönlicher Daten**.
+- Die App hat **keine Internet-Berechtigung**. Sie kann keine Daten senden oder empfangen – weder deine Fotos noch Nutzungsdaten.
+- Wir setzen **keine Werbe-SDKs**, **keine Tracking-Tools** und **keine Analyse-Dienste** ein.
 
 ---
 
-## 2. Erforderliche App-Berechtigungen
-
-Damit AutoKorrektur seine Kernfunktionen ausführen kann, benötigt die App folgende Geräteberechtigungen:
+## 2. App-Berechtigungen
 
 1. **Kamera (`android.permission.CAMERA`)**:
-   - **Zweck**: Ausschließlich zur Erzeugung des Live-AR-Kamerabildes und zur Aufnahme von Fotos und 5-Sekunden-Videosequenzen.
-   - **Verarbeitung**: Die Kamerabilder werden live im flüchtigen Speicher deines Endgeräts verarbeitet. Es findet keine unbemerkte Übertragung im Hintergrund statt.
+   - **Zweck**: Nur, wenn du auf „Foto aufnehmen“ tippst, wird die Kamera-App deines Geräts geöffnet, um ein Foto für die Bearbeitung zu machen. AutoKorrektur zeigt selbst kein Kamerabild an und nimmt nichts im Hintergrund auf.
+   - Du kannst die Berechtigung verweigern und stattdessen Fotos aus der Galerie auswählen.
 
-2. **Speicher / Mediathek (`READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`)**:
-   - **Zweck**: Ermöglicht dir das Auswählen vorhandener Fotos aus deiner Galerie für das Studio-Inpainting sowie das Speichern der fertigen Vorher/Nachher-Ergebnisse in deinen Medienordner.
+2. **Fotos / Mediathek**:
+   - **Auswählen**: Über den Android-Fotoauswähler bekommt die App nur Zugriff auf genau das Foto, das du auswählst, nicht auf deine ganze Galerie.
+   - **Speichern**: Fertige Ergebnisse legt die App auf deinen Wunsch als JPEG im Ordner „Pictures“ deines Geräts ab; die Galerie in der App zeigt diese von ihr selbst gespeicherten Bilder wieder an.
 
 ---
 
-## 3. Datenverarbeitung bei lokaler KI-Nutzung (On-Device)
+## 3. Verarbeitung deiner Fotos
 
-Wenn du den **AR-Modus**, den **Schnell-Modus** oder den **Progressiven High-Res Modus** nutzt:
-- Die Objekterkennung (YOLO) und das KI-Inpainting (MI-GAN / Progressive Tile Engine) laufen **vollständig lokal auf dem Prozessor / NPU deines Geräts**.
-- Zu keinem Zeitpunkt verlassen deine Bild- oder Videodaten dein Endgerät.
+- Die Fahrzeugerkennung (YOLOv11) und das KI-Inpainting (MI-GAN) laufen **vollständig auf dem Prozessor deines Geräts**. Die Modelle sind Teil der App.
+- Deine Fotos verlassen dein Gerät zu keinem Zeitpunkt. Es gibt keinen Server, an den sie geschickt werden könnten (siehe §1: keine Internet-Berechtigung).
+- Zwischenergebnisse liegen nur im Arbeitsspeicher; gespeichert wird ausschließlich, was du selbst speicherst oder teilst.
 
 ---
 
 ## 4. Weitergabe von Daten an Dritte
 
-Deine Daten werden weder verkauft, noch an Werbenetzwerke oder unbefugte Dritte weitergegeben. Wenn du fertige Bilder oder Videos über Instagram oder andere Apps teilst, erfolgt dies ausschließlich über das standardmäßige Android-Freigabesystem (`Intent.ACTION_SEND`), über das du jederzeit die volle Kontrolle behältst.
+Deine Daten werden weder verkauft noch an Werbenetzwerke oder sonstige Dritte weitergegeben. Wenn du ein fertiges Vorher/Nachher-Bild über Instagram oder eine andere App teilst, geschieht das ausschließlich über das Android-Teilen-Menü (`Intent.ACTION_SEND`): Du wählst die Ziel-App, und nur sie erhält das Bild.
 
 ---
 
@@ -45,9 +47,9 @@ Deine Daten werden weder verkauft, noch an Werbenetzwerke oder unbefugte Dritte 
 
 Um die App auf möglichst vielen Geräten schnell und stabil zu machen, kannst du unter **„Diagnosedaten“** im Menü das Mitschreiben technischer Messwerte einschalten. Standardmäßig ist das **ausgeschaltet**.
 
-- **Was erfasst wird**: Rechenzeiten der einzelnen Verarbeitungsschritte, Bildgröße in Pixeln, gewählter Modus, Anzahl erkannter Fahrzeuge, Erfolg oder Fehlerart, Bildrate im AR-Modus, sowie einmal pro Sitzung App-Version, Android-Version, Gerätehersteller und -modell, Arbeitsspeicher und Prozessorkerne. Dazu eine zufällige Installations-ID, die die App beim Einschalten erzeugt und beim Löschen der Daten verwirft.
-- **Was nicht erfasst wird**: keine Bilder oder Videos, keine Dateinamen, kein Standort, keine Kontakte, keine Werbe-ID, keine Konto- oder Kontaktdaten, keine Freitexte aus Fehlermeldungen.
-- **Wo die Daten liegen**: ausschließlich in einer Datei im privaten Speicherbereich der App auf deinem Gerät. Die App überträgt sie **nicht** automatisch – es gibt keinen Server, der sie empfängt.
+- **Was erfasst wird**: Rechenzeiten der einzelnen Verarbeitungsschritte, Bildgröße in Pixeln, Anzahl erkannter Fahrzeuge, Erfolg oder Fehlerart, sowie einmal pro Sitzung App-Version, Android-Version, Gerätehersteller und -modell, Arbeitsspeicher und Prozessorkerne. Dazu eine zufällige Installations-ID, die die App beim Einschalten erzeugt und beim Löschen der Daten verwirft.
+- **Was nicht erfasst wird**: keine Bilder, keine Dateinamen, kein Standort, keine Kontakte, keine Werbe-ID, keine Konto- oder Kontaktdaten, keine Freitexte aus Fehlermeldungen.
+- **Wo die Daten liegen**: ausschließlich in einer Datei im privaten Speicherbereich der App auf deinem Gerät. Die App überträgt sie **nicht** – sie kann es mangels Internet-Berechtigung auch gar nicht.
 - **Export und Löschen**: Du kannst die Datei jederzeit über das Android-Teilen-Menü selbst weitergeben (z. B. per E-Mail an die Entwickler) oder mit einem Tipp löschen. Deaktivierst du die Funktion, wird nichts mehr geschrieben.
 
 Unabhängig davon führt die App ein technisches Protokoll (Log) im app-eigenen Speicher, das keine Bilder enthält und das Gerät ebenfalls nur verlässt, wenn du es selbst exportierst.

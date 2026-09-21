@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replaced ThreadLocal prototype channel buffers in `YoloMaskAssembler` to reduce per-frame GC allocations.
 
 ### Removed
+- `core`/`plus` manifests drop `INTERNET`, `READ_MEDIA_VIDEO` and `READ_MEDIA_AUDIO` (`tools:node="remove"`): those tiers have no network feature and no video/audio handling, and `PRIVACY_POLICY.md` §1 now promises "no internet permission" for the published app. `beta`/`full` keep them.
+- `PRIVACY_POLICY.md` / `.en.md` trimmed to what `core` actually does (photo in, on-device inpainting, save/share, opt-in diagnostics): AR mode, video clips, high-res tile mode and batch processing are no longer described either — they ship only in unpublished flavors.
 - `PRIVACY_POLICY.md` / `.en.md` §4 "Optional cloud processing (Cloud SDXL – Frankfurt)": the cloud tier is unfinished and off in every public flavor, so the policy (and the hosted site) no longer describes it; the text is in git history for when it ships.
 - Dead `useFP16` code path through `YoloEngine`/`YoloTFLiteEngine`/`YoloService`/`YoloServiceImpl` and the unused `yolo11s-seg_float16.tflite` asset (~20MB). Audit found every production call site hardcoded `useFP16 = false`; the only path that ever requested the fp16 model was one instrumented test that already tolerated its failure. Not a real NNAPI fallback — that fallback (NNAPI→CPU) operates on whichever single model buffer was already loaded, never re-selects a model file. See `docs/MVP_FEATURE_FLAG_PLAN.md` §3.
 

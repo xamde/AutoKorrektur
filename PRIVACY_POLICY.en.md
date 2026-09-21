@@ -2,44 +2,44 @@
 
 **Last updated:** September 2026
 
-_English translation of [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for convenience; the German text is the binding one. Keep both in sync — `site/build.sh` renders each into the website (`/privacy`, `/privacy-en`)._
+_English translation of [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for convenience; the German text is the binding one. Describes the published app (product flavor `core`); features of unpublished flavors are deliberately not covered. Keep both files in sync — `site/build.sh` renders each into the website (`/privacy`, `/privacy-en`)._
 
-The developers of **AutoKorrektur** take the protection of your personal data and your privacy seriously. This policy explains the nature, scope and purpose of any processing of personal data inside our Android application.
+The developers of **AutoKorrektur** take the protection of your personal data and your privacy seriously. This policy explains which data the AutoKorrektur Android app processes – and which it does not.
 
 ---
 
-## 1. Principle: on-device and data minimisation
+## 1. Principle: everything stays on your device
 
 AutoKorrektur follows **privacy by design and by default**:
-- Using the app requires **no registration**, **no user account** and **no entry of personal identity data**.
-- We use **no advertising SDKs**, **no tracking tools** and **no behavioural analytics services**.
+- Using the app requires **no registration**, **no user account** and **no entry of personal data**.
+- The app has **no internet permission**. It cannot send or receive anything – neither your photos nor usage data.
+- We use **no advertising SDKs**, **no tracking tools** and **no analytics services**.
 
 ---
 
 ## 2. App permissions
 
-For its core functions the app needs the following device permissions:
-
 1. **Camera (`android.permission.CAMERA`)**:
-   - **Purpose**: solely to produce the live AR camera view and to take photos and 5-second video clips.
-   - **Processing**: camera frames are processed live in your device's volatile memory. There is no hidden transfer in the background.
+   - **Purpose**: only when you tap "Take photo", your device's camera app is opened to take a picture for editing. AutoKorrektur shows no camera preview of its own and records nothing in the background.
+   - You can deny the permission and pick photos from the gallery instead.
 
-2. **Storage / media library (`READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`)**:
-   - **Purpose**: lets you pick existing photos from your gallery for studio inpainting and save the finished before/after results to your media folder.
+2. **Photos / media library**:
+   - **Picking**: through the Android photo picker the app only gets access to the exact photo you select, not to your whole gallery.
+   - **Saving**: on your request, finished results are saved as JPEG into your device's "Pictures" folder; the in-app gallery shows the images the app itself saved there.
 
 ---
 
-## 3. Data processing with on-device AI
+## 3. Processing of your photos
 
-When you use the **AR mode**, the **Fast mode** or the **Progressive High-Res mode**:
-- Object detection (YOLO) and AI inpainting (MI-GAN / progressive tile engine) run **entirely locally on your device's processor / NPU**.
-- At no point do your image or video data leave your device.
+- Vehicle detection (YOLOv11) and AI inpainting (MI-GAN) run **entirely on your device's processor**. The models ship inside the app.
+- Your photos never leave your device. There is no server they could be sent to (see §1: no internet permission).
+- Intermediate results live only in memory; the only thing written to storage is what you save or share yourself.
 
 ---
 
 ## 4. Disclosure to third parties
 
-Your data is neither sold nor passed on to advertising networks or other unauthorised third parties. When you share finished images or videos via Instagram or other apps, this happens solely through Android's standard share system (`Intent.ACTION_SEND`), over which you keep full control at all times.
+Your data is neither sold nor passed on to advertising networks or any other third party. When you share a finished before/after image via Instagram or another app, this happens solely through Android's share sheet (`Intent.ACTION_SEND`): you choose the target app, and only that app receives the image.
 
 ---
 
@@ -47,9 +47,9 @@ Your data is neither sold nor passed on to advertising networks or other unautho
 
 To make the app fast and stable on as many devices as possible, you can switch on the recording of technical measurements under **"Diagnostics"** in the menu. It is **off by default**.
 
-- **What is recorded**: compute time of each processing step, image size in pixels, the selected mode, the number of detected vehicles, success or the kind of error, the frame rate in AR mode, and once per session the app version, Android version, device manufacturer and model, memory size and processor cores. Plus a random installation ID that the app generates when you switch diagnostics on and discards when you delete the data.
-- **What is not recorded**: no images or videos, no file names, no location, no contacts, no advertising ID, no account or contact details, no free text from error messages.
-- **Where the data lives**: only in a file in the app's private storage area on your device. The app does **not** transmit it automatically – there is no server receiving it.
+- **What is recorded**: compute time of each processing step, image size in pixels, the number of detected vehicles, success or the kind of error, and once per session the app version, Android version, device manufacturer and model, memory size and processor cores. Plus a random installation ID that the app generates when you switch diagnostics on and discards when you delete the data.
+- **What is not recorded**: no images, no file names, no location, no contacts, no advertising ID, no account or contact details, no free text from error messages.
+- **Where the data lives**: only in a file in the app's private storage area on your device. The app does **not** transmit it – without an internet permission it could not even if it wanted to.
 - **Export and deletion**: you can pass the file on yourself at any time through the Android share sheet (for example by e-mail to the developers) or delete it with one tap. If you switch the feature off, nothing more is written.
 
 Independently of this, the app keeps a technical log in its own storage area; it contains no images and likewise leaves the device only if you export it yourself.

@@ -9,6 +9,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- These tiers have no network feature (FEATURE_CLOUD_SDXL=false) and handle no video or
+         audio, so the permissions the shared manifest declares for beta/full are removed here.
+         PRIVACY_POLICY.md §1 promises "no internet permission" for the published app; keep it true. -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" tools:node="remove" />
+
     <application>
         <activity
             android:name=".ar.ArCameraActivity"
