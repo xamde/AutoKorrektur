@@ -1,0 +1,59 @@
+/* autokorrektur.org -- the landing, privacy and Impressum pages. Palette from the launcher icon
+   (app/src/main/res/drawable/ic_launcher_*.xml: navy, indigo, sky, green); no external resource
+   (the site's CSP is default-src 'self', server repo role autokorrektur). Same layout as
+   laberampel.de's site.css. */
+:root {
+  color-scheme: light dark;
+  --brand: #1E1B4B; --primary: #4F46E5; --on-primary: #fff; --primary-container: #E0E7FF;
+  --bg: #F8FAFF; --surface: #fff; --surface-2: #EEF2FF; --ink: #0F172A; --muted: #4B5563;
+  --outline: #C7D2FE; --accent: #3730A3; --green: #059669; --focus: #0072B2;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --primary: #A5B4FC; --on-primary: #1E1B4B; --primary-container: #312E81;
+    --bg: #0F172A; --surface: #1E1B4B; --surface-2: #1E293B; --ink: #E2E8F0; --muted: #A5B4C8;
+    --outline: #3730A3; --accent: #A5B4FC; --green: #34D399; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 18px/1.55 var(--font); }
+a { color: var(--accent); }
+a:focus-visible, .button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+main, header.site, footer.site { max-width: 44rem; margin-inline: auto; padding-inline: 1.25rem; }
+header.site { display: flex; align-items: center; gap: .75rem; padding-block: 1rem; }
+header.site img { width: 44px; height: 44px; border-radius: 10px; }
+header.site .name { font-weight: 700; font-size: 1.25rem; color: var(--accent); text-decoration: none; }
+header.site nav { margin-left: auto; font-size: .95rem; }
+header.site nav a { margin-left: 1rem; }
+.hero { padding: 2rem 0 1rem; }
+.hero h1 { font-size: 2.4rem; line-height: 1.15; margin: 0 0 .5rem; color: var(--accent); }
+.hero .lede { font-size: 1.2rem; color: var(--muted); margin: 0 0 1.5rem; max-width: 34rem; }
+.actions { display: flex; flex-wrap: wrap; gap: .75rem; margin: 1rem 0; }
+.button { display: inline-block; padding: .75rem 1.25rem; border-radius: 999px; font-weight: 600;
+  text-decoration: none; border: 2px solid var(--primary); }
+.button.primary { background: var(--primary); color: var(--on-primary); }
+.button.secondary { color: var(--primary); background: transparent; }
+.button small { display: block; font-weight: 400; font-size: .8rem; opacity: .85; }
+h2 { font-size: 1.35rem; margin: 2.25rem 0 .5rem; color: var(--accent); }
+h3 { font-size: 1.05rem; margin: 1.25rem 0 .25rem; }
+p, li { margin: .6rem 0; }
+.note { border-left: 4px solid var(--accent); padding: .25rem 0 .25rem 1rem; color: var(--muted); }
+.cards { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); margin: 1rem 0; }
+.card { background: var(--surface); border: 1px solid var(--outline); border-radius: 14px; padding: 1rem 1.1rem; }
+.card h3 { margin-top: 0; }
+.card p { margin: .4rem 0; font-size: .97rem; }
+/* before/after pair from media/ */
+.pair { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); margin: 1.25rem 0; }
+.pair figure { margin: 0; }
+.pair img { width: 100%; height: auto; border-radius: 14px; border: 1px solid var(--outline); display: block; }
+.pair figcaption { font-size: .9rem; color: var(--muted); text-align: center; margin-top: .35rem; }
+code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .85em; }
+.sum { word-break: break-all; }
+table { border-collapse: collapse; width: 100%; font-size: .95rem; margin: .75rem 0; }
+th, td { text-align: left; padding: .4rem .5rem; border-bottom: 1px solid var(--outline); vertical-align: top; }
+footer.site { margin-top: 3rem; padding-block: 1.5rem; border-top: 1px solid var(--outline); color: var(--muted); font-size: .9rem; }
+footer.site a { margin-right: 1rem; }
+/* privacy*.html are pandoc output: give their title the hero look */
+.doc h1 { font-size: 2rem; line-height: 1.2; margin: 1.5rem 0 .5rem; color: var(--accent); }
+.doc h2 { font-size: 1.3rem; }
+.doc hr { border: 0; border-top: 1px solid var(--outline); margin: 1.5rem 0; }
+address { font-style: normal; }

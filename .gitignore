@@ -42,3 +42,6 @@ __pycache__/
 *.keystore
 *.jks
 
+
+# autokorrektur.org build output (site/build.sh)
+/site/dist

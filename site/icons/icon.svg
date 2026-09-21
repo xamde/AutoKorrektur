@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
+<!-- AutoKorrektur launcher icon (app/src/main/res/drawable/ic_launcher_*.xml) as SVG for autokorrektur.org -->
+<rect width="108" height="108" rx="22" fill="#0F172A"/>
+<path d="M0,22 A22,22 0 0 1 22,0 L0,0Z M0,22 L108,108 L22,108 A22,22 0 0 1 0,86Z" fill="#1E1B4B"/>
+<path fill="#818CF8" d="M28,62L34,44C35,41 38,39 41,39L67,39C70,39 73,41 74,44L80,62C83,63 85,66 85,70L85,77C85,79 83.5,80.5 82,80.5L78,80.5C76.5,80.5 75,79 75,77L75,74L33,74L33,77C33,79 31.5,80.5 30,80.5L26,80.5C24.5,80.5 23,79 23,77L23,70C23,66 25,63 28,62Z"/>
+<path fill="#0F172A" d="M37,45L71,45L66,57L42,57Z"/>
+<circle cx="31" cy="66" r="3" fill="#38BDF8"/><circle cx="77" cy="66" r="3" fill="#38BDF8"/>
+<path fill="#34D399" d="M68,26L71,32L77,35L71,38L68,44L65,38L59,35L65,32Z"/>
+<path fill="#F472B6" d="M40,28L42,31L45,33L42,35L40,38L38,35L35,33L38,31Z"/>
+</svg>

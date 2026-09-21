@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoKorrektur – your street without cars, computed on your own device</title>
+<meta name="description" content="AutoKorrektur removes parked cars from your photos – AI inpainting entirely on the phone, no account, no tracking. Share a before/after image. Android app.">
+<!-- English version of index.html; the placeholders (double underscores) are filled by site/build.sh. -->
+<link rel="stylesheet" href="site.css">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="alternate" hreflang="de" href="./">
+</head>
+<body>
+<header class="site">
+  <img src="icons/icon.svg" alt="" width="44" height="44">
+  <a class="name" href="en.html">AutoKorrektur</a>
+  <nav><a href="#android">Android</a><a href="privacy-en">Privacy</a><a href="./" lang="de" hreflang="de">Deutsch</a></nav>
+</header>
+<main>
+  <section class="hero">
+    <h1>Your street without cars. Computed on your own device.</h1>
+    <p class="lede">AutoKorrektur finds the parked cars in your photo and makes them disappear – the AI runs entirely on the phone. No account, no upload, no tracking. A before/after image ready to share in two taps.</p>
+    <div class="actions">
+      <a class="button primary" href="#android">For Android<small>Google Play · version __VERSION__</small></a>
+      <a class="button secondary" href="privacy-en">Privacy policy<small>in short: nothing leaves your device</small></a>
+    </div>
+  </section>
+
+  <div class="pair">
+    <figure><img src="img/before.png" alt="Street with a parked car" width="640" height="640"><figcaption>Before: the original photo</figcaption></figure>
+    <figure><img src="img/after.png" alt="The same street, the car removed" width="640" height="640"><figcaption>After: car-free vision</figcaption></figure>
+  </div>
+
+  <h2>What it does</h2>
+  <div class="cards">
+    <div class="card"><h3>Photo in, cars out</h3><p>Take a photo or pick one from the gallery. A segmentation network (YOLOv11) finds the vehicles; an inpainting network (MI-GAN) fills the gap with plausible road, greenery and pavement.</p></div>
+    <div class="card"><h3>Before / after</h3><p>A slider shows the difference. The finished split card (“BEFORE / CAR-FREE”) goes out through Android's ordinary share sheet – Instagram, Signal, mail, whatever you pick.</p></div>
+    <div class="card"><h3>For the mobility transition</h3><p>Made for activists, urban planners and anyone who wants to show how much room a street has once the metal is gone. Free, open source (AGPLv3).</p></div>
+  </div>
+  <p>The models ship inside the app, which is why it is a few hundred megabytes – and why it needs no internet connection after installing. The result is a sketch, not a print-quality montage: shadows, reflections and hidden details are invented plausibly, not always correctly.</p>
+
+  <h2>Privacy, in one paragraph</h2>
+  <p>Detection and inpainting run on your device's own processor; your photos never leave it. There is no account, no advertising, no analytics service. Whatever you share goes only through the Android share sheet to the app you choose there. Optionally you can switch on anonymous diagnostics in the settings (compute times, device model – never images), recorded on the device and exported only by you; it is off by default. <a href="privacy-en">Full privacy policy</a> (the <a href="privacy" lang="de">German version</a> is the binding one).</p>
+
+  <h2 id="android">Android</h2>
+  <p>AutoKorrektur is coming to Google Play (package <code>de.konradvoelkel.android.autokorrektur</code>). Android 10 or newer; a device with 4 GB of RAM or more is recommended, older devices take longer.</p>
+  <p class="note">Version __VERSION__, as of __DATE__. The source code is on <a href="https://github.com/xamde/AutoKorrektur">GitHub</a>.</p>
+
+  <h2>Who is behind this</h2>
+  <p>AutoKorrektur is a private project by Konrad Völkel in Düsseldorf. It builds on two bachelor theses at Heinrich Heine University Düsseldorf (Till Schellscheidt 2024, “Autokorrektur – Automatisierte Objektersetzung in Fotos”; Ben Beckers 2025, “Autokorrektur – Inpainting auf mobilen Endgeräten”) and on <a href="https://github.com/BenB2/AutoKorrektur">Benjamin Beckers' web version</a>. Questions and bug reports: see the <a href="impressum">Impressum</a> (German).</p>
+</main>
+<footer class="site">
+  <a href="privacy-en">Privacy policy</a><a href="impressum">Impressum</a><a href="./" lang="de">Deutsch</a>
+</footer>
+</body>
+</html>
