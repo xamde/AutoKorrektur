@@ -25,7 +25,7 @@ This project is a native Android reimplementation and major architectural evolut
 
 The primary mission is to empower mobility activists, urban planners, and citizens to visualize what our cities could look like when public space is reclaimed from parked cars for people, greenery, and sustainable mobility.
 
-Default processing is executed **100% on-device** without accounts or telemetry. Usage is free and open source.
+Default processing is executed **100% on-device** without accounts or tracking; the only diagnostics are an opt-in, on-device file the user can export by hand (`PRIVACY_POLICY.md` §6). Usage is free and open source.
 
 ---
 
@@ -173,7 +173,9 @@ To navigate the comprehensive project documentation:
 | | [walkthrough.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/walkthrough.md) | Implementation walkthrough of newly added features and UI components. |
 | **🚀 Release & Play Store** | [docs/PLAY_STORE_LISTING.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/docs/PLAY_STORE_LISTING.md) | Google Play Store copy and metadata in German and English. |
 | | [RELEASE_CHECKLIST.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/RELEASE_CHECKLIST.md) | Play Store release pre-flight checks, signing keys, and AAB bundle steps. |
-| | [PRIVACY_POLICY.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/PRIVACY_POLICY.md) | GDPR/DSGVO privacy policy, on-device guarantees, and zero-storage terms. |
+| | [PRIVACY_POLICY.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/PRIVACY_POLICY.md) | GDPR/DSGVO privacy policy (German, binding), on-device guarantees, zero-storage terms, opt-in diagnostics. [PRIVACY_POLICY.en.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/PRIVACY_POLICY.en.md) is the English translation. |
+| | [site/](file:///home/konrad/files/work/__drafts/AutoKorrektur/site/) | Static website for autokorrektur.org (landing de/en, `/privacy`, `/privacy-en`, Impressum); `build.sh` + `deploy.sh`, server side in the infrastructure repo. |
+| | [HUMAN_RELEASE_CHECKLIST.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/HUMAN_RELEASE_CHECKLIST.md) | What only the owner can do before the Play upload: tag, keystore (done), privacy hosting, Data Safety, assets. |
 | | [CHANGELOG.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/CHANGELOG.md) | Version history, release tags, and feature changelog. |
 | **☁️ Backend & Cloud** | [backend/README.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/backend/README.md) | FastAPI SDXL cloud inpainting server documentation. |
 | | [backend/DEPLOY_FRANKFURT.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/backend/DEPLOY_FRANKFURT.md) | Deployment guide for German Frankfurt VPS with Docker & Caddy SSL. |

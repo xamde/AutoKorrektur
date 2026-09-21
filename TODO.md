@@ -14,6 +14,7 @@
   - Execute test scenarios outlined in [TODO-for-human.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/TODO-for-human.md) and [docs/FIELD_TESTING_AND_DATA_COLLECTION.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/docs/FIELD_TESTING_AND_DATA_COLLECTION.md).
 - [ ] **FT-02. Batch Telemetry & CSV Metric Collection**
   - Run multi-photo batch processing across varied lighting conditions and export execution CSVs for performance review.
+  - Since 2026-09-21 every flavor (incl. `core`) also has opt-in on-device diagnostics: menu → Diagnostics → switch on, use the app, Export (share sheet) → `autokorrektur-diagnostics-<date>.jsonl` with per-stage timings, AR fps, export durations and crash lines. Off by default; see `PRIVACY_POLICY.md` §6.
 - [ ] **FT-03. Social Media Split Export Trials**
   - Generate split cards, 4:5 carousels, and animated sweep MP4s on real street photos to verify Instagram readiness.
 
@@ -22,8 +23,8 @@
 ### 🚀 Milestone 2: Google Play Store Release
 - [ ] **REL-01. Google Play Console Listing Setup**
   - Paste prepared German & English metadata from [docs/PLAY_STORE_LISTING.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/docs/PLAY_STORE_LISTING.md).
-- [ ] **REL-02. Privacy Policy Hosting**
-  - Publish [PRIVACY_POLICY.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/PRIVACY_POLICY.md) to GitHub Pages or project website.
+- [ ] **REL-02. Privacy Policy Hosting** — site prepared 2026-09-21, waiting for the VPS
+  - `site/` (landing de/en, `/privacy`, `/privacy-en`, `/impressum`) + server-repo role `autokorrektur`; register `autokorrektur.org`, set the domain in the server inventory, `make site TAGS=autokorrektur`, `site/deploy.sh`. Steps in [HUMAN_RELEASE_CHECKLIST.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/HUMAN_RELEASE_CHECKLIST.md) §3.
 - [ ] **REL-03. Release App Bundle Generation**
   - Build signed `.aab` bundle via `./gradlew bundleCoreRelease` (`core` is the Play Store flavor) and upload to Play Console Internal Testing track.
 

@@ -124,25 +124,35 @@ To eliminate discrepancies between clean lab benchmarks and messy real-world pho
 > systematically sweep by hand. This tier automates that sweep instead of relying on a person to
 > stumble into every locale × theme × screen-width combination.
 
-### A. String Resource Localization Test (✅ Implemented)
+### A. String Resource Localization Test (✅ Implemented, strict since 2026-09-21)
 `app/src/test/java/de/konradvoelkel/android/autokorrektur/StringResourceLocalizationTest.kt`
 
 A pure-JVM test (no emulator, runs in `./gradlew :app:testFullDebugUnitTest`) that parses
-`values/strings.xml`, `values-de/strings.xml`, and `values-en/strings.xml` directly and asserts
-resource-resolution safety. It caught a real, pre-existing bug while being written: **51 of the
-121 keys in the default (locale-neutral) `strings.xml` are German text that disagrees with the
-deliberate English translation in `values-en`**, and 49 of those aren't declared in `values-de`
-at all. The app currently "works" only because `values-de` and `values-en` happen to cover
-complementary halves of the key space — but Google Play serves every locale by default, and any
-device set to French, Spanish, Polish, etc. has no override to fall back to, so it renders a UI
-that silently mixes English and German on the same screen. The test ships as a ratchet (today's
-51 known offenders are allow-listed so CI stays green) so it fails the moment a *new* violation
-is introduced, without demanding an immediate fix of the existing ones. See the file's doc
-comment for the two remediation options (restrict store listing to de/en markets, or make
-`values/strings.xml` purely English).
+`values/strings.xml` and `values-de/strings.xml` directly and enforces the localization contract:
+the default file is English and complete (the fallback for every locale), `values-de` is a
+complete German override, and there is no `values-en`. Concretely: key parity in both directions
+(strings, string-arrays, plurals; `translatable="false"` exempt), format-placeholder parity, no
+German entry byte-identical to its English one unless allow-listed as genuinely the same
+("AutoKorrektur", "Start", …), and `values-en/` must not exist.
+
+History: when first written (2026-08) it found that 51 of 121 default entries were German and
+`values-de`/`values-en` each covered only half the keys — German and English devices looked right
+by accident while any third locale mixed both languages. It shipped as a ratchet then; the fix
+(fold `values-en` into the default file, complete `values-de`, move the remaining hard-coded UI
+text and the pipelines' English progress-stage strings into resources via `PipelineStage`) landed
+on 2026-09-21 and the test became strict. The 119 `MissingTranslation` lint entries left
+`app/lint-baseline.xml` at the same time.
+
+### A2. Diagnostics store test (✅ Implemented)
+`app/src/test/java/de/konradvoelkel/android/autokorrektur/telemetry/TelemetryStoreTest.kt` covers
+the opt-in diagnostics file (`telemetry/TelemetryStore`, `TelemetryEvent`): JSON Lines encoding
+and escaping, lazy file creation, counting, clearing, and the size cap that drops the oldest
+half. The Android facade (`Telemetry`) is a thin wrapper and is a no-op in JVM tests, so pipeline
+tests need no changes. To verify on a device: menu → Diagnostics → switch on, run an inference,
+then `adb shell run-as de.konradvoelkel.android.autokorrektur cat files/telemetry/events.jsonl`.
 
 ### B. Screenshot / Visual Regression Testing Across the Config Matrix (Proposed)
-This app already ships `values-de`, `values-en`, `values-night`, `values-land`, `values-w600dp`,
+This app already ships `values-de`, `values-night`, `values-land`, `values-w600dp`,
 and `values-w1240dp` — five independent axes a human tester samples maybe one or two
 combinations of. [Paparazzi](https://github.com/cashapp/paparazzi) renders Android views/layouts
 to PNGs on the JVM with no emulator (seconds, not the 20-30s of `connectedAndroidTest`), which

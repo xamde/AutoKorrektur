@@ -85,7 +85,7 @@ Manually brush over deep asphalt shadows and tinted reflections, or use the eras
 - **🎬 Animated Sweep Videos**: 3.5s looping split-slider MP4 video for Reels & Stories.
 
 🔒 **Privacy & Open Science**
-- 100% On-Device AI processing by default. Zero telemetry, no account required.
+- 100% On-Device AI processing by default. No tracking, no account required; diagnostics are opt-in and never leave the device unless you export them yourself.
 - Optional Frankfurt, Germany cloud processing with zero-storage ephemeral memory.
 - Based on academic research at Heinrich Heine University Düsseldorf (Till Schellscheidt 2024, Ben Beckers 2025, Dr. Konrad Völkel).
 ```
