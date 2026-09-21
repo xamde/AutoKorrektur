@@ -2,7 +2,7 @@
     <string name="app_name">AutoKorrektur</string>
     <string name="action_about">Über &amp; Lizenzen</string>
     <string name="about_dialog_title">Über AutoKorrektur</string>
-    <string name="about_dialog_content">AutoKorrektur\n\nVersion: 1.0.0\nLizenz: GNU AGPLv3\n\nOpen-Source-Komponenten:\n• YOLOv11-seg: GNU AGPLv3 (Ultralytics)\n• MI-GAN: Apache 2.0\n• OpenCV Android SDK: Apache 2.0\n• ONNX Runtime: MIT-Lizenz\n\nDie lokale Bildverarbeitung arbeitet zu 100% offline und datenschutzkonform.</string>
+    <string name="about_dialog_content">AutoKorrektur – Autofreie Visionen &amp; AR\n\nVersion: %1$s\nLizenz: GNU AGPLv3\n\nWissenschaftliche Grundlagen:\n• Till Schellscheidt: Bachelorarbeit \"Autokorrektur – Automatisierte Objektersetzung in Fotos\" (HHU Düsseldorf, 2024)\n• Ben Beckers: Bachelorarbeit \"Autokorrektur – Inpainting auf mobilen Endgeräten\" (HHU Düsseldorf, 2025)\n• Dr. Konrad Völkel: Betreuung, native Android-Architektur &amp; AR-Pipeline\n\nOpen-Source-Komponenten:\n• YOLOv11-seg: GNU AGPLv3 (Ultralytics)\n• MI-GAN: MIT License (Picsart AI Research)\n• OpenCV Android SDK 5: Apache 2.0\n• ONNX Runtime / TFLite: MIT / Apache 2.0\n• CameraX &amp; Jetpack: Apache 2.0\n\n100% On-Device KI-Verarbeitung ohne Datensammlung.</string>
     <string name="first_fragment_label">AutoKorrektur</string>
     <string name="next">Weiter</string>
     <string name="previous">Zurück</string>
@@ -28,7 +28,7 @@
     <string name="select_multiple_images">Mehrere Bilder auswählen</string>
     <string name="start_btn">Start</string>
     <string name="select_image_btn">Bild auswählen</string>
-    <string name="processing">Verarbeitung...</string>
+    <string name="processing">Verarbeitung…</string>
     <string name="export_instagram">Für Instagram exportieren</string>
     <string name="share_to_instagram">Grafik teilen</string>
     <string name="save_graphic">Grafik speichern</string>
@@ -88,4 +88,112 @@
         <item>4:5 Feed Porträt (Übereinander)</item>
         <item>9:16 Story (Nebeneinander)</item>
     </string-array>
+
+    <!-- AR camera, video, export, brush, gallery, cloud engine (moved from the former mixed-language default file) -->
+    <string name="ar_camera_title">AUTOFREIE VISION</string>
+    <string name="ar_camera_subtitle">● 30 FPS • Echtzeit auf dem Gerät</string>
+    <string name="btn_reset">ZURÜCKSETZEN</string>
+    <string name="video_title">Autofreies Video (HQ)</string>
+    <string name="video_btn_car_free">AUTOFREI</string>
+    <string name="video_inpainting_progress">HQ-Inpainting auf dem Gerät…</string>
+    <string name="video_progress_zero">0%</string>
+    <string name="btn_save">Speichern</string>
+    <string name="btn_share_instagram">Instagram Reels</string>
+    <string name="export_title">INSTAGRAM &amp; SOCIAL EXPORT</string>
+    <string name="export_subtitle">Wähle das Format für deinen Beitrag oder deine Story:</string>
+    <string name="export_layout_type">LAYOUT TYP</string>
+    <string name="export_layout_split">📸 Split-Bild (Side-by-Side)</string>
+    <string name="export_layout_carousel">🔄 2-Slide Swipe-Karussell</string>
+    <string name="export_layout_video">🎬 Animierter Video-Slider (Reels/Story)</string>
+    <string name="export_aspect_ratio">SEITENVERHÄLTNIS</string>
+    <string name="export_ratio_square">1:1 Quadrat</string>
+    <string name="export_ratio_portrait">4:5 Portrait-Feed</string>
+    <string name="export_ratio_story">9:16 Story / Reel</string>
+    <string name="btn_export_share">Exportieren &amp; Teilen</string>
+    <string name="brush_title">MASKEN-PINSEL</string>
+    <string name="btn_delete">Löschen</string>
+    <string name="btn_done">Fertig</string>
+    <string name="brush_type_brush">🖌️ Pinsel (Auto/Schatten)</string>
+    <string name="brush_type_eraser">🧹 Radierer (Fahrrad/Person)</string>
+    <string name="brush_size">Größe:</string>
+    <string name="gallery_title">Autofreie Vision Galerie</string>
+    <string name="gallery_zero_shots">0 Aufnahmen</string>
+    <string name="gallery_empty_text">Noch keine autofreien Aufnahmen gemacht.\nRichte die AR-Kamera aus und tippe auf den Auslöser!</string>
+    <string name="gdpr_desc1">Um ein hochwertiges Inpainting zu bieten, wird dein Foto zusammen mit einer berechneten Maske und einer Vorschau an unseren sicheren Backend-Server gesendet.</string>
+    <string name="gdpr_desc2">Datenschutzgarantie:\n• Bilder werden streng im Arbeitsspeicher verarbeitet.\n• Bilder werden nach der Verarbeitung sofort gelöscht.\n• Es werden keine Daten gespeichert oder für das Training verwendet.</string>
+    <string name="gdpr_checkbox">Meine Wahl merken und nicht mehr anzeigen</string>
+    <string name="first_frag_brush">🖌️ Pinsel</string>
+    <string name="engine_title">INPAINTING-ENGINE</string>
+    <string name="engine_fast">⚡ Schnell (auf dem Gerät)</string>
+    <string name="engine_highres">💎 High-Res Progressiv</string>
+    <string name="engine_cloud">☁️ Cloud SDXL</string>
+    <string name="engine_privacy">🔒 In-Memory-Verarbeitung in Frankfurt, Deutschland. Keine dauerhafte Speicherung.</string>
+    <string name="engine_quota">⚡ 1/2 kostenlose High-Res-Server-Erweiterungen verbleiben in diesem Monat</string>
+    <string name="cd_recent_gallery">Aktuelle Aufnahmen-Galerie</string>
+    <string name="cd_studio_prep">Studio &amp; Nachbearbeitung</string>
+    <string name="cd_back">Zurück</string>
+    <string name="cd_shot_thumbnail">Autofreie Aufnahme Vorschau</string>
+    <string name="ar_fps_active">● 30 FPS Kamera • Aktive AR-Ebene</string>
+    <string name="ar_error_video_init">Videoaufnahme nicht initialisiert</string>
+    <string name="ar_recording">🔴 AUFNAHME (5s Video-Snippet)</string>
+    <string name="ar_msg_captured">Autofreie Vision aufgenommen</string>
+    <string name="ar_error_no_frame">Kein Frame zur Aufnahme bereit</string>
+    <string name="export_error_not_ready">Bilder nicht bereit zum Export</string>
+    <string name="export_btn_exporting">Exportiere…</string>
+    <string name="export_error_failed">Export fehlgeschlagen: %1$s</string>
+    <string name="gallery_n_shots">%1$d Aufnahmen</string>
+    <string name="video_error_not_found">Videodatei nicht gefunden</string>
+    <string name="video_msg_ready">HQ Autofreies Video fertig!</string>
+    <string name="video_error_inpainting">Inpainting fehlgeschlagen: %1$s</string>
+    <string name="video_btn_before">VORHER (RAW)</string>
+    <string name="video_error_none_to_save">Kein Video zum Speichern vorhanden</string>
+    <string name="video_msg_saved">Video in Galerie gespeichert 🎬</string>
+    <string name="video_error_save">Fehler beim Speichern des Videos</string>
+    <string name="video_error_share">Teilen fehlgeschlagen: %1$s</string>
+
+    <!-- Pipeline-Fortschrittsschritte (PipelineStage) -->
+    <string name="stage_initializing">Initialisiere</string>
+    <string name="stage_initializing_engines">Initialisiere neuronale Engines</string>
+    <string name="stage_loading_image">Lade &amp; bereite Bild vor</string>
+    <string name="stage_segmentation">Erkenne Fahrzeuge</string>
+    <string name="stage_inpainting_cloud">Cloud-SDXL-Inpainting</string>
+    <string name="stage_inpainting_high_res">Progressives High-Res-Inpainting</string>
+    <string name="stage_inpainting_on_device">Inpainting auf dem Gerät</string>
+    <string name="stage_completed">Fertig</string>
+    <string name="stage_extracting_regions">Extrahiere Fahrzeugbereiche</string>
+    <string name="stage_inpainting_region">Inpainting Bereich %1$d/%2$d</string>
+    <string name="stage_refining_textures">Verfeinere Texturen (%1$d/%2$d)</string>
+    <string name="stage_finalizing_high_res">Stelle High-Res-Ergebnis fertig</string>
+    <string name="stage_preparing_encoder">Bereite Video-Encoder vor</string>
+    <string name="stage_inpainting_frame">Inpainting Frame %1$d/%2$d</string>
+    <string name="stage_finalizing_video">Stelle MP4-Video fertig</string>
+    <string name="stage_video_completed">Video-Inpainting abgeschlossen</string>
+    <string name="loading_status_batch">Stapel %1$d/%2$d: %3$s (%4$d%%)</string>
+    <string name="error_unknown">Unbekannter Fehler</string>
+
+    <!-- CSV-Export-Dialog der Stapelverarbeitung -->
+    <string name="csv_export_dialog_title">CSV-Bericht exportieren</string>
+    <string name="csv_export_dialog_message">Messwerte der Stapelverarbeitung für %1$d Bilder unter Documents/AutoKorrektur speichern?</string>
+    <string name="csv_export_none">Keine Stapel-Ergebnisse zum Exportieren</string>
+    <string name="csv_export_done">Stapel-Bericht als CSV exportiert</string>
+    <string name="csv_export_failed">CSV-Bericht konnte nicht exportiert werden</string>
+    <string name="share_video_chooser_title">Video teilen via</string>
+
+    <!-- Diagnosedaten (Opt-In, nur auf dem Gerät; PRIVACY_POLICY.md §6) -->
+    <string name="action_diagnostics">Diagnosedaten</string>
+    <string name="diagnostics_title">Diagnosedaten</string>
+    <string name="diagnostics_switch">Diagnosedaten auf diesem Gerät aufzeichnen</string>
+    <string name="diagnostics_description">Standardmäßig aus. Wenn aktiv, schreibt die App Rechenzeiten, Bildgrößen, Modi, Anzahl erkannter Fahrzeuge, Fehlertypen und dein Gerätemodell in eine Datei, die auf diesem Gerät bleibt. Nie Bilder, Dateinamen, Standorte oder persönliche Daten. Nichts wird hochgeladen – du entscheidest, ob du die Datei an die Entwickler weitergibst.</string>
+    <string name="diagnostics_install_id_label">ID %1$s…</string>
+    <string name="diagnostics_export">Exportieren</string>
+    <string name="diagnostics_export_subject">AutoKorrektur-Diagnosedaten</string>
+    <string name="diagnostics_export_chooser">Diagnosedatei teilen</string>
+    <string name="diagnostics_export_empty">Noch keine Diagnosedaten aufgezeichnet</string>
+    <string name="diagnostics_delete">Löschen</string>
+    <string name="diagnostics_delete_confirm">Alle aufgezeichneten Diagnosedaten und die Installations-ID löschen?</string>
+    <string name="diagnostics_deleted">Diagnosedaten gelöscht</string>
+    <plurals name="diagnostics_event_count">
+        <item quantity="one">%1$d Ereignis</item>
+        <item quantity="other">%1$d Ereignisse</item>
+    </plurals>
 </resources>

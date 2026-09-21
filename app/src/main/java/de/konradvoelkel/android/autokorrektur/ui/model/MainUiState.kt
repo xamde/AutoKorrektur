@@ -5,6 +5,7 @@ import android.net.Uri
 import de.konradvoelkel.android.autokorrektur.model.BatchProcessingResult
 import de.konradvoelkel.android.autokorrektur.model.InpaintingQualityMode
 import de.konradvoelkel.android.autokorrektur.pipeline.PipelineResult
+import de.konradvoelkel.android.autokorrektur.pipeline.PipelineStage
 
 /**
  * Sealed class representing the different UI states for the Main Fragment.
@@ -12,10 +13,16 @@ import de.konradvoelkel.android.autokorrektur.pipeline.PipelineResult
 sealed class MainUiState {
     data object Idle : MainUiState()
 
+    /**
+     * In-progress inference. [stage] is resolved to text in the UI's locale at display time;
+     * [batchIndex]/[batchTotal] (1-based, 0 = single image) prefix it with the batch position.
+     */
     data class Loading(
-        val stage: String,
+        val stage: PipelineStage,
         val percent: Int,
-        val intermediateInpaintedBitmap: Bitmap? = null
+        val intermediateInpaintedBitmap: Bitmap? = null,
+        val batchIndex: Int = 0,
+        val batchTotal: Int = 0
     ) : MainUiState()
 
     data class Success(

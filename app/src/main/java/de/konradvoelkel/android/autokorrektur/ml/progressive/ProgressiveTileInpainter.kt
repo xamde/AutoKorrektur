@@ -2,6 +2,7 @@ package de.konradvoelkel.android.autokorrektur.ml.progressive
 
 import android.graphics.Bitmap
 import de.konradvoelkel.android.autokorrektur.ml.InpaintingEngine
+import de.konradvoelkel.android.autokorrektur.pipeline.PipelineStage
 import de.konradvoelkel.android.autokorrektur.utils.AppLogger
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -38,7 +39,7 @@ class ProgressiveTileInpainter(
     suspend fun inpaintProgressive(
         fullImageMat: Mat,
         subtractiveMaskMat: Mat,
-        onProgress: ((stage: String, percent: Int, intermediateBitmap: Bitmap?) -> Unit)? = null
+        onProgress: ((stage: PipelineStage, percent: Int, intermediateBitmap: Bitmap?) -> Unit)? = null
     ): Mat {
         currentCoroutineContext().ensureActive()
         val origW = fullImageMat.cols()
@@ -54,7 +55,7 @@ class ProgressiveTileInpainter(
             return fullImageMat.clone()
         }
 
-        onProgress?.invoke("Extracting Vehicle Regions", 5, null)
+        onProgress?.invoke(PipelineStage.EXTRACTING_REGIONS, 5, null)
 
         // 2. Find contours and bounding boxes of all detected vehicles
         val contours = java.util.ArrayList<MatOfPoint>()
@@ -97,7 +98,7 @@ class ProgressiveTileInpainter(
             val mergedBoxes = mergeBoundingBoxes(boundingBoxes, paddingRatio = 0.20f, imgW = origW, imgH = origH)
             val totalBoxes = mergedBoxes.size
 
-            onProgress?.invoke("Progressive Neural Inpainting (0/$totalBoxes)", 15, null)
+            onProgress?.invoke(PipelineStage.inpaintingRegion(0, totalBoxes), 15, null)
 
             mergedBoxes.forEachIndexed { index, bbox ->
                 currentCoroutineContext().ensureActive()
@@ -105,7 +106,7 @@ class ProgressiveTileInpainter(
                 val progressStart = 15 + (index * 75 / totalBoxes)
                 val progressEnd = 15 + ((index + 1) * 75 / totalBoxes)
 
-                onProgress?.invoke("Inpainting Region ${index + 1}/$totalBoxes", progressStart, null)
+                onProgress?.invoke(PipelineStage.inpaintingRegion(index + 1, totalBoxes), progressStart, null)
 
                 // Extract ROI from image and subtractive mask
                 val imageRoi = Mat(outputMat, bbox)
@@ -128,10 +129,10 @@ class ProgressiveTileInpainter(
                 // Generate intermediate preview bitmap
                 val previewBitmap = Bitmap.createBitmap(origW, origH, Bitmap.Config.ARGB_8888)
                 Utils.matToBitmap(outputMat, previewBitmap)
-                onProgress?.invoke("Refining Textures (${index + 1}/$totalBoxes)", progressEnd, previewBitmap)
+                onProgress?.invoke(PipelineStage.refiningTextures(index + 1, totalBoxes), progressEnd, previewBitmap)
             }
 
-            onProgress?.invoke("Finalizing High-Res Output", 95, null)
+            onProgress?.invoke(PipelineStage.FINALIZING_HIGH_RES, 95, null)
             return outputMat
         } catch (e: Exception) {
             AppLogger.error("ProgressiveTileInpainter error, applying fallback", e)

@@ -12,6 +12,7 @@ import de.konradvoelkel.android.autokorrektur.ml.MiGanInference
 import de.konradvoelkel.android.autokorrektur.ml.api.ServerSdxlApi
 import de.konradvoelkel.android.autokorrektur.ml.api.YoloServiceImpl
 import de.konradvoelkel.android.autokorrektur.ml.engine.YoloTFLiteEngine
+import de.konradvoelkel.android.autokorrektur.pipeline.PipelineStage
 import de.konradvoelkel.android.autokorrektur.pipeline.StaticImagePipeline
 import de.konradvoelkel.android.autokorrektur.ui.model.MainUiProperties
 import de.konradvoelkel.android.autokorrektur.ui.model.MainUiState
@@ -131,7 +132,7 @@ class MainViewModel(
                 }
             } catch (e: Exception) {
                 AppLogger.error("Inference failed", e)
-                _uiState.value = MainUiState.Error(e.message ?: "Unknown error")
+                _uiState.value = MainUiState.Error(e.message ?: getApplication<Application>().getString(R.string.error_unknown))
             }
         }
     }
@@ -144,7 +145,7 @@ class MainViewModel(
         useServerSdxl: Boolean
     ) {
         if (uri == null) return
-        _uiState.value = MainUiState.Loading("Initializing", 0)
+        _uiState.value = MainUiState.Loading(PipelineStage.INITIALIZING, 0)
 
         val currentQuality = properties.value.qualityMode
         val effectiveQuality = if (useServerSdxl) InpaintingQualityMode.CLOUD_SDXL else currentQuality
@@ -163,7 +164,7 @@ class MainViewModel(
             },
             onIntermediateInpaintUpdate = { intermediateBmp ->
                 val prev = _uiState.value
-                val stage = (prev as? MainUiState.Loading)?.stage ?: "Inpainting"
+                val stage = (prev as? MainUiState.Loading)?.stage ?: PipelineStage.INPAINTING_HIGH_RES
                 val percent = (prev as? MainUiState.Loading)?.percent ?: 60
                 _uiState.value = MainUiState.Loading(stage, percent, intermediateBmp)
             }
@@ -191,7 +192,7 @@ class MainViewModel(
         uris.forEachIndexed { index, uri ->
             val startTime = System.currentTimeMillis()
             val imageName = "Image_${index + 1}"
-            _uiState.value = MainUiState.Loading("Batch (${index + 1}/${uris.size})", 0)
+            _uiState.value = MainUiState.Loading(PipelineStage.INITIALIZING, 0, batchIndex = index + 1, batchTotal = uris.size)
 
             try {
                 val result = pipeline.processImage(
@@ -201,7 +202,7 @@ class MainViewModel(
                     scoreThreshold = scoreThreshold,
                     useServerSdxl = useServerSdxl,
                     onProgressUpdate = { stage, percent ->
-                        _uiState.value = MainUiState.Loading("Batch ${index + 1}: $stage", percent)
+                        _uiState.value = MainUiState.Loading(stage, percent, batchIndex = index + 1, batchTotal = uris.size)
                     }
                 )
 

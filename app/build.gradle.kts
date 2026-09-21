@@ -138,12 +138,10 @@ android {
         unitTests.isIncludeAndroidResources = true
     }
     lint {
-        // Pre-existing debt, unrelated to the MVP feature-flag work: lintFullDebug currently
-        // finds 119 MissingTranslation errors (values/strings.xml vs values-en), confirmed
-        // present before this session too (verified against commit a2a81e9). Same underlying
-        // issue as TESTING.md §8's StringResourceLocalizationTest, which already ratchets it as
-        // known but doesn't fix it. Baselined here so CI can build/test the new flavors without
-        // being blocked by unrelated debt — new lint issues introduced later still fail CI.
+        // Pre-existing debt baselined so CI isn't blocked by it; new lint issues introduced
+        // later still fail CI. (The 119 MissingTranslation entries the baseline used to carry
+        // went away on 2026-09-21 when values/strings.xml became purely English with a complete
+        // values-de override — StringResourceLocalizationTest now enforces that invariant.)
         baseline = file("lint-baseline.xml")
     }
     compileOptions {

@@ -4,9 +4,11 @@ import android.graphics.Bitmap
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import de.konradvoelkel.android.autokorrektur.MainActivity
+import de.konradvoelkel.android.autokorrektur.R
 import de.konradvoelkel.android.autokorrektur.model.BatchProcessingResult
 import de.konradvoelkel.android.autokorrektur.shared.AndroidInstrumentedBaseTest
 import de.konradvoelkel.android.autokorrektur.utils.ImageExportManager
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -25,7 +27,7 @@ class UiDelegateInstrumentedTest : AndroidInstrumentedBaseTest() {
                 }
 
                 delegate.showCsvExportDialog(emptyList())
-                assertTrue(messageReceived?.contains("No batch results") == true)
+                assertEquals(activity.getString(R.string.csv_export_none), messageReceived)
             }
         }
     }

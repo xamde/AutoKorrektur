@@ -99,7 +99,7 @@ class VideoPreviewActivity : AppCompatActivity() {
                 ) { stage, percent ->
                     runOnUiThread {
                         binding.progressBar.progress = percent
-                        binding.tvProgressStage.text = stage
+                        binding.tvProgressStage.text = stage.label(this@VideoPreviewActivity)
                         binding.tvProgressPercent.text = "$percent%"
                     }
                 }
@@ -218,7 +218,7 @@ class VideoPreviewActivity : AppCompatActivity() {
                         putExtra(Intent.EXTRA_STREAM, contentUri)
                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     },
-                    "Video teilen via"
+                    getString(R.string.share_video_chooser_title)
                 )
                 startActivity(genericChooser)
             }

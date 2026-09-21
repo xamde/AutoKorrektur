@@ -223,7 +223,12 @@ class FirstFragment : Fragment() {
             }
 
             is MainUiState.Loading -> {
-                val statusText = getString(R.string.loading_status, state.stage, state.percent)
+                val stageLabel = state.stage.label(requireContext())
+                val statusText = if (state.batchTotal > 0) {
+                    getString(R.string.loading_status_batch, state.batchIndex, state.batchTotal, stageLabel, state.percent)
+                } else {
+                    getString(R.string.loading_status, stageLabel, state.percent)
+                }
                 if (autoStartInferenceEnabled) {
                     binding.processingStatusText.visibility = View.VISIBLE
                     binding.processingStatusText.text = statusText
