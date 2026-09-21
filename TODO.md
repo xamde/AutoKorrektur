@@ -23,8 +23,7 @@
 ### 🚀 Milestone 2: Google Play Store Release
 - [ ] **REL-01. Google Play Console Listing Setup**
   - Paste prepared German & English metadata from [docs/PLAY_STORE_LISTING.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/docs/PLAY_STORE_LISTING.md).
-- [ ] **REL-02. Privacy Policy Hosting** — `autokorrektur.org` registered + DNS applied 2026-09-21, site prepared, waiting for the VPS
-  - `site/` (landing de/en, `/privacy`, `/privacy-en`, `/impressum`) + server-repo role `autokorrektur`; remaining: `make site TAGS=autokorrektur`, `site/deploy.sh`. Steps in [HUMAN_RELEASE_CHECKLIST.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/HUMAN_RELEASE_CHECKLIST.md) §3.
+- [x] **REL-02. Privacy Policy Hosting** — live since 2026-09-21 at https://autokorrektur.org/privacy (`/privacy-en` English); redeploy with `site/deploy.sh`. Still to do by hand: paste the URL into Play Console → App content. Steps in [HUMAN_RELEASE_CHECKLIST.md](file:///home/konrad/files/work/__drafts/AutoKorrektur/HUMAN_RELEASE_CHECKLIST.md) §3.
 - [ ] **REL-03. Release App Bundle Generation**
   - Build signed `.aab` bundle via `./gradlew bundleCoreRelease` (`core` is the Play Store flavor) and upload to Play Console Internal Testing track.
 
