@@ -32,7 +32,7 @@ graph TD
   - **Boundary-$IoU$ ($d=4\text{px}$)**: Specifically measures **Guided Filter edge adherence** along bodywork contours.
   - **Non-Car Over-Masking Rate ($FPR_{bg}$)**: Specifically penalizes masking background buildings, roads, trees, and sky.
   - **Inpainting Fidelity ($PSNR$)**: Verifies exact RGB background preservation outside the vehicle hole.
-- Generates interactive visual diff reports: [`backend/benchmark_report.html`](backend/benchmark_report.html).
+- Generates an interactive visual diff report at `backend/benchmark_report.html` (gitignored — 67 MB of embedded images; run `backend/benchmark_ml.py` to regenerate).
 
 ### C. On-Device Hardware Parity & Fidelity Matrix (`androidTest`)
 - [`MaskQualityBenchmarkTest.kt`](app/src/androidTest/java/de/konradvoelkel/android/autokorrektur/ml/MaskQualityBenchmarkTest.kt): Evaluates on-device segmentation against ground-truth triples with memory-safe Mat lifecycle management.

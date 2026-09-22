@@ -39,7 +39,7 @@ This document describes the test structure, benchmark suites, and validation com
 ```bash
 uv run --directory backend python benchmark_ml.py
 ```
-*Generates visual diff report at `backend/benchmark_report.html` with side-by-side Before/Mask/Prediction/Inpainted comparison.*
+*Generates a visual diff report at `backend/benchmark_report.html` (gitignored, regenerate locally) with side-by-side Before/Mask/Prediction/Inpainted comparison.*
 
 ### B. Android Client Tests
 
