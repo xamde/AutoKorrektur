@@ -17,6 +17,8 @@ import androidx.core.graphics.withClip
  * Interactive Before/After split-slider view allowing users to drag a vertical handle
  * across the view to reveal the original (Before) and inpainted (After) bitmaps in real time.
  */
+import de.konradvoelkel.android.autokorrektur.R
+
 class BeforeAfterSliderView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -130,6 +132,11 @@ class BeforeAfterSliderView @JvmOverloads constructor(
      */
     fun getSliderPosition(): Float = sliderPosition
 
+    private var downX = 0f
+    private var downY = 0f
+    private var draggingSlider = false
+    private val touchSlop = android.view.ViewConfiguration.get(context).scaledTouchSlop
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
         val before = beforeBitmap ?: return super.onTouchEvent(event)
         val viewW = width.toFloat()
@@ -152,17 +159,38 @@ class BeforeAfterSliderView @JvmOverloads constructor(
             right = left + drawW
         }
 
+        fun moveSliderTo(x: Float) {
+            val clampedX = x.coerceIn(left, right)
+            sliderPosition = if (right > left) (clampedX - left) / (right - left) else 0.5f
+            invalidate()
+        }
+
         when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN,
+            MotionEvent.ACTION_DOWN -> {
+                downX = event.x
+                downY = event.y
+                draggingSlider = false
+                moveSliderTo(event.x)
+                return true
+            }
             MotionEvent.ACTION_MOVE -> {
-                parent?.requestDisallowInterceptTouchEvent(true)
-                val clampedX = event.x.coerceIn(left, right)
-                sliderPosition = if (right > left) (clampedX - left) / (right - left) else 0.5f
-                invalidate()
+                if (!draggingSlider) {
+                    val dx = kotlin.math.abs(event.x - downX)
+                    val dy = kotlin.math.abs(event.y - downY)
+                    // Claim the gesture only once it is clearly horizontal. Locking the parent on
+                    // ACTION_DOWN (as this used to) swallowed every vertical drag that started on
+                    // the image, so the buttons below the comparison could not be scrolled to.
+                    if (dy > touchSlop && dy >= dx) return true
+                    if (dx <= touchSlop) return true
+                    draggingSlider = true
+                    parent?.requestDisallowInterceptTouchEvent(true)
+                }
+                moveSliderTo(event.x)
                 return true
             }
             MotionEvent.ACTION_UP,
             MotionEvent.ACTION_CANCEL -> {
+                draggingSlider = false
                 parent?.requestDisallowInterceptTouchEvent(false)
                 return true
             }
@@ -243,13 +271,13 @@ class BeforeAfterSliderView @JvmOverloads constructor(
         val badgeMargin = 40f * density
         val badgeOffset = 12f * density
         if (splitX > viewRect.left + badgeMargin) {
-            drawBadge(canvas, "VORHER", viewRect.left + badgeOffset, viewRect.top + badgeOffset)
+            drawBadge(canvas, context.getString(R.string.badge_before), viewRect.left + badgeOffset, viewRect.top + badgeOffset)
         }
 
         // 6. Draw "NACHHER" badge on right if visible
         if (splitX < viewRect.right - badgeMargin) {
-            val badgeW = calculateBadgeWidth("NACHHER")
-            drawBadge(canvas, "NACHHER", viewRect.right - badgeW - badgeOffset, viewRect.top + badgeOffset)
+            val badgeW = calculateBadgeWidth(context.getString(R.string.badge_after))
+            drawBadge(canvas, context.getString(R.string.badge_after), viewRect.right - badgeW - badgeOffset, viewRect.top + badgeOffset)
         }
     }
 

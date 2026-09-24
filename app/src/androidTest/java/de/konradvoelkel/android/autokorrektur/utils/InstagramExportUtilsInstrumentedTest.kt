@@ -36,6 +36,7 @@ class InstagramExportUtilsInstrumentedTest : AndroidInstrumentedBaseTest() {
         val result = InstagramExportUtils.createComparisonBitmap(
             beforeBitmap = before,
             afterBitmap = after,
+            labels = InstagramExportUtils.BadgeLabels.from(appContext),
             ratio = InstagramExportUtils.AspectRatio.SQUARE_1_1,
             layout = InstagramExportUtils.LayoutStyle.SIDE_BY_SIDE
         )
@@ -72,6 +73,7 @@ class InstagramExportUtilsInstrumentedTest : AndroidInstrumentedBaseTest() {
         val result = InstagramExportUtils.createComparisonBitmap(
             beforeBitmap = before,
             afterBitmap = after,
+            labels = InstagramExportUtils.BadgeLabels.from(appContext),
             ratio = InstagramExportUtils.AspectRatio.PORTRAIT_4_5,
             layout = InstagramExportUtils.LayoutStyle.STACKED
         )
@@ -152,6 +154,7 @@ class InstagramExportUtilsInstrumentedTest : AndroidInstrumentedBaseTest() {
             val exported = InstagramExportUtils.createComparisonBitmap(
                 beforeBitmap = origBmp,
                 afterBitmap = inpaintBmp,
+                labels = InstagramExportUtils.BadgeLabels.from(appContext),
                 ratio = InstagramExportUtils.AspectRatio.SQUARE_1_1,
                 layout = InstagramExportUtils.LayoutStyle.SIDE_BY_SIDE
             )
@@ -242,6 +245,7 @@ class InstagramExportUtilsInstrumentedTest : AndroidInstrumentedBaseTest() {
         val result = InstagramExportUtils.createComparisonBitmap(
             beforeBitmap = before,
             afterBitmap = after,
+            labels = InstagramExportUtils.BadgeLabels.from(appContext),
             ratio = InstagramExportUtils.AspectRatio.SQUARE_1_1,
             layout = InstagramExportUtils.LayoutStyle.SIDE_BY_SIDE
         )
@@ -268,6 +272,7 @@ class InstagramExportUtilsInstrumentedTest : AndroidInstrumentedBaseTest() {
         val result = InstagramExportUtils.createComparisonBitmap(
             beforeBitmap = before,
             afterBitmap = after,
+            labels = InstagramExportUtils.BadgeLabels.from(appContext),
             ratio = InstagramExportUtils.AspectRatio.PORTRAIT_4_5,
             layout = InstagramExportUtils.LayoutStyle.STACKED
         )

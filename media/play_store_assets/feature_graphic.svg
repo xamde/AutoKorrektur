@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9C5313"/>
+      <stop offset="1" stop-color="#663305"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="500" fill="url(#g)"/>
+  <!-- the launcher icon artwork, scaled into the left third -->
+  <g transform="translate(96,142) scale(2.0)">
+    <rect width="108" height="108" rx="22" fill="#371801" opacity="0.35"/>
+    <path fill="#FFEADC" d="M28,62L34,44C35,41 38,39 41,39L67,39C70,39 73,41 74,44L80,62C83,63 85,66 85,70L85,77C85,79 83.5,80.5 82,80.5L78,80.5C76.5,80.5 75,79 75,77L75,74L33,74L33,77C33,79 31.5,80.5 30,80.5L26,80.5C24.5,80.5 23,79 23,77L23,70C23,66 25,63 28,62Z"/>
+    <path fill="#371801" d="M37,45L71,45L66,57L42,57Z"/>
+    <circle cx="31" cy="66" r="3" fill="#E89960"/><circle cx="77" cy="66" r="3" fill="#E89960"/>
+    <path fill="#FFFFFF" d="M68,26L71,32L77,35L71,38L68,44L65,38L59,35L65,32Z"/>
+    <path fill="#FFEADC" d="M40,28L42,31L45,33L42,35L40,38L38,35L35,33L38,31Z"/>
+  </g>
+  <text x="400" y="228" font-family="Roboto, 'Noto Sans', system-ui, sans-serif" font-size="76" font-weight="700" fill="#FFFFFF">AutoKorrektur</text>
+  <text x="400" y="292" font-family="Roboto, 'Noto Sans', system-ui, sans-serif" font-size="34" fill="#FFEADC">Deine Straße ohne Autos</text>
+  <text x="400" y="344" font-family="Roboto, 'Noto Sans', system-ui, sans-serif" font-size="24" fill="#E89960">KI auf dem Gerät · kein Konto · kein Tracking</text>
+</svg>

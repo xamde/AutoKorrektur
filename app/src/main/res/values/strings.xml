@@ -199,4 +199,9 @@
         <item quantity="one">%1$d event</item>
         <item quantity="other">%1$d events</item>
     </plurals>
+
+    <!-- Badges burned into the before/after slider and the exported image -->
+    <string name="badge_before">BEFORE</string>
+    <string name="badge_after">AFTER</string>
+    <string name="badge_car_free">CAR-FREE</string>
 </resources>

@@ -52,7 +52,9 @@ android {
             buildConfigField("boolean", "FEATURE_MANUAL_MASK_BRUSH", "false")
             buildConfigField("boolean", "FEATURE_BATCH_PROCESSING", "false")
             buildConfigField("boolean", "FEATURE_EXTRA_EXPORT_LAYOUTS", "false")
-            ndk { abiFilters += "arm64-v8a" }
+            // arm64 only for the Play build. -PscreenshotAbi=x86_64 swaps it for emulator work
+            // (store screenshots, UI checks) — never pass it when building a release bundle.
+            ndk { abiFilters += (project.findProperty("screenshotAbi") as String? ?: "arm64-v8a") }
             // no applicationIdSuffix: this is "the app" as far as Play/users are concerned
         }
         create("plus") {

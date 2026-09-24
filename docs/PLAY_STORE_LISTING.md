@@ -15,7 +15,7 @@
 - **Kategorie**: Fotografie
 - **Altersfreigabe**: USK 0 / PEGI 3 / Everyone
 - **Datenschutzerklärung**: https://autokorrektur.org/privacy (English: /privacy-en)
-- **Website**: https://autokorrektur.org · **E-Mail**: autokorrektur@konradvoelkel.com
+- **Website**: https://autokorrektur.org · **E-Mail**: kontakt@autokorrektur.org
 
 ---
 
@@ -95,9 +95,14 @@ The models ship inside the app, which is why it is a few hundred megabytes. Andr
 
 ## 5. Grafiken
 
-`media/play_store_assets/`: Die Icons (512×512, flächig und transparent) sind aktuell — sie werden
-aus `site/icons/icon.svg` erzeugt und tragen die Markenfarbe (BRANDING.md, Farbton 55°).
-**Die Feature-Grafik ist noch in der alten indigoblauen Fassung und muss neu gebaut werden.
-Die drei Screenshots dort zeigen Live-AR, den Engine-Wähler und den Multi-Layout-Export – Funktionen, die `core` nicht hat.**
-Vor dem Upload neue Screenshots vom `core`-Build machen (Startbildschirm, Ergebnis mit Schieberegler,
-Teilen-Menü mit der Split-Karte, Galerie).
+Alles in `media/play_store_assets/`, alles in der Markenfarbe (Farbton 55°) und aus dem
+`core`-Build aufgenommen:
+
+- **Icons** 512×512 (flächig und transparent), erzeugt aus `site/icons/icon.svg`.
+- **Feature-Grafik** 1024×500, erzeugt aus `feature_graphic.svg` — beides mit
+  `inkscape --export-type=png` neu rendern, wenn sich Palette oder Text ändert.
+- **Screenshots** (720×1280, echter Durchlauf auf einem Emulator): Startbildschirm, erkannte
+  Fahrzeuge (Maskenvorschau), Vorher/Nachher-Schieberegler, Speichern & Teilen.
+
+Für einen physischen Screenshot-Durchlauf: `./gradlew :app:installCoreDebug -PscreenshotAbi=x86_64`
+(nur für den Emulator; der Release-Bundle-Build bleibt arm64).

@@ -1,6 +1,7 @@
 package de.konradvoelkel.android.autokorrektur.utils
 
 import android.content.Context
+import de.konradvoelkel.android.autokorrektur.R
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -22,13 +23,26 @@ import kotlin.math.sin
 
 /**
  * Utility for rendering Instagram-ready (1:1, 4:5, 9:16) comparison graphics and animated sweep videos
- * combining "VORHER" and "NACHHER" photo bitmaps.
+ * combining the before and after photo bitmaps.
  */
 object InstagramExportUtils {
 
     /**
      * Common aspect ratios supported by Instagram posts, carousels, and stories.
      */
+    /**
+     * The words burned into the exported image. They used to be German literals, so an English
+     * device shared a picture labelled "VORHER"/"AUTOFREI"; [from] resolves them per locale.
+     */
+    data class BadgeLabels(val before: String, val after: String) {
+        companion object {
+            fun from(context: Context): BadgeLabels = BadgeLabels(
+                context.getString(R.string.badge_before),
+                context.getString(R.string.badge_car_free),
+            )
+        }
+    }
+
     enum class AspectRatio(val width: Int, val height: Int) {
         /** 1:1 square format (1080x1080). */
         SQUARE_1_1(1080, 1080),
@@ -54,6 +68,7 @@ object InstagramExportUtils {
     fun createComparisonBitmap(
         beforeBitmap: Bitmap,
         afterBitmap: Bitmap,
+        labels: BadgeLabels,
         ratio: AspectRatio = AspectRatio.SQUARE_1_1,
         layout: LayoutStyle = LayoutStyle.SIDE_BY_SIDE
     ): Bitmap {
@@ -88,8 +103,8 @@ object InstagramExportUtils {
 
                 canvas.drawLine(halfWidth, 0f, halfWidth, targetHeight.toFloat(), dividerPaint)
 
-                drawBadge(canvas, "VORHER", leftRect, isTop = true)
-                drawBadge(canvas, "AUTOFREI", rightRect, isTop = true)
+                drawBadge(canvas, labels.before, leftRect, isTop = true)
+                drawBadge(canvas, labels.after, rightRect, isTop = true)
             }
             LayoutStyle.STACKED -> {
                 val halfHeight = targetHeight / 2f
@@ -101,8 +116,8 @@ object InstagramExportUtils {
 
                 canvas.drawLine(0f, halfHeight, targetWidth.toFloat(), halfHeight, dividerPaint)
 
-                drawBadge(canvas, "VORHER", topRect, isTop = true)
-                drawBadge(canvas, "AUTOFREI", bottomRect, isTop = true)
+                drawBadge(canvas, labels.before, topRect, isTop = true)
+                drawBadge(canvas, labels.after, bottomRect, isTop = true)
             }
         }
 
@@ -115,6 +130,7 @@ object InstagramExportUtils {
     fun createCarouselPair(
         beforeBitmap: Bitmap,
         afterBitmap: Bitmap,
+        labels: BadgeLabels,
         ratio: AspectRatio = AspectRatio.PORTRAIT_4_5
     ): Pair<Bitmap, Bitmap> {
         val targetW = ratio.width
@@ -124,12 +140,12 @@ object InstagramExportUtils {
         val slide1 = Bitmap.createBitmap(targetW, targetH, Bitmap.Config.ARGB_8888)
         val canvas1 = Canvas(slide1)
         drawScaledCenterCrop(canvas1, beforeBitmap, fullRect)
-        drawBadge(canvas1, "1/2  VORHER", fullRect, isTop = true)
+        drawBadge(canvas1, "1/2  ${labels.before}", fullRect, isTop = true)
 
         val slide2 = Bitmap.createBitmap(targetW, targetH, Bitmap.Config.ARGB_8888)
         val canvas2 = Canvas(slide2)
         drawScaledCenterCrop(canvas2, afterBitmap, fullRect)
-        drawBadge(canvas2, "2/2  AUTOFREI", fullRect, isTop = true)
+        drawBadge(canvas2, "2/2  ${labels.after}", fullRect, isTop = true)
 
         return Pair(slide1, slide2)
     }
@@ -141,6 +157,7 @@ object InstagramExportUtils {
         beforeBitmap: Bitmap,
         afterBitmap: Bitmap,
         outputFile: File,
+        labels: BadgeLabels,
         ratio: AspectRatio = AspectRatio.STORY_9_16,
         fps: Int = 30,
         durationSeconds: Float = 3.5f
@@ -187,10 +204,10 @@ object InstagramExportUtils {
 
                 // 4. Draw Badges
                 if (splitX > 200f) {
-                    drawBadge(canvas, "VORHER", RectF(0f, 0f, splitX, targetH.toFloat()), isTop = true)
+                    drawBadge(canvas, labels.before, RectF(0f, 0f, splitX, targetH.toFloat()), isTop = true)
                 }
                 if (splitX < targetW - 200f) {
-                    drawBadge(canvas, "AUTOFREI", RectF(splitX, 0f, targetW.toFloat(), targetH.toFloat()), isTop = true)
+                    drawBadge(canvas, labels.after, RectF(splitX, 0f, targetW.toFloat(), targetH.toFloat()), isTop = true)
                 }
 
                 encoder.encodeFrame(frameBitmap)
@@ -229,7 +246,7 @@ object InstagramExportUtils {
     }
 
     /**
-     * Draws a styled "VORHER" or "AUTOFREI" pill badge inside the destination region.
+     * Draws a styled before/after pill badge inside the destination region.
      */
     private fun drawBadge(canvas: Canvas, text: String, region: RectF, isTop: Boolean) {
         val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -304,7 +321,7 @@ object InstagramExportUtils {
         afterBitmap: Bitmap,
         ratio: AspectRatio = AspectRatio.SQUARE_1_1
     ): Uri = withContext(Dispatchers.IO) {
-        val splitBitmap = createComparisonBitmap(beforeBitmap, afterBitmap, ratio)
+        val splitBitmap = createComparisonBitmap(beforeBitmap, afterBitmap, BadgeLabels.from(context), ratio)
         try {
             saveBitmapForSharing(context, splitBitmap)
         } finally {

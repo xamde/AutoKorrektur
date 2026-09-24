@@ -16,6 +16,13 @@
         <item name="colorOnSurfaceVariant">@color/on_surface_variant_light</item>
         <item name="android:colorBackground">@color/surface_light</item>
         <item name="colorOnBackground">@color/on_surface_light</item>
+        <item name="colorSurfaceContainerLowest">@color/surface_container_lowest</item>
+        <item name="colorSurfaceContainerLow">@color/surface_container_low</item>
+        <item name="colorSurfaceContainer">@color/surface_container</item>
+        <item name="colorSurfaceContainerHigh">@color/surface_container_high</item>
+        <item name="colorSurfaceContainerHighest">@color/surface_container_highest</item>
+        <item name="colorSurfaceBright">@color/surface_bright</item>
+        <item name="colorSurfaceDim">@color/surface_dim</item>
         <item name="colorError">@color/feedback_negative</item>
     </style>
 

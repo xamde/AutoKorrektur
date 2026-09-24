@@ -39,6 +39,7 @@ class InstagramExportDelegate(
                     val graphic = InstagramExportUtils.createComparisonBitmap(
                         beforeBitmap = originalBitmap,
                         afterBitmap = inpaintedBitmap,
+                        labels = InstagramExportUtils.BadgeLabels.from(context),
                         ratio = ratio,
                         layout = layout
                     )

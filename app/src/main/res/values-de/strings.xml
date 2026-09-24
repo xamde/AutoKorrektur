@@ -196,4 +196,9 @@
         <item quantity="one">%1$d Ereignis</item>
         <item quantity="other">%1$d Ereignisse</item>
     </plurals>
+
+    <!-- Badges im Vorher/Nachher-Vergleich und im exportierten Bild -->
+    <string name="badge_before">VORHER</string>
+    <string name="badge_after">NACHHER</string>
+    <string name="badge_car_free">AUTOFREI</string>
 </resources>

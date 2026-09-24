@@ -92,12 +92,13 @@ class InstagramExportBottomSheet : BottomSheetDialogFragment() {
             R.id.chipAnimatedVideo -> "video_sweep"
             else -> "split_card"
         }
+        val labels = InstagramExportUtils.BadgeLabels.from(requireContext())
         val exportStartNs = System.nanoTime()
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 when (binding.chipGroupLayout.checkedChipId) {
                     R.id.chipCarouselPair -> {
-                        val (slide1, slide2) = InstagramExportUtils.createCarouselPair(before, after, ratio)
+                        val (slide1, slide2) = InstagramExportUtils.createCarouselPair(before, after, labels, ratio)
                         val uri1 = InstagramExportUtils.saveBitmapForSharing(requireContext(), slide1, "autokorrektur_slide1.jpg")
                         val uri2 = InstagramExportUtils.saveBitmapForSharing(requireContext(), slide2, "autokorrektur_slide2.jpg")
                         slide1.recycle()
@@ -116,6 +117,7 @@ class InstagramExportBottomSheet : BottomSheetDialogFragment() {
                             beforeBitmap = before,
                             afterBitmap = after,
                             outputFile = videoFile,
+                            labels = labels,
                             ratio = ratio
                         )
 
