@@ -25,6 +25,7 @@ app's own internal numbering.
 - `ARCHITECTURE.md` — mask polarity, colour spaces, coordinate transforms and JNI lifecycle rules.
 
 ### Changed
+- **Canonical repository is now [konradvoelkel/AutoKorrektur](https://github.com/konradvoelkel/AutoKorrektur)**, a fork of `xamde/AutoKorrektur` (which was itself already a fork of the 1.0 browser version, so the fork marker costs nothing new). Build assets were re-published to a release there and `scripts/assets.manifest`, the README, the privacy policies and the website now point at it. `xamde/AutoKorrektur` stays as the historical upstream.
 - **Renamed to AutoKorrektur 2.0.** The browser version this app rewrites is 1.0; the README, the changelog headings, the store listing, the website and the `versionName` fallback now say so. `git describe` output loses a leading `v`, so a `v2.0.0` tag produces the version name `2.0.0`.
 - `docs/MVP_FEATURE_FLAG_PLAN.md` → `docs/PRODUCT_TIERS.md`: it was a 20 KB proposal for work finished in the same month, complete with Gradle snippets "ready to apply" and a migration sequence. Now a 3.8 KB description of what the four flavors actually are, what `core` deliberately lacks and how to promote a feature, with `app/build.gradle.kts` named as the authority for the flags.
 - Documentation trimmed to what does not rot: `TESTING.md` lost the stale run dates, timings and measured values and gained the invariants worth knowing (13.6 → 4.8 KB); `README.md` points at `docs/INDEX.md` instead of repeating it.

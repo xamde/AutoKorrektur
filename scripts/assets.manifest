@@ -5,7 +5,7 @@
 # Why not in git: these are hundreds of megabytes of binaries that every clone and every CI run
 # would otherwise pay for, and they change rarely and independently of the source. They live as
 # assets on a GitHub release of this repo:
-#   https://github.com/xamde/AutoKorrektur/releases/tag/assets-v1
+#   https://github.com/konradvoelkel/AutoKorrektur/releases/tag/assets-v1
 # To publish new versions, upload to a new `assets-vN` release and update the hashes here in the
 # same commit that needs them — manifest and code then move together.
 #
@@ -19,16 +19,16 @@
 # "About & Licenses" dialog: MI-GAN is MIT (Picsart AI Research), YOLO11s-seg is AGPL-3.0
 # (Ultralytics), exported to TFLite.
 
-file	app/src/main/assets/model/mi-gan-512.onnx	6f1f3530a1a2324b19752018ce756088b07973cda8d7d890034ace5c8a48c40b	https://github.com/xamde/AutoKorrektur/releases/download/assets-v1/mi-gan-512.onnx
-file	app/src/main/assets/model/yolo11s-seg_saved_model/yolo11s-seg_float32.tflite	6c418a7950c684c2f191856e1e815fd9873dc522e7f5f92f3951be8ed785de0f	https://github.com/xamde/AutoKorrektur/releases/download/assets-v1/yolo11s-seg_float32.tflite
+file	app/src/main/assets/model/mi-gan-512.onnx	6f1f3530a1a2324b19752018ce756088b07973cda8d7d890034ace5c8a48c40b	https://github.com/konradvoelkel/AutoKorrektur/releases/download/assets-v1/mi-gan-512.onnx
+file	app/src/main/assets/model/yolo11s-seg_saved_model/yolo11s-seg_float32.tflite	6c418a7950c684c2f191856e1e815fd9873dc522e7f5f92f3951be8ed785de0f	https://github.com/konradvoelkel/AutoKorrektur/releases/download/assets-v1/yolo11s-seg_float32.tflite
 
 # benchmark_manifest.json is the hand-maintained index of the fixture set and stays in git, so it
 # is excluded from the extraction to keep the archive from overwriting local edits to it.
-archive	app/src/androidTest/assets	017e4b2f6770b9c71b36c1503acda5ce412e9ebe71856afb32c6b3ef5b665347	https://github.com/xamde/AutoKorrektur/releases/download/assets-v1/androidtest-assets.tar.zst	--exclude=assets/benchmark_manifest.json
+archive	app/src/androidTest/assets	017e4b2f6770b9c71b36c1503acda5ce412e9ebe71856afb32c6b3ef5b665347	https://github.com/konradvoelkel/AutoKorrektur/releases/download/assets-v1/androidtest-assets.tar.zst	--exclude=assets/benchmark_manifest.json
 
 # The 50 reference triples are needed by the Android instrumented tests and the JVM unit tests,
 # which each load them from their own source set. They used to be byte-identical copies in git;
 # now one archive is extracted into both places, and the download is shared because the cache is
 # keyed by hash.
-archive	app/src/androidTest/assets/triples	fa9560b2e280a9e9d4b84205296d940ff17741977216bd93a7231a135ae12a08	https://github.com/xamde/AutoKorrektur/releases/download/assets-v1/triples.tar.zst
-archive	app/src/test/resources/triples	fa9560b2e280a9e9d4b84205296d940ff17741977216bd93a7231a135ae12a08	https://github.com/xamde/AutoKorrektur/releases/download/assets-v1/triples.tar.zst
+archive	app/src/androidTest/assets/triples	fa9560b2e280a9e9d4b84205296d940ff17741977216bd93a7231a135ae12a08	https://github.com/konradvoelkel/AutoKorrektur/releases/download/assets-v1/triples.tar.zst
+archive	app/src/test/resources/triples	fa9560b2e280a9e9d4b84205296d940ff17741977216bd93a7231a135ae12a08	https://github.com/konradvoelkel/AutoKorrektur/releases/download/assets-v1/triples.tar.zst

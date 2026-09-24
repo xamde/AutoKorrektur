@@ -15,8 +15,14 @@ this native Android rewrite is **AutoKorrektur 2.0**.
       a clone is ~13 MB, the tracked tree under 3 MB (2026-09-24).
 - [x] **REPO-02. Rebrand to 2.0** — README lineage, changelog headings, version fallback, store
       listing and website (2026-09-24).
-- [ ] **REPO-03. Fork to `konradvoelkel/AutoKorrektur`** to own the canonical repository, keeping
-      `xamde/AutoKorrektur` as the historical upstream.
+- [x] **REPO-03. Canonical repository is now `konradvoelkel/AutoKorrektur`** (2026-09-24), a fork of
+      `xamde/AutoKorrektur`, which stays as the historical upstream. The repo was already a fork of
+      [BenB2/AutoKorrektur](https://github.com/BenB2/AutoKorrektur), so nothing was lost by forking
+      again; a fresh, network-detached repository remains an option for a later major version.
+- [ ] **REPO-04. Ask GitHub Support to garbage-collect the fork network.** The pre-rewrite objects
+      are still reachable by SHA (`.../commit/<old-sha>`), so `TODO-for-human.md` and
+      `HUMAN_RELEASE_CHECKLIST.md` can still be fetched from old commits. Only a support-side GC (or
+      a fresh repository pushed from the rewritten history) removes them.
 
 ### 🏙️ Milestone 1: Field Testing & Data Collection
 - [ ] **FT-01. Physical Field Testing on Device**

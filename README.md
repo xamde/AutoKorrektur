@@ -89,7 +89,7 @@ This codebase serves as a benchmark for how far modern **Agentic AI** and **Vibe
 
 The ML models and the instrumented-test fixtures are **not stored in git** — they are ~230 MB of
 binaries that change rarely, so they live as assets on the
-[`assets-v1`](https://github.com/xamde/AutoKorrektur/releases/tag/assets-v1) release and are
+[`assets-v1`](https://github.com/konradvoelkel/AutoKorrektur/releases/tag/assets-v1) release and are
 pinned by SHA-256 in [`scripts/assets.manifest`](scripts/assets.manifest):
 
 ```bash
