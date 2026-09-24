@@ -26,10 +26,9 @@ file	app/src/main/assets/model/yolo11s-seg_saved_model/yolo11s-seg_float32.tflit
 # is excluded from the extraction to keep the archive from overwriting local edits to it.
 archive	app/src/androidTest/assets	017e4b2f6770b9c71b36c1503acda5ce412e9ebe71856afb32c6b3ef5b665347	https://github.com/xamde/AutoKorrektur/releases/download/assets-v1/androidtest-assets.tar.zst	--exclude=assets/benchmark_manifest.json
 
-# The 50 reference triples are needed by three test suites (Android instrumented, JVM unit,
-# backend pytest), which each load them from their own source set. They used to be three
-# byte-identical 97 MB copies in git; now one archive is extracted into all three places, and the
-# download is shared because the cache is keyed by hash.
+# The 50 reference triples are needed by the Android instrumented tests and the JVM unit tests,
+# which each load them from their own source set. They used to be byte-identical copies in git;
+# now one archive is extracted into both places, and the download is shared because the cache is
+# keyed by hash.
 archive	app/src/androidTest/assets/triples	fa9560b2e280a9e9d4b84205296d940ff17741977216bd93a7231a135ae12a08	https://github.com/xamde/AutoKorrektur/releases/download/assets-v1/triples.tar.zst
 archive	app/src/test/resources/triples	fa9560b2e280a9e9d4b84205296d940ff17741977216bd93a7231a135ae12a08	https://github.com/xamde/AutoKorrektur/releases/download/assets-v1/triples.tar.zst
-archive	backend/tests/fixtures/triples	fa9560b2e280a9e9d4b84205296d940ff17741977216bd93a7231a135ae12a08	https://github.com/xamde/AutoKorrektur/releases/download/assets-v1/triples.tar.zst

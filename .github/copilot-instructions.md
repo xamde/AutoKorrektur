@@ -25,7 +25,7 @@ The app's purpose is to help users visualize cities with fewer cars using a hybr
 
 - **Instance Segmentation**: YOLOv11-seg (`yolo11n-seg` / `yolo11s-seg`) for vehicle detection
 - **Inpainting (Local)**: MI-GAN (`mi-gan-512.onnx`) for local on-device inpainting
-- **Inpainting (Server Opt-In)**: SDXL via FastAPI backend (`backend/server.py`) for high-res inpainting
+- **Inpainting (Server Opt-In)**: SDXL via a separate service ([autokorrektur-backend](https://github.com/konradvoelkel/autokorrektur-backend)); off in every published flavor
 
 ## Project Structure
 
@@ -47,10 +47,7 @@ AutoKorrektur/
 │   │   └── test/ - JVM unit tests
 │   ├── build.gradle.kts - App build configuration
 │   └── proguard-rules.pro - ProGuard & R8 rules
-├── backend/
-│   ├── server.py - FastAPI SDXL server endpoint
-│   ├── Dockerfile - Production deployment container
-│   └── requirements.txt - Python dependencies
+├── scripts/ - Asset fetching (models and test fixtures are not in git)
 └── TESTING.md - Test execution guide
 ```
 

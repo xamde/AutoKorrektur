@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ARCHITECTURE.md` — mask polarity, colour spaces, coordinate transforms and JNI lifecycle rules.
 
 ### Changed
+- Documentation trimmed to what does not rot: `TESTING.md` lost the stale run dates, timings and measured values and gained the invariants worth knowing (13.6 → 4.8 KB); `README.md` points at `docs/INDEX.md` instead of repeating it.
 - **Brand colours** (hue 55° orange): palette in `values/colors.xml` with every tone derived via OKLCH, wired through the Material3 light/dark themes (surfaces included), the launcher icon, the website and the Play icons.
 - **German and English are both complete**: `values/strings.xml` is English-only and the fallback for every locale, `values-de/` a full override, `values-en/` gone. The localization test is now a strict invariant instead of a ratchet, and the `MissingTranslation` lint baseline is empty.
 - Privacy policy, Play listing copy and the Data Safety answers describe only what `core` actually ships — no cloud tier, no AR, video or batch features.
@@ -27,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `BatchProcessingWorker` passes batch URIs through temp JSON files (WorkManager's 10 KB limit); hardware Matrix downsampling replaces Canvas scaling; fewer per-frame allocations in `YoloMaskAssembler`; backend setting renamed to `sd_model_id`.
 
 ### Removed
+- **The cloud backend moved to its own repository**, [konradvoelkel/autokorrektur-backend](https://github.com/konradvoelkel/autokorrektur-backend), with its history: the SDXL service, its container and deploy setup, and the desktop ML benchmark. It was never used by a published build — `core` has no network permission — and it carried the app repo's only Python, two CI steps and a deployment guide. The app keeps its client code behind `FEATURE_CLOUD_SDXL`.
+- `walkthrough.md` (a second testing-architecture description that duplicated `TESTING.md`) and the sitemap table duplicated between `README.md` and `docs/INDEX.md`.
 - **Large binaries left git and its history** (`git filter-repo`): the OpenCV 4 `.so`s — dead weight, since OpenCV 5 comes from Maven and the release bundle carried 23 MB of native code nothing loaded — plus the models, the test fixtures (the 50 reference triples had been committed three times), a 67 MB generated benchmark report and the old `AndroidKorrektur/` binaries. A clone went from **668 MB to 13 MB**; existing clones and forks must re-clone.
 - `core`/`plus` no longer request `INTERNET`, `READ_MEDIA_VIDEO` or `READ_MEDIA_AUDIO` — the published app has no network permission at all.
 - Owner-only notes (`TODO-for-human.md`, `HUMAN_RELEASE_CHECKLIST.md`, `BRANDING.md`) and the stale Play screenshots and feature graphic, which advertised features `core` does not have.

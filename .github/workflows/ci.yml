@@ -20,7 +20,7 @@ jobs:
 
       # The ML models and the test fixtures live on a GitHub release, not in git
       # (scripts/assets.manifest). Cache them keyed by the manifest so a run only downloads when
-      # a hash actually changes; the backend pytest suite and every Gradle task need them.
+      # a hash actually changes; every Gradle task needs them.
       - name: Cache large build assets
         uses: actions/cache@v4
         with:
@@ -29,31 +29,6 @@ jobs:
 
       - name: Fetch large build assets
         run: scripts/fetch_assets.sh
-
-      - name: Set up Python 3.13
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Install uv and cache dependencies
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-          cache-dependency-glob: "backend/uv.lock"
-
-      - name: Install backend dependencies
-        # --extra dev pulls in pytest/pytest-cov (backend/pyproject.toml's
-        # [project.optional-dependencies] dev group) — without it `uv sync` only installs the
-        # runtime dependencies and the next step's `pytest` invocation fails with
-        # "Failed to spawn: pytest ... No such file or directory". Restores behavior lost when
-        # this step was reorganized in 96b540a (switched --directory backend --extra dev to
-        # --project backend, silently dropping --extra dev) — pre-existing since before this
-        # session, unrelated to any of today's changes.
-        run: uv sync --project backend --extra dev
-
-      - name: Run Backend Pytest Suite with Coverage
-        run: |
-          uv run --project backend pytest backend/test_server.py backend/test_benchmark_ml.py --cov=backend
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4

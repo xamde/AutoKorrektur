@@ -13,7 +13,7 @@ The [web version by Benjamin Beckers](https://github.com/BenB2/AutoKorrektur) is
 this native Android rewrite is **AutoKorrektur 2.0**. The plan, in order:
 - [ ] **REPO-01. Slim the repository further** before anything else — binaries and owner-only notes
       are already out (a clone is ~13 MB, the tracked tree ~3.5 MB); decide what else goes, e.g.
-      whether the unfinished cloud backend (`backend/`) belongs in the app repo at all.
+      the cloud backend moved to its own repository on 2026-09-24.
 - [ ] **REPO-02. Rebrand to 2.0** — version naming, README framing (1.0 = the web version, 2.0 =
       this app), store listing and changelog headings. Deliberately the **last** step before the fork,
       so it happens once, in the repo that will keep it.
@@ -44,6 +44,6 @@ this native Android rewrite is **AutoKorrektur 2.0**. The plan, in order:
 
 ### ☁️ Milestone 3: Community Cloud Inpainting (Optional Frankfurt Backend)
 - [ ] **SRV-01. Deploy Docker Compose to German VPS**
-  - Follow [backend/DEPLOY_FRANKFURT.md](backend/DEPLOY_FRANKFURT.md) to launch the SDXL backend with automatic SSL and Redis rate limiting.
+  - The service now lives in [konradvoelkel/autokorrektur-backend](https://github.com/konradvoelkel/autokorrektur-backend); its README covers deployment.
 - [ ] **SRV-02. Configure Production Backend URL**
   - Update `BACKEND_URL` in `app/build.gradle.kts` release build type with live production domain.

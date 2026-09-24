@@ -72,7 +72,6 @@ This codebase serves as a benchmark for how far modern **Agentic AI** and **Vibe
 ## 🛠️ Tech Stack
 
 - **Android Client**: Kotlin, ONNX Runtime, OpenCV Android SDK 5, TensorFlow Lite, CameraX (Core, Camera2, Lifecycle, View, Video), AndroidX, Material3 Design.
-- **Python Backend**: FastAPI, Uvicorn, Pytest, Docker, Caddy. See [backend/README.md](backend/README.md).
 - **ML Models**:
   - Detection / Segmentation: **YOLOv11-seg** (On-Device TFLite/ONNX)
   - Inpainting: **MI-GAN** (On-Device) and **SDXL** (Optional Frankfurt Cloud Backend)
@@ -116,9 +115,6 @@ ABIs) and is the day-to-day dev target; `core` is the Play Store candidate.
 
 # Run Static Analysis (Detekt)
 ./gradlew detekt
-
-# Run Backend Service Tests
-uv run --directory backend pytest --cov=.
 ```
 
 ---
@@ -176,28 +172,14 @@ AutoKorrektur is the result of continuous academic research conducted at the **H
 
 ---
 
-## 📄 Documentation Sitemap & Index
+## 📄 Documentation
 
-To navigate the comprehensive project documentation:
-
-| Category | Document | Description |
-|---|---|---|
-| **🧪 Testing & Field Operations** | [docs/FIELD_TESTING_AND_DATA_COLLECTION.md](docs/FIELD_TESTING_AND_DATA_COLLECTION.md) | Field testing protocol, batch CSV metrics collection, and on-device diagnostics. |
-| | [docs/TESTING_INSIGHTS_FROM_THESES.md](docs/TESTING_INSIGHTS_FROM_THESES.md) | 5-criteria evaluation framework, failure mode taxonomy & edge cases. |
-| | [TESTING.md](TESTING.md) | Testing guidelines, hardware matrix, unit & instrumented test suites. |
-| **🏗️ Architecture & Engineering** | [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture, CameraX AR loop, and MediaCodec video pipeline. |
-| | [docs/IMAGE_PIPELINE_SPECIFICATION.md](docs/IMAGE_PIPELINE_SPECIFICATION.md) | ML pipeline specification, coordinate math, and tensor normalization. |
-| | [walkthrough.md](walkthrough.md) | Implementation walkthrough of newly added features and UI components. |
-| **🚀 Release & Play Store** | [docs/PLAY_STORE_LISTING.md](docs/PLAY_STORE_LISTING.md) | Google Play Store copy and metadata in German and English. |
-| | [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) | Play Store release pre-flight checks, signing keys, and AAB bundle steps. |
-| | [PRIVACY_POLICY.md](PRIVACY_POLICY.md) | GDPR/DSGVO privacy policy (German, binding), on-device guarantees, zero-storage terms, opt-in diagnostics. [PRIVACY_POLICY.en.md](PRIVACY_POLICY.en.md) is the English translation. |
-| | [site/](site/) | Static website for autokorrektur.org (landing de/en, `/privacy`, `/privacy-en`, Impressum); `build.sh` + `deploy.sh`, server side in the infrastructure repo. |
-| | [CHANGELOG.md](CHANGELOG.md) | Version history, release tags, and feature changelog. |
-| **☁️ Backend & Cloud** | [backend/README.md](backend/README.md) | FastAPI SDXL cloud inpainting server documentation. |
-| | [backend/DEPLOY_FRANKFURT.md](backend/DEPLOY_FRANKFURT.md) | Deployment guide for German Frankfurt VPS with Docker & Caddy SSL. |
-| **🧭 Product & Roadmaps** | [TODO.md](TODO.md) | Active milestone roadmap (Field Testing, Play Store, Cloud Backend). |
-| | [docs/ARCHIVE_TODO.md](docs/ARCHIVE_TODO.md) | Historical archive of completed milestones M1–M8 and Phases 1–4. |
-| | [docs/PERSONAS.md](docs/PERSONAS.md) | User personas (Mobility Activists, Lot Managers, Photographers). |
+[docs/INDEX.md](docs/INDEX.md) is the map. The ones most people want:
+[ARCHITECTURE.md](ARCHITECTURE.md) (pipelines, mask polarity, coordinate spaces),
+[TESTING.md](TESTING.md) (suites and how to run them),
+[PRIVACY_POLICY.md](PRIVACY_POLICY.md) (German, binding; [English](PRIVACY_POLICY.en.md)),
+[TODO.md](TODO.md) (roadmap) and [CHANGELOG.md](CHANGELOG.md).
+The optional cloud service lives in [autokorrektur-backend](https://github.com/konradvoelkel/autokorrektur-backend).
 
 ---
 
