@@ -42,8 +42,8 @@ this native Android rewrite is **AutoKorrektur 2.0**. The plan, in order:
 
 ---
 
-### ☁️ Milestone 3: Community Cloud Inpainting (Optional Frankfurt Backend)
-- [ ] **SRV-01. Deploy Docker Compose to German VPS**
-  - The service now lives in [konradvoelkel/autokorrektur-backend](https://github.com/konradvoelkel/autokorrektur-backend); its README covers deployment.
-- [ ] **SRV-02. Configure Production Backend URL**
-  - Update `BACKEND_URL` in `app/build.gradle.kts` release build type with live production domain.
+### ☁️ Milestone 3: Optional cloud inpainting (deferred)
+The SDXL service lives in [konradvoelkel/autokorrektur-backend](https://github.com/konradvoelkel/autokorrektur-backend)
+and is not part of any published build. Reviving it means, in this repo: point `BACKEND_URL`
+(release build type) at the live host, and update the privacy policy, the Data Safety answers and
+the listing copy **first** — all three currently state that the published app has no network access.
