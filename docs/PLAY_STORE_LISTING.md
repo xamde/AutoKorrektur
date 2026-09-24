@@ -93,7 +93,9 @@ The models ship inside the app, which is why it is a few hundred megabytes. Andr
 
 ## 5. Grafiken
 
-`media/play_store_assets/`: Feature-Grafik und Icon sind verwendbar. **Die drei Screenshots dort
-zeigen Live-AR, den Engine-Wähler und den Multi-Layout-Export – Funktionen, die `core` nicht hat.**
+`media/play_store_assets/`: Die Icons (512×512, flächig und transparent) sind aktuell — sie werden
+aus `site/icons/icon.svg` erzeugt und tragen die Markenfarbe (BRANDING.md, Farbton 55°).
+**Die Feature-Grafik ist noch in der alten indigoblauen Fassung und muss neu gebaut werden.
+Die drei Screenshots dort zeigen Live-AR, den Engine-Wähler und den Multi-Layout-Export – Funktionen, die `core` nicht hat.**
 Vor dem Upload neue Screenshots vom `core`-Build machen (Startbildschirm, Ergebnis mit Schieberegler,
 Teilen-Menü mit der Split-Karte, Galerie); Vorgehen wie in `HUMAN_RELEASE_CHECKLIST.md` §5.

@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0F0F14"
+    android:background="@color/surface_dark"
     android:orientation="vertical">
 
     <!-- Top Bar with Title, Mode Switcher, and Apply Button -->
@@ -29,7 +29,7 @@
             android:layout_width="wrap_content"
             android:layout_height="48dp"
             android:text="@string/btn_delete"
-            android:textColor="#EF4444"
+            android:textColor="@color/feedback_negative"
             android:textSize="12sp" />
 
         <com.google.android.material.button.MaterialButton
@@ -49,7 +49,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:background="#050508">
+        android:background="@color/surface_dark">
 
         <de.konradvoelkel.android.autokorrektur.ui.brush.MaskBrushView
             android:id="@+id/maskBrushView"
@@ -62,7 +62,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="#16161E"
+        android:background="@color/surface_dark_2"
         android:paddingHorizontal="20dp"
         android:paddingTop="12dp"
         android:paddingBottom="24dp">
@@ -106,7 +106,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/brush_size"
-                android:textColor="#94A3B8"
+                android:textColor="@color/muted_on_dark"
                 android:textSize="12sp" />
 
             <com.google.android.material.slider.Slider

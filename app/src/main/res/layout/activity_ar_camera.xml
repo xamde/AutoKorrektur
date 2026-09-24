@@ -55,7 +55,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/ar_camera_subtitle"
-                android:textColor="#34D399"
+                android:textColor="@color/feedback_positive"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif" />
         </LinearLayout>
@@ -128,7 +128,7 @@
                 android:max="5000"
                 android:progress="0"
                 android:visibility="gone"
-                app:indicatorColor="#EF4444"
+                app:indicatorColor="@color/feedback_negative"
                 app:indicatorSize="84dp"
                 app:trackColor="#40FFFFFF"
                 app:trackThickness="4dp" />

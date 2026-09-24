@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="#16161E"
+    android:background="@color/surface_dark_2"
     android:orientation="vertical"
     android:padding="24dp">
 
@@ -28,7 +28,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:text="@string/export_subtitle"
-        android:textColor="#94A3B8"
+        android:textColor="@color/muted_on_dark"
         android:textSize="13sp" />
 
     <!-- Format Mode Selection Chips -->
@@ -39,7 +39,7 @@
         android:layout_marginTop="16dp"
         android:text="@string/export_layout_type"
         android:letterSpacing="0.05"
-        android:textColor="#94A3B8"
+        android:textColor="@color/muted_on_dark"
         android:textSize="11sp"
         android:textStyle="bold" />
 
@@ -82,7 +82,7 @@
         android:layout_marginTop="16dp"
         android:text="@string/export_aspect_ratio"
         android:letterSpacing="0.05"
-        android:textColor="#94A3B8"
+        android:textColor="@color/muted_on_dark"
         android:textSize="11sp"
         android:textStyle="bold" />
 
@@ -124,7 +124,7 @@
         android:layout_width="match_parent"
         android:layout_height="54dp"
         android:layout_marginTop="24dp"
-        android:backgroundTint="#E1306C"
+        android:backgroundTint="@color/instagram_brand"
         android:text="@string/btn_export_share"
         android:textColor="#FFFFFF"
         android:textSize="15sp"

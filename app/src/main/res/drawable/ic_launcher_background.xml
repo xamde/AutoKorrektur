@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Brand ground (BRANDING.md, hue 55°): the brand tone with the diagonal one step darker,
+     same structure as before, only the hue moved from indigo to orange. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
     <path
-        android:fillColor="#0F172A"
+        android:fillColor="@color/brand"
         android:pathData="M0,0h108v108h-108z" />
     <path
-        android:fillColor="#1E1B4B"
+        android:fillColor="@color/brand_container_dark"
         android:pathData="M0,0L108,108L0,108Z" />
 </vector>

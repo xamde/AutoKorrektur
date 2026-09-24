@@ -67,3 +67,6 @@ __pycache__/
 /app/src/androidTest/assets/triples/
 /app/src/test/resources/triples/
 /backend/tests/fixtures/triples/
+
+# Branding decision doc, kept out of the public repo (ledger: ~/files/personal/orga)
+/BRANDING.md

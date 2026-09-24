@@ -1,8 +1,22 @@
 <resources>
-    <!-- Base application theme. -->
+    <!-- Light scheme. Only the primary family is branded; Material3's baseline derives the rest,
+         which keeps the theme honest when the palette moves (BRANDING.md, values/colors.xml). -->
     <style name="Base.Theme.AndroidKorrektur" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <item name="colorPrimary">@color/brand</item>
+        <item name="colorOnPrimary">@color/brand_on</item>
+        <item name="colorPrimaryContainer">@color/brand_container</item>
+        <item name="colorOnPrimaryContainer">@color/brand_on_container</item>
+        <item name="colorSecondary">@color/brand</item>
+        <item name="colorOnSecondary">@color/brand_on</item>
+        <item name="colorSecondaryContainer">@color/brand_container</item>
+        <item name="colorOnSecondaryContainer">@color/brand_on_container</item>
+        <item name="colorSurface">@color/surface_light</item>
+        <item name="colorOnSurface">@color/on_surface_light</item>
+        <item name="colorSurfaceVariant">@color/surface_variant_light</item>
+        <item name="colorOnSurfaceVariant">@color/on_surface_variant_light</item>
+        <item name="android:colorBackground">@color/surface_light</item>
+        <item name="colorOnBackground">@color/on_surface_light</item>
+        <item name="colorError">@color/feedback_negative</item>
     </style>
 
     <style name="Theme.AndroidKorrektur" parent="Base.Theme.AndroidKorrektur"></style>

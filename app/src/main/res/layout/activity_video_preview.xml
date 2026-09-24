@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0A0A0E">
+    android:background="@color/surface_dark">
 
     <!-- Video Player View -->
     <VideoView
@@ -83,7 +83,7 @@
             android:layout_height="8dp"
             android:max="100"
             android:progress="0"
-            android:progressTint="#38BDF8" />
+            android:progressTint="@color/brand_dark" />
 
         <TextView
             android:id="@+id/tvProgressStage"
@@ -101,7 +101,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:text="@string/video_progress_zero"
-            android:textColor="#94A3B8"
+            android:textColor="@color/muted_on_dark"
             android:textSize="12sp" />
     </LinearLayout>
 
@@ -143,7 +143,7 @@
                 android:layout_height="52dp"
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:backgroundTint="#E1306C"
+                android:backgroundTint="@color/instagram_brand"
                 android:text="@string/btn_share_instagram"
                 android:textColor="#FFFFFF"
                 android:textStyle="bold"

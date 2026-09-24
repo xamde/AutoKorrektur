@@ -1,5 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Brand palette — see BRANDING.md (decided 2026-09-22 across the six projects; the ledger copy is
+  the authority). AutoKorrektur's hue is 55° (orange). Every tone below is derived from that one
+  hue with OKLCH, never picked by hand:
+
+      brand            oklch(0.52 0.12 55)   white on it is 5.7:1 (WCAG AA)
+      container light  oklch(0.95 0.03 55)
+      accent dark      oklch(0.75 0.12 55)   8.2:1 on the dark surface below
+
+  The remaining tones follow the same rule with only L and C moved. If something doesn't fit,
+  change L/C for the whole set rather than fixing one hex — otherwise the system decays into a
+  pile of unrelated colors. Hex is the Android fallback; the website writes oklch() directly.
+
+  Deliberately NOT on the brand hue: the feedback colors (green = worked, red = failed) and
+  Instagram's own pink, which identifies a third party.
+-->
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Brand, light scheme -->
+    <color name="brand">#9C5313</color>
+    <color name="brand_on">#FFFFFFFF</color>
+    <color name="brand_container">#FFEADC</color>
+    <color name="brand_on_container">#4B2000</color>
+
+    <!-- Brand, dark scheme -->
+    <color name="brand_dark">#E89960</color>
+    <color name="brand_on_dark">#371801</color>
+    <color name="brand_container_dark">#663305</color>
+
+    <!-- Page surfaces: Material3's baseline surface is violet-tinted, which fought the brand -->
+    <color name="surface_light">#FFF9F5</color>
+    <color name="surface_variant_light">#F6E4D8</color>
+    <color name="on_surface_light">#371801</color>
+    <color name="on_surface_variant_light">#675040</color>
+    <color name="on_surface_dark">#F3E5DC</color>
+    <color name="on_surface_variant_dark">#B9ABA2</color>
+
+    <!-- Dark chrome of the camera/studio/video screens, warmed onto the brand hue -->
+    <color name="surface_dark">#190F09</color>
+    <color name="surface_dark_2">#2A1B11</color>
+    <color name="outline_dark">#47372C</color>
+    <color name="muted_on_dark">#AFA299</color>
+
+    <!-- Semantic, off-hue on purpose -->
+    <color name="feedback_positive">#34D399</color>
+    <color name="feedback_negative">#EF4444</color>
+    <color name="instagram_brand">#E1306C</color>
 </resources>
