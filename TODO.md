@@ -23,7 +23,7 @@
 ### 🚀 Milestone 2: Google Play Store Release
 - [ ] **REL-01. Google Play Console Listing Setup**
   - Paste prepared German & English metadata from [docs/PLAY_STORE_LISTING.md](docs/PLAY_STORE_LISTING.md).
-- [x] **REL-02. Privacy Policy Hosting** — live since 2026-09-21 at https://autokorrektur.org/privacy (`/privacy-en` English); redeploy with `site/deploy.sh`. Still to do by hand: paste the URL into Play Console → App content. Steps in [HUMAN_RELEASE_CHECKLIST.md](HUMAN_RELEASE_CHECKLIST.md) §3.
+- [x] **REL-02. Privacy Policy Hosting** — live since 2026-09-21 at https://autokorrektur.org/privacy (`/privacy-en` English); redeploy with `site/deploy.sh`. Still to do by hand: paste the URL into Play Console → App content.
 - [ ] **REL-03. Release App Bundle Generation**
   - Build signed `.aab` bundle via `./gradlew bundleCoreRelease` (`core` is the Play Store flavor) and upload to Play Console Internal Testing track.
 

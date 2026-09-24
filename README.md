@@ -192,7 +192,6 @@ To navigate the comprehensive project documentation:
 | | [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) | Play Store release pre-flight checks, signing keys, and AAB bundle steps. |
 | | [PRIVACY_POLICY.md](PRIVACY_POLICY.md) | GDPR/DSGVO privacy policy (German, binding), on-device guarantees, zero-storage terms, opt-in diagnostics. [PRIVACY_POLICY.en.md](PRIVACY_POLICY.en.md) is the English translation. |
 | | [site/](site/) | Static website for autokorrektur.org (landing de/en, `/privacy`, `/privacy-en`, Impressum); `build.sh` + `deploy.sh`, server side in the infrastructure repo. |
-| | [HUMAN_RELEASE_CHECKLIST.md](HUMAN_RELEASE_CHECKLIST.md) | What only the owner can do before the Play upload: tag, keystore (done), privacy hosting, Data Safety, assets. |
 | | [CHANGELOG.md](CHANGELOG.md) | Version history, release tags, and feature changelog. |
 | **☁️ Backend & Cloud** | [backend/README.md](backend/README.md) | FastAPI SDXL cloud inpainting server documentation. |
 | | [backend/DEPLOY_FRANKFURT.md](backend/DEPLOY_FRANKFURT.md) | Deployment guide for German Frankfurt VPS with Docker & Caddy SSL. |

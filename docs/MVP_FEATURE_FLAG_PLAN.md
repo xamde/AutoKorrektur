@@ -262,7 +262,7 @@ verifiable steps rather than one large refactor:
    `lintDebug`, `connectedDebugAndroidTest`) do not — only `test`/`lint`/`connectedAndroidTest`
    (all four flavors) or the fully flavor-qualified per-variant task exist. Updated
    `.github/workflows/ci.yml`, `README.md`, `TESTING.md`, `RELEASE_CHECKLIST.md`, `TODO.md`,
-   `HUMAN_RELEASE_CHECKLIST.md`, and `.github/copilot-instructions.md`.
+   and `.github/copilot-instructions.md`.
    CI now targets `full` for lint/unit-tests/instrumented-tests (the only flavor exercising every
    code path, so no coverage regression from adding flavors) and `core` for the release bundle
    (the actual Play Store artifact) — see `app/build.gradle.kts`'s `jacocoTestReport` task, which

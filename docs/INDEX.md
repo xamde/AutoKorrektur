@@ -15,7 +15,6 @@ Welcome to the AutoKorrektur technical documentation repository.
 | **🚀 Release & Play Store** | [PLAY_STORE_LISTING.md](PLAY_STORE_LISTING.md) | Google Play Store copy (DE & EN) and graphic assets. |
 | | [RELEASE_CHECKLIST.md](../RELEASE_CHECKLIST.md) | Release pre-flight checklist & keystore procedures. |
 | | [PRIVACY_POLICY.md](../PRIVACY_POLICY.md) | GDPR/DSGVO privacy policy for the published `core` flavor (German, binding); [PRIVACY_POLICY.en.md](../PRIVACY_POLICY.en.md) English. Hosted at https://autokorrektur.org/privacy from [site/](../site/). |
-| | [HUMAN_RELEASE_CHECKLIST.md](../HUMAN_RELEASE_CHECKLIST.md) | What only the owner can do before the Play upload (tag, keystore, Data Safety, screenshots). |
 | | [CHANGELOG.md](../CHANGELOG.md) | Release history & version tags. |
 | **☁️ Backend & Cloud** (not part of any published flavor) | [backend/README.md](../backend/README.md) | FastAPI SDXL cloud service documentation. |
 | | [backend/DEPLOY_FRANKFURT.md](../backend/DEPLOY_FRANKFURT.md) | Deployment guide for Frankfurt VPS with Docker & Caddy. |

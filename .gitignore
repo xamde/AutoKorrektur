@@ -73,3 +73,6 @@ __pycache__/
 
 # Owner-only testing/release notes, not for the public repo
 /TODO-for-human.md
+
+# Owner-only release checklist, not for the public repo
+/HUMAN_RELEASE_CHECKLIST.md

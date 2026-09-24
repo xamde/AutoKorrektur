@@ -7,7 +7,7 @@ This checklist tracks the tasks required to build, sign, and publish **AutoKorre
 ## 1. Build Configuration & Security
 - [x] Enable R8 code shrinking and resource shrinking in `app/build.gradle.kts` (`isMinifyEnabled = true`, `isShrinkResources = true`).
 - [x] Verify ProGuard rules in `app/proguard-rules.pro` preserve OpenCV, ONNX Runtime, and TFLite native JNI symbols.
-- [x] Generate production release key/keystore — done 2026-09-21, see `HUMAN_RELEASE_CHECKLIST.md` §2 (`~/.android-signing/autokorrektur/`, gitignored `keystore.properties`).
+- [x] Generate production release key/keystore — done 2026-09-21 (`~/.android-signing/autokorrektur/`, credentials in the gitignored `keystore.properties`).
 - [ ] Configure signing credentials safely using environment variables or `local.properties` (never commit keys to Git).
 
 ## 2. Metadata & Versioning
