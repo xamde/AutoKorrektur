@@ -8,6 +8,19 @@
 
 ## 🎯 Active Milestones
 
+### 🏷️ Milestone 0: AutoKorrektur 2.0 and the move to an own repository
+The [web version by Benjamin Beckers](https://github.com/BenB2/AutoKorrektur) is **AutoKorrektur 1.0**;
+this native Android rewrite is **AutoKorrektur 2.0**. The plan, in order:
+- [ ] **REPO-01. Slim the repository further** before anything else — binaries and owner-only notes
+      are already out (a clone is ~13 MB, the tracked tree ~3.5 MB); decide what else goes, e.g.
+      whether the unfinished cloud backend (`backend/`) belongs in the app repo at all.
+- [ ] **REPO-02. Rebrand to 2.0** — version naming, README framing (1.0 = the web version, 2.0 =
+      this app), store listing and changelog headings. Deliberately the **last** step before the fork,
+      so it happens once, in the repo that will keep it.
+- [ ] **REPO-03. Fork to `konradvoelkel/AutoKorrektur`** to own the canonical repository, keeping
+      `xamde/AutoKorrektur` as the historical upstream.
+
+
 ### 🏙️ Milestone 1: Field Testing & Data Collection
 - [ ] **FT-01. Physical Field Testing on Device**
   - Walk through real urban environments (residential street, commercial parking, mixed bike/pedestrian zones).

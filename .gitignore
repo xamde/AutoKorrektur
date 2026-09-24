@@ -76,3 +76,8 @@ __pycache__/
 
 # Owner-only release checklist, not for the public repo
 /HUMAN_RELEASE_CHECKLIST.md
+
+# IDE state: only the shared code style and inspection profile are tracked
+/.idea/*
+!/.idea/codeStyles/
+!/.idea/inspectionProfiles/
