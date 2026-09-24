@@ -15,11 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `site/` — the static website for autokorrektur.org (landing de/en, `/privacy`, `/privacy-en`, Impressum), rendered from the policy files by `build.sh` so the hosted text cannot drift.
 - `PRIVACY_POLICY.en.md` — English translation; the German text stays binding.
 - `scripts/fetch_assets.sh` + `scripts/assets.manifest`: models and test fixtures are fetched from the `assets-v1` release and SHA-256 verified; Gradle's `verifyAssets` fails early when they are missing, CI caches them.
-- Four product flavors (`core`/`plus`/`beta`/`full`) driven by per-tier `BuildConfig` feature flags; `core` is the Play Store candidate. See `docs/MVP_FEATURE_FLAG_PLAN.md`.
+- Four product flavors (`core`/`plus`/`beta`/`full`) driven by per-tier `BuildConfig` feature flags; `core` is the Play Store candidate. See `docs/PRODUCT_TIERS.md`.
 - Test and CI infrastructure: `StringResourceLocalizationTest`, `TelemetryStoreTest`, unit/instrumented tests for the ML and UI layers, JaCoCo coverage, and a GitHub Actions workflow (backend pytest, lint, unit tests, emulator tests, release bundle).
 - `ARCHITECTURE.md` — mask polarity, colour spaces, coordinate transforms and JNI lifecycle rules.
 
 ### Changed
+- `docs/MVP_FEATURE_FLAG_PLAN.md` → `docs/PRODUCT_TIERS.md`: it was a 20 KB proposal for work finished in the same month, complete with Gradle snippets "ready to apply" and a migration sequence. Now a 3.8 KB description of what the four flavors actually are, what `core` deliberately lacks and how to promote a feature, with `app/build.gradle.kts` named as the authority for the flags.
 - Documentation trimmed to what does not rot: `TESTING.md` lost the stale run dates, timings and measured values and gained the invariants worth knowing (13.6 → 4.8 KB); `README.md` points at `docs/INDEX.md` instead of repeating it.
 - **Brand colours** (hue 55° orange): palette in `values/colors.xml` with every tone derived via OKLCH, wired through the Material3 light/dark themes (surfaces included), the launcher icon, the website and the Play icons.
 - **German and English are both complete**: `values/strings.xml` is English-only and the fallback for every locale, `values-de/` a full override, `values-en/` gone. The localization test is now a strict invariant instead of a ratchet, and the `MissingTranslation` lint baseline is empty.

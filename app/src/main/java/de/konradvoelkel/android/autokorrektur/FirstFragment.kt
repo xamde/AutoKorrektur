@@ -166,7 +166,7 @@ class FirstFragment : Fragment() {
     /**
      * Records the newly selected/captured image and, when this tier offers no real inpainting
      * engine choice (see [autoStartInferenceEnabled]), immediately kicks off processing instead
-     * of waiting for a manual Start tap — see docs/MVP_FEATURE_FLAG_PLAN.md §1 ("no screen the
+     * of waiting for a manual Start tap — see docs/PRODUCT_TIERS.md ("no screen the
      * user must configure before their first result").
      */
     private fun onImageSelected(uri: Uri) {
@@ -375,7 +375,7 @@ class FirstFragment : Fragment() {
 
     /**
      * Hides UI entry points for features not present in this build's tier
-     * (see docs/MVP_FEATURE_FLAG_PLAN.md).
+     * (see docs/PRODUCT_TIERS.md).
      */
     private fun applyFeatureFlags() {
         if (!BuildConfig.FEATURE_LIVE_AR) {
@@ -399,7 +399,7 @@ class FirstFragment : Fragment() {
         // Fast On-Device is always available; High-Res and Cloud are the only other options.
         // A chip-group "choice" between one always-checked pill and nothing else isn't a real
         // choice, so don't show it as one — this is exactly the plan's own "no engine picker
-        // unless there's something to pick" principle (docs/MVP_FEATURE_FLAG_PLAN.md §1).
+        // unless there's something to pick" principle (docs/PRODUCT_TIERS.md).
         if (!BuildConfig.FEATURE_HIGH_RES_PROGRESSIVE && !BuildConfig.FEATURE_CLOUD_SDXL) {
             binding.premiumEditCard.visibility = View.GONE
         }
@@ -755,7 +755,7 @@ class FirstFragment : Fragment() {
         if (!BuildConfig.FEATURE_EXTRA_EXPORT_LAYOUTS) {
             // Only one export shape exists in this tier — the bottom sheet's layout/ratio
             // picker would be a choice with a single option, i.e. not a real choice, so skip
-            // straight to composing and sharing it (docs/MVP_FEATURE_FLAG_PLAN.md §1).
+            // straight to composing and sharing it (docs/PRODUCT_TIERS.md).
             viewLifecycleOwner.lifecycleScope.launch {
                 try {
                     val uri = de.konradvoelkel.android.autokorrektur.utils.InstagramExportUtils

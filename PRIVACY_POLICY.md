@@ -2,7 +2,7 @@
 
 **Stand:** September 2026
 
-_Beschreibt die veröffentlichte App (Produkt-Flavor `core`, siehe `docs/MVP_FEATURE_FLAG_PLAN.md`). Funktionen anderer, nicht veröffentlichter Flavors (Live-AR, Videoclips, High-Res-Kachel-Inpainting, Cloud-Inpainting, Stapelverarbeitung) sind hier absichtlich nicht beschrieben; wird davon etwas veröffentlicht, wird dieser Text zuerst erweitert. Rendering auf autokorrektur.org: `site/build.sh`._
+_Beschreibt die veröffentlichte App (Produkt-Flavor `core`, siehe `docs/PRODUCT_TIERS.md`). Funktionen anderer, nicht veröffentlichter Flavors (Live-AR, Videoclips, High-Res-Kachel-Inpainting, Cloud-Inpainting, Stapelverarbeitung) sind hier absichtlich nicht beschrieben; wird davon etwas veröffentlicht, wird dieser Text zuerst erweitert. Rendering auf autokorrektur.org: `site/build.sh`._
 
 Die Entwickler von **AutoKorrektur** nehmen den Schutz deiner persönlichen Daten und deiner Privatsphäre sehr ernst. Diese Datenschutzerklärung informiert dich darüber, welche Daten die Android-App AutoKorrektur verarbeitet – und welche nicht.
 

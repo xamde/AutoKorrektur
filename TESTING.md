@@ -10,7 +10,7 @@ are tested there.
 > `app/src/androidTest/assets/triples/` and `app/src/test/resources/triples/`. Gradle fails with
 > that command if anything is missing.
 
-The app builds as four product flavors (`docs/MVP_FEATURE_FLAG_PLAN.md`), so Gradle test tasks
+The app builds as four product flavors (`docs/PRODUCT_TIERS.md`), so Gradle test tasks
 need a flavor prefix — bare `testDebugUnitTest` does not resolve. The commands below use `full`,
 the flavor that exercises every code path; substitute `core`/`plus`/`beta` to test a tier.
 

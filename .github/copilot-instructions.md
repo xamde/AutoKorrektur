@@ -54,7 +54,7 @@ AutoKorrektur/
 ## Build and Test
 
 The app builds as four product flavors (`core`/`plus`/`beta`/`full`, see
-`docs/MVP_FEATURE_FLAG_PLAN.md`) — most Gradle tasks need a flavor prefix. The examples below use
+`docs/PRODUCT_TIERS.md`) — most Gradle tasks need a flavor prefix. The examples below use
 `full` (every feature on, all ABIs — the pre-flavor app, and the dev/CI baseline) and `core`
 (the Play Store candidate) as needed; drop the flavor name (e.g. `./gradlew test`) to run all four.
 

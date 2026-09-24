@@ -41,7 +41,7 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
-      # Product flavors were introduced in docs/MVP_FEATURE_FLAG_PLAN.md; CI validates the
+      # Product flavors were introduced in docs/PRODUCT_TIERS.md; CI validates the
       # `full` flavor (all FEATURE_* flags true, all ABIs) since it's the only one that
       # exercises every code path and matches the pre-flavor app exactly — no coverage
       # regression from adding flavors. `core` (the actual Play Store candidate) is validated

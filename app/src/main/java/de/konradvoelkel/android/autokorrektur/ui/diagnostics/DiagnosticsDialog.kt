@@ -16,7 +16,7 @@ import de.konradvoelkel.android.autokorrektur.utils.AppLogger
  * recorded, and Export (share sheet, via the FileProvider `cache` path) / Delete actions.
  *
  * Kept as a plain dialog rather than a settings screen because it is the app's only setting and
- * the `core` tier has no settings surface at all (docs/MVP_FEATURE_FLAG_PLAN.md §1). Available on
+ * the `core` tier has no settings surface at all (docs/PRODUCT_TIERS.md). Available on
  * every flavor — field testers on `core` are exactly who the export is for.
  */
 object DiagnosticsDialog {

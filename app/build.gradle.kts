@@ -36,7 +36,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    // MVP tier feature flags (see docs/MVP_FEATURE_FLAG_PLAN.md). `core` is the only flavor
+    // MVP tier feature flags (see docs/PRODUCT_TIERS.md). `core` is the only flavor
     // that ever goes to the public Play Store listing; plus/beta/full are internal/opt-in-tester
     // builds distributed as direct APKs. `full` reproduces today's pre-flavor app exactly (all
     // flags true, all 4 ABIs) so it stays the CI/dev baseline with no coverage regression.

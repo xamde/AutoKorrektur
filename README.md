@@ -99,7 +99,7 @@ from checked-in `.so` files.
 ### Flavors and tasks
 
 The app ships as four product flavors (`core`/`plus`/`beta`/`full`, see
-[`docs/MVP_FEATURE_FLAG_PLAN.md`](docs/MVP_FEATURE_FLAG_PLAN.md)) — Gradle tasks are
+[`docs/PRODUCT_TIERS.md`](docs/PRODUCT_TIERS.md)) — Gradle tasks are
 flavor-qualified accordingly. `full` reproduces the pre-flavor app exactly (every feature on, all
 ABIs) and is the day-to-day dev target; `core` is the Play Store candidate.
 

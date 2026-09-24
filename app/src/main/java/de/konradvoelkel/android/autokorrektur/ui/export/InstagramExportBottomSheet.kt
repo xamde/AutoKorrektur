@@ -55,7 +55,7 @@ class InstagramExportBottomSheet : BottomSheetDialogFragment() {
 
     /**
      * MVP tier ships exactly one export shape (the split card, one aspect ratio) — see
-     * docs/MVP_FEATURE_FLAG_PLAN.md §2. With only one layout and one ratio possible, the
+     * docs/PRODUCT_TIERS.md. With only one layout and one ratio possible, the
      * picker rows themselves aren't a real choice either — hide the whole row (label + chip
      * group), not just the extra chips inside it, so `core` doesn't show a single-option
      * "choice" that can't do anything except stay selected.

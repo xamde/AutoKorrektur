@@ -1,6 +1,6 @@
 # Google Play Store Listing: AutoKorrektur
 
-> Describes the **`core` flavor**, the only one that goes to Google Play (`docs/MVP_FEATURE_FLAG_PLAN.md`):
+> Describes the **`core` flavor**, the only one that goes to Google Play (`docs/PRODUCT_TIERS.md`):
 > photo in, cars removed on-device, before/after slider, split card shared through the Android
 > share sheet, in-app gallery of past shots. Play's policy forbids advertising features the
 > uploaded build doesn't have, so the AR / video / high-res / cloud / brush / batch copy that used

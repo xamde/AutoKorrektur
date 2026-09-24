@@ -1,7 +1,7 @@
 # Android Release Preparation Checklist
 
 Engineering-side checklist for building, signing and publishing **AutoKorrektur** to Google Play.
-`core` is the flavor that goes to the Store (see [docs/MVP_FEATURE_FLAG_PLAN.md](docs/MVP_FEATURE_FLAG_PLAN.md));
+`core` is the flavor that goes to the Store (see [docs/PRODUCT_TIERS.md](docs/PRODUCT_TIERS.md));
 the owner keeps the account-side steps (keystore backup, Console forms) in a private note.
 
 Status as of 2026-09-24.
