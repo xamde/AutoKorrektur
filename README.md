@@ -1,4 +1,4 @@
-# AutoKorrektur: Autofreie Visionen & AR
+# AutoKorrektur 2.0 — Autofreie Visionen
 
 > [!NOTE]
 > 🤖 **An Experiment in Vibe Coding & Agentic Software Engineering**  
@@ -8,9 +8,14 @@
 
 ## 🌆 Über das Projekt (About AutoKorrektur)
 
-**AutoKorrektur** is an Android application that automatically removes cars from live camera views and photographs using on-device machine learning and augmented reality.
+**AutoKorrektur** removes parked cars from photographs, with the machine learning running entirely
+on the phone.
 
-This project is a native Android reimplementation and major architectural evolution of the original [AutoKorrektur Web Version](https://github.com/BenB2/AutoKorrektur) created by **Benjamin Beckers**, which was based on the Bachelor Thesis *"Autokorrektur – Automatisierte Objektersetzung in Fotos"* by **Till Schellscheidt**.
+**Version lineage.** The [browser version by Benjamin Beckers](https://github.com/BenB2/AutoKorrektur)
+— built on Till Schellscheidt's thesis *"Autokorrektur – Automatisierte Objektersetzung in Fotos"* —
+is **AutoKorrektur 1.0**. This repository is **2.0**: a native Android rewrite that keeps the idea and
+the on-device principle and replaces everything else. Both were supervised at HHU Düsseldorf; see
+[Academic Attribution & Scientific Lineage](#-academic-attribution--scientific-lineage) for who contributed what.
 
 <table>
   <tr>

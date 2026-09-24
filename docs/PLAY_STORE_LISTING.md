@@ -53,6 +53,7 @@ Die fertige Split-Karte („VORHER / AUTOFREI“) teilst du über das normale An
 • Optionale Diagnosedaten (Rechenzeiten, Gerätemodell – nie Bilder) bleiben auf dem Gerät, bis du sie selbst exportierst. Standardmäßig aus.
 
 🔬 Hintergrund
+AutoKorrektur 2.0 ist die native Android-Neuentwicklung der Browser-Version (1.0) von Benjamin Beckers.
 Das Ergebnis ist eine Skizze, keine Fotomontage in Druckqualität: Schatten, Spiegelungen und verdeckte Details erfindet das Netz plausibel, aber nicht immer richtig. Die App baut auf zwei Bachelorarbeiten an der Heinrich-Heine-Universität Düsseldorf auf (Till Schellscheidt 2024, Ben Beckers 2025). Freie Software (AGPLv3), Quellcode auf GitHub.
 
 Die KI-Modelle stecken in der App, deshalb ist sie einige hundert Megabyte groß. Android 10 oder neuer; ein Gerät mit 4 GB RAM oder mehr ist empfehlenswert.
@@ -84,6 +85,7 @@ The finished split card ("BEFORE / CAR-FREE") goes out through Android's ordinar
 • Optional diagnostics (compute times, device model – never images) stay on the device until you export them yourself. Off by default.
 
 🔬 Background
+AutoKorrektur 2.0 is the native Android rewrite of Benjamin Beckers' browser version (1.0).
 The result is a sketch, not a print-quality montage: shadows, reflections and hidden details are invented plausibly, not always correctly. The app builds on two bachelor theses at Heinrich Heine University Düsseldorf (Till Schellscheidt 2024, Ben Beckers 2025). Free software (AGPLv3), source code on GitHub.
 
 The models ship inside the app, which is why it is a few hundred megabytes. Android 10 or newer; a device with 4 GB of RAM or more is recommended.

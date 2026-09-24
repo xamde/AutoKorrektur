@@ -22,8 +22,9 @@ android {
         commandLine("git", "describe", "--tags", "--always")
         isIgnoreExitValue = true
     }.standardOutput.asText.map { text ->
-        val trimmed = text.trim()
-        if (trimmed.isNotEmpty()) trimmed else "1.0.0"
+        // Tags are written v2.0.0; the version name users see should not carry the "v".
+        val trimmed = text.trim().removePrefix("v")
+        if (trimmed.isNotEmpty()) trimmed else "2.0.0"
     }
 
     defaultConfig {
@@ -31,7 +32,7 @@ android {
         minSdk = 29
         targetSdk = 36
         versionCode = gitCommitCountProvider.getOrElse(170)
-        versionName = gitVersionNameProvider.getOrElse("1.0.0")
+        versionName = gitVersionNameProvider.getOrElse("2.0.0")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

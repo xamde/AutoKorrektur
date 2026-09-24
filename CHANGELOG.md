@@ -5,9 +5,13 @@ All notable changes to the AutoKorrektur project will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+**Versioning**: AutoKorrektur 1.0 is the [browser version by Benjamin Beckers](https://github.com/BenB2/AutoKorrektur);
+this native Android app is 2.0. Entries below dated before the 2.0 naming (2026-09-24) used the
+app's own internal numbering.
+
 ---
 
-## [Unreleased]
+## [Unreleased] — towards 2.0.0
 
 ### Added
 - Opt-in, on-device diagnostics (`telemetry/`, "Diagnostics" in the menu): JSON-Lines events (stage timings, image size, detections, outcome, AR frame rate, crash class) in a 2 MB-capped private file. Never uploaded — export via the share sheet or delete. Off by default; see `PRIVACY_POLICY.md` §5.
@@ -20,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ARCHITECTURE.md` — mask polarity, colour spaces, coordinate transforms and JNI lifecycle rules.
 
 ### Changed
+- **Renamed to AutoKorrektur 2.0.** The browser version this app rewrites is 1.0; the README, the changelog headings, the store listing, the website and the `versionName` fallback now say so. `git describe` output loses a leading `v`, so a `v2.0.0` tag produces the version name `2.0.0`.
 - `docs/MVP_FEATURE_FLAG_PLAN.md` → `docs/PRODUCT_TIERS.md`: it was a 20 KB proposal for work finished in the same month, complete with Gradle snippets "ready to apply" and a migration sequence. Now a 3.8 KB description of what the four flavors actually are, what `core` deliberately lacks and how to promote a feature, with `app/build.gradle.kts` named as the authority for the flags.
 - Documentation trimmed to what does not rot: `TESTING.md` lost the stale run dates, timings and measured values and gained the invariants worth knowing (13.6 → 4.8 KB); `README.md` points at `docs/INDEX.md` instead of repeating it.
 - **Brand colours** (hue 55° orange): palette in `values/colors.xml` with every tone derived via OKLCH, wired through the Material3 light/dark themes (surfaces included), the launcher icon, the website and the Play icons.
@@ -43,7 +48,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.0] - 2026-08-14
+## [2.0.0-alpha] - 2026-08-14
+
+First feature-complete native build (then numbered 1.0.0 internally).
 
 ### Added
 - Complete on-device vehicle detection and segmentation pipeline powered by YOLOv11-seg (TFLite).
