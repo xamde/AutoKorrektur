@@ -62,7 +62,7 @@ field-testing round before it's in front of anyone but you again.
 > `MainActivity`/`FirstFragment`, is the app's actual `MAIN`/`LAUNCHER` activity today
 > (`AndroidManifest.xml`) — confirmed on-device, the app opens directly into the AR camera, and
 > `FirstFragment` ("Studio") is reached *from* AR mode via `btnOpenStudio`, not the other way
-> around. `TODO-for-human.md` already documents this correctly ("Test 3: ... From AR mode, tap
+> around. The owner's private testing walkthrough already documents this correctly ("Test 3: ... From AR mode, tap
 > the Studio floating action button"); this plan's framing of AR as one optional button off a
 > campaign-tool home screen was the piece that didn't account for it. **Consequence for `core`:**
 > hiding `arLiveModeButton` in `FirstFragment` (done in step 3, see §6) is necessary but not
@@ -262,7 +262,7 @@ verifiable steps rather than one large refactor:
    `lintDebug`, `connectedDebugAndroidTest`) do not — only `test`/`lint`/`connectedAndroidTest`
    (all four flavors) or the fully flavor-qualified per-variant task exist. Updated
    `.github/workflows/ci.yml`, `README.md`, `TESTING.md`, `RELEASE_CHECKLIST.md`, `TODO.md`,
-   `TODO-for-human.md`, `HUMAN_RELEASE_CHECKLIST.md`, and `.github/copilot-instructions.md`.
+   `HUMAN_RELEASE_CHECKLIST.md`, and `.github/copilot-instructions.md`.
    CI now targets `full` for lint/unit-tests/instrumented-tests (the only flavor exercising every
    code path, so no coverage regression from adding flavors) and `core` for the release bundle
    (the actual Play Store artifact) — see `app/build.gradle.kts`'s `jacocoTestReport` task, which

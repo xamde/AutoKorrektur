@@ -6,8 +6,7 @@ Welcome to the AutoKorrektur technical documentation repository.
 
 | Category | File | Description |
 |---|---|---|
-| **🧪 Testing & Field Operations** | [TODO-for-human.md](../TODO-for-human.md) | Physical phone testing instructions & launch checklist. |
-| | [FIELD_TESTING_AND_DATA_COLLECTION.md](FIELD_TESTING_AND_DATA_COLLECTION.md) | Field testing protocol, CSV batch telemetry & ADB logs. |
+| **🧪 Testing & Field Operations** | [FIELD_TESTING_AND_DATA_COLLECTION.md](FIELD_TESTING_AND_DATA_COLLECTION.md) | Field testing protocol, CSV batch telemetry & on-device diagnostics. |
 | | [TESTING_INSIGHTS_FROM_THESES.md](TESTING_INSIGHTS_FROM_THESES.md) | 5-criteria evaluation framework & failure mode taxonomy. |
 | | [TESTING.md](../TESTING.md) | Unit/instrumented test suites & hardware benchmarking matrix. |
 | **🏗️ Architecture & Engineering** | [ARCHITECTURE.md](../ARCHITECTURE.md) | System architecture, CameraX AR loop & MediaCodec encoder. |

@@ -11,7 +11,7 @@
 ### 🏙️ Milestone 1: Field Testing & Data Collection
 - [ ] **FT-01. Physical Field Testing on Device**
   - Walk through real urban environments (residential street, commercial parking, mixed bike/pedestrian zones).
-  - Execute test scenarios outlined in [TODO-for-human.md](TODO-for-human.md) and [docs/FIELD_TESTING_AND_DATA_COLLECTION.md](docs/FIELD_TESTING_AND_DATA_COLLECTION.md).
+  - Execute the test scenarios in [docs/FIELD_TESTING_AND_DATA_COLLECTION.md](docs/FIELD_TESTING_AND_DATA_COLLECTION.md) (the owner also keeps a private, device-specific walkthrough outside this repo).
 - [ ] **FT-02. Batch Telemetry & CSV Metric Collection**
   - Run multi-photo batch processing across varied lighting conditions and export execution CSVs for performance review.
   - Since 2026-09-21 every flavor (incl. `core`) also has opt-in on-device diagnostics: menu → Diagnostics → switch on, use the app, Export (share sheet) → `autokorrektur-diagnostics-<date>.jsonl` with per-stage timings, AR fps, export durations and crash lines. Off by default; see `PRIVACY_POLICY.md` §5.

@@ -182,8 +182,7 @@ To navigate the comprehensive project documentation:
 
 | Category | Document | Description |
 |---|---|---|
-| **🧪 Testing & Field Operations** | [TODO-for-human.md](TODO-for-human.md) | Step-by-step physical phone testing guide, camera walkthroughs & checklist. |
-| | [docs/FIELD_TESTING_AND_DATA_COLLECTION.md](docs/FIELD_TESTING_AND_DATA_COLLECTION.md) | Field testing protocol, batch CSV metrics collection, and ADB telemetry. |
+| **🧪 Testing & Field Operations** | [docs/FIELD_TESTING_AND_DATA_COLLECTION.md](docs/FIELD_TESTING_AND_DATA_COLLECTION.md) | Field testing protocol, batch CSV metrics collection, and on-device diagnostics. |
 | | [docs/TESTING_INSIGHTS_FROM_THESES.md](docs/TESTING_INSIGHTS_FROM_THESES.md) | 5-criteria evaluation framework, failure mode taxonomy & edge cases. |
 | | [TESTING.md](TESTING.md) | Testing guidelines, hardware matrix, unit & instrumented test suites. |
 | **🏗️ Architecture & Engineering** | [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture, CameraX AR loop, and MediaCodec video pipeline. |

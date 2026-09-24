@@ -70,3 +70,6 @@ __pycache__/
 
 # Branding decision doc, kept out of the public repo (ledger: ~/files/personal/orga)
 /BRANDING.md
+
+# Owner-only testing/release notes, not for the public repo
+/TODO-for-human.md
