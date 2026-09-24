@@ -18,6 +18,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # The ML models and the test fixtures live on a GitHub release, not in git
+      # (scripts/assets.manifest). Cache them keyed by the manifest so a run only downloads when
+      # a hash actually changes; the backend pytest suite and every Gradle task need them.
+      - name: Cache large build assets
+        uses: actions/cache@v4
+        with:
+          path: .assets-cache
+          key: assets-${{ hashFiles('scripts/assets.manifest') }}
+
+      - name: Fetch large build assets
+        run: scripts/fetch_assets.sh
+
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:

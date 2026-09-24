@@ -5,6 +5,13 @@
 
 This document describes the test structure, benchmark suites, and validation commands for the AutoKorrektur Android client and Python backend.
 
+> **Before the first test run**, fetch the fixtures: `scripts/fetch_assets.sh`. The 50 reference
+> triples and the sample photos are not in git (see `scripts/assets.manifest`); one archive is
+> extracted into all three places that need it — `app/src/androidTest/assets/triples/` for the
+> instrumented tests, `app/src/test/resources/triples/` for the JVM tests and
+> `backend/tests/fixtures/triples/` for pytest. `benchmark_manifest.json`, the hand-maintained
+> index of that fixture set, stays in git.
+
 ---
 
 ## 1. Test Suite Layout

@@ -81,6 +81,24 @@ This codebase serves as a benchmark for how far modern **Agentic AI** and **Vibe
 
 ## 🧪 Development & Testing
 
+### First checkout: fetch the large assets
+
+The ML models and the instrumented-test fixtures are **not stored in git** — they are ~230 MB of
+binaries that change rarely, so they live as assets on the
+[`assets-v1`](https://github.com/xamde/AutoKorrektur/releases/tag/assets-v1) release and are
+pinned by SHA-256 in [`scripts/assets.manifest`](scripts/assets.manifest):
+
+```bash
+scripts/fetch_assets.sh          # download + verify; idempotent, cached in .assets-cache/
+scripts/fetch_assets.sh --check  # verify only (what CI and Gradle's verifyAssets use)
+```
+
+Gradle fails fast with this instruction if anything is missing, so an incomplete checkout can't
+turn into a confusing build or runtime error. OpenCV comes from Maven (`org.opencv:opencv`), not
+from checked-in `.so` files.
+
+### Flavors and tasks
+
 The app ships as four product flavors (`core`/`plus`/`beta`/`full`, see
 [`docs/MVP_FEATURE_FLAG_PLAN.md`](docs/MVP_FEATURE_FLAG_PLAN.md)) — Gradle tasks are
 flavor-qualified accordingly. `full` reproduces the pre-flavor app exactly (every feature on, all

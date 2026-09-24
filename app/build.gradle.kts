@@ -212,6 +212,47 @@ dependencies {
     implementation(libs.androidx.camera.video)
 }
 
+// The large build inputs (ML models, instrumented-test fixtures) are not in git; they are
+// downloaded by scripts/fetch_assets.sh from the hashes in scripts/assets.manifest. Without this
+// check a fresh clone fails deep inside the build (a missing asset surfaces as an aapt error or,
+// worse, at runtime), so fail early with the one command that fixes it. Existence only — the
+// script owns hash verification, and hashing ~200 MB on every build would be pointless overhead.
+val verifyAssets = tasks.register("verifyAssets") {
+    group = "verification"
+    description = "Fails if the assets listed in scripts/assets.manifest are missing (run scripts/fetch_assets.sh)."
+    val manifestFile = rootProject.file("scripts/assets.manifest")
+    val repoRoot = rootProject.projectDir
+    inputs.file(manifestFile)
+    outputs.upToDateWhen { false }
+    doLast {
+        val missing = manifestFile.readLines()
+            .map { it.substringBefore('#').trim() }
+            .filter { it.isNotEmpty() }
+            .mapNotNull { line ->
+                val fields = line.split(Regex("\\s+"))
+                if (fields.size < 4) return@mapNotNull null
+                val (kind, dest) = fields
+                val target = File(repoRoot, dest)
+                val present = when (kind) {
+                    "file" -> target.isFile && target.length() > 0
+                    // An archive is installed iff fetch_assets.sh left its stamp behind.
+                    "archive" -> File(target, ".assets-stamp").isFile
+                    else -> true
+                }
+                if (present) null else dest
+            }
+        if (missing.isNotEmpty()) {
+            throw GradleException(
+                "Missing build assets:\n" + missing.joinToString("\n") { "  $it" } +
+                    "\n\nThese are kept out of git (see scripts/assets.manifest). Fetch them with:" +
+                    "\n  scripts/fetch_assets.sh\n"
+            )
+        }
+    }
+}
+
+tasks.named("preBuild") { dependsOn(verifyAssets) }
+
 // Coverage is measured against the "full" flavor specifically: it's the only flavor that
 // exercises every code path (all FEATURE_* flags true), and product flavors don't have a
 // meaningful combined/aggregate coverage report the way a single-variant project would.
